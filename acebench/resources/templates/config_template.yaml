@@ -1,0 +1,132 @@
+prompt:
+  template: "level_{task_level}.j2"    # which prompt template to use
+
+dockerfile:
+  template: "00"  # 00/01/... selects the Dockerfile template for this data; files live under templates/dockerfiles/ at repo root
+
+appendix:
+  additional_dependencies:
+    # dependencies the agent must install in advance; ⚠️ missing ones may break tests
+    - "einops>=0.7.0"
+    - "mcp"
+  hyperparameters:
+    # optional hyperparameter config (omit if not needed)
+    batch_size: 32
+    learning_rate: 0.001
+
+# Source link
+source_link: "https://github.com/linkedin/Liger-Kernel"
+
+# name used by pip install <library_name>
+# e.g. pip install liger-kernel
+library_name: "liger-kernel"
+
+black_links:
+  # optional; omit if not needed
+  - "https://github.com/google-research/vision_transformer"
+  - "https://github.com/lucidrains/vit-pytorch"
+  - "https://github.com/huggingface/pytorch-image-models/blob/main/timm/models/vision_transformer.py"
+
+technical_docs:
+  # optional; omit if not needed. Place docs under docs/ at repo root.
+  # current Agent version does not read PDF; use LaTeX sources for papers
+  - path: "vision_transformer.tex"
+    description: "paper of ViT"
+  - path: "123123.tex"
+    description: "joke"
+
+# --------------------------------------------------------------------
+task_level: 1 # 1: modify based on library, 2: call library, 3: build from scratch
+
+# Task description
+task_name: "liger_kernel_cross_entropy"
+
+# If set to "repo", pytest must run under /workspace/test/<repo>/ (some repos require running tests from repo root).
+# If omitted or set to "test", pytest runs under /workspace/test/ (default).
+test_root_path: |
+  test
+
+# Test description 1: ⚠️ must have content or code section will not render
+test_description1: |
+  Below is **Test Description 1**
+
+# Code section for test description. It specifies where the agent-generated feature should live.
+# For example, if you write:
+#   from agent_code.Liger_Kernel.src.liger_kernel.ops.cross_entropy import LigerCrossEntropyFunction
+# then the agent must place LigerCrossEntropyFunction in /workspace/agent_code/Liger_Kernel/src/liger_kernel/ops/cross_entropy.py
+test_code1: |
+  from agent_code.Liger_Kernel.src.liger_kernel.ops.cross_entropy import LigerCrossEntropyFunction
+  from agent_code.Liger_Kernel.src.liger_kernel.ops.cross_entropy import liger_cross_entropy_kernel
+  from agent_code.Liger_Kernel.src.liger_kernel.transformers.cross_entropy import LigerCrossEntropyLoss
+  from agent_code.Liger_Kernel.src.liger_kernel.transformers.functional import liger_cross_entropy
+
+# Interface description 1: supplementary description before the interface; ⚠️ must have content or code section will not render
+interface_description1: |
+  Below is **Interface Description 1**
+
+
+# Provide docstrings for each class/function and mask the real implementation below. Do not include anything else (e.g., imports or unrelated functions).
+interface_code1: |
+  def liger_cross_entropy_kernel(
+      X_ptr,
+      X_stride,
+      Y_ptr,
+      Y_stride,
+      weight_ptr,
+      loss_ptr,
+      z_loss_ptr,
+      loss_stride,
+      n_cols,
+      n_non_ignore,
+      sum_non_ignore_weight,
+      weight_sum,
+      ignore_index,
+      lse_square_scale: tl.constexpr,
+      label_smoothing: tl.constexpr,
+      reduction: tl.constexpr,  # set it as constexpr since reduction is always known at compile time
+      softcap,
+      RETURN_Z_LOSS: tl.constexpr,
+      BLOCK_SIZE: tl.constexpr,
+      HAS_WEIGHT: tl.constexpr,
+      HAS_SOFTCAPPING: tl.constexpr,
+  ):
+      """
+          This kernel computes both cross entropy loss and the gradient of the input.
+          We only consider hard label + mean reduction for now. Please refer to https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html for the math.
+
+          Parameters:
+          X_ptr: Pointer to input tensor.
+          X_stride (int): The stride of the input tensor.
+          Y_ptr: Pointer to target tensor.
+          Y_stride (int): The stride of the target tensor.
+          weight_ptr: Pointer to weight tensor.
+          loss_ptr: Pointer to tensor to store the loss.
+          z_loss_ptr: Pointer to tensor to store the z loss. No operation if RETURN_Z_LOSS is 0.
+          loss_stride (int): The stride of the loss tensor.
+          n_cols (int): The number of columns in the input tensor.
+          n_non_ignore (float): The number of non-ignored elements in the batch.
+          sum_non_ignore_weight (float): The sum of non-ignored target's weights in the batch.
+          weight_sum (float): The sum of weight tensor.
+          ignore_index (int): The index to ignore in the target.
+          label_smoothing (float): The amount of smoothing when computing the loss, where 0.0 means no smoothing.
+          lse_square_scale (float): The scaler of (logsumexp(_input)) ^ 2 adding to the loss for the stability of training.
+          reduction (str): The string for the reduction to apply
+          softcap (float): The upper threshold for scaling logits to the range (-softcap, +softcap).
+          RETURN_Z_LOSS (int): The boolean value to decide whether storing z loss to z_loss_ptr or not. It must be 0 or 1.
+          BLOCK_SIZE (int): The block size for Triton operations.
+          HAS_WEIGHT (bool): The boolean value to determine whether assigning weight to each of the classes.
+          HAS_SOFTCAPPING (bool): The boolean value to determine whether applying soft-capping or not.
+          """
+      <your code>
+
+  
+
+# If you need to add more "test description/code" or "interface description/code", continue below:
+#
+# interface_description2: |
+#   description for interface2.
+#
+# interface_code2_path: "path/to/api.py"
+#
+# interface_code2: "none"
+# ...

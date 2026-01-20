@@ -1,0 +1,55 @@
+# Custom
+download_cache/*
+scripts/*
+cases_filter/*
+.vscode/
+*output/
+*outputs/
+*log/
+*logs/
+acebench/resources/repos
+acebench/resources/constants/*
+!acebench/resources/constants/python_example.py
+!acebench/resources/constants/full_images.txt
+!acebench/resources/constants/lite_images.txt
+config.toml
+tmp/
+runs/
+OpenHands/
+.cursor/*
+.github/skills/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv

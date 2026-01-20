@@ -1,0 +1,17 @@
+{%- if appendix -%}
+- Additional Dependencies
+{%- if appendix.additional_dependencies -%}
+{%- for dep in appendix.additional_dependencies %}
+    - {{ dep }}
+{%- endfor %}
+{%- endif %}
+- Specific Hyperparameters
+{%- if appendix.hyperparameters -%}
+{%- for param_name, param_value in appendix.hyperparameters.items() %}
+    - {{ param_name }}: {{ param_value }}
+{%- endfor %}
+{%- endif %}
+{%- else -%}
+- Additional Dependencies
+- Specific Hyperparameters
+{%- endif -%}

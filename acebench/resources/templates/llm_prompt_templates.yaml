@@ -1,0 +1,107 @@
+function_docstring_template: |
+  Generate a detailed docstring for the following Python function. The docstring should include:
+  1. The main function description
+  2. Parameter description (if any)
+  3. Return value description (if any)
+  4. Important notes or exceptions (if applicable)
+
+  Function qualified name:
+  ```python
+  {function_qualified_name}
+  ```
+
+  The full file content for reference:
+  ```python
+  {file_content}
+  ```
+
+  You only need to generate the docstring of the {function_qualified_name} function, the complete content of the file is for your reference only, and there is no need to generate the docstring of other functions or classes.
+
+  In docstring, in order for us to parse it correctly, you are forbidden to use syntax like ```python ```, which may cause the end result to be confusing. Please only return the docstring content!!! DO NOT include triple quotes or other format tags:
+
+class_docstring_template: |
+  Generate a detailed docstring for the following Python class. The docstring should include:
+  1. The class's primary purpose and functionality
+  2. Description of main attributes (if any)
+  3. Brief explanation of main methods
+  4. Usage examples (if applicable)
+
+  Class qualified name:
+  ```python
+  {class_qualified_name}
+  ```
+
+  The full file content for reference:
+  ```python
+  {file_content}
+  ```
+
+  You only need to generate the docstring of the {class_qualified_name} class, the complete content of the file is for your reference only, and there is no need to generate the docstring of other functions, methods, or classes.
+
+  Please only return the docstring content, do not include triple quotes or other format tags:
+
+task_statement_template: |
+  I want to give questions to code agent based on the following code interface, please generate a **generalized** and **short** task statement that briefly summarizes:
+  1. The core functionalities these interfaces aim to provide
+  2. The main features and requirements of the task
+  3. The key challenges or considerations to keep in mind
+
+  The description should focus on the essential goals and characteristics of the task, without going into too much technical detail.
+
+  The following interface list is the list of interface objects I want agent to generate, I will provide you with all the information of the files where these interfaces are located, you need to refer to these files, analyze what functions these interfaces implement in general, and then give me the output according to my above requirements
+
+  Interface List:
+  {top_objects_ids}
+
+  Files Content for reference:
+  {top_file_content_dict}
+
+  Now use generalized language to describe the objectives and requirements of this programming task. Note that your answer should be as short as possible and not too long, keep in mind that I only need the task statement, without anything else:
+
+test_file_adjustment_template: |
+  Your task is to replace references to specific objects from the repository "{repo_name}" with imports from "agent_code" module.
+
+  **IMPORTANT RULES:**
+  1. For objects listed in "Objects to Modify" section, replace their references from the "{repo_name}" repository with "agent_code" imports
+  2. DO NOT modify references from external libraries (e.g., torch, numpy, etc.)
+  3. DO NOT modify any other parts of the code (comments, whitespace, indentation, variable names, etc.)
+  4. The number of lines in your output MUST be exactly the same as the input
+  5. Do NOT modify variable names (only modify object references/calls)
+
+  **Repository Name:** {repo_name}
+
+  **Objects to Modify:**
+  {objects_to_prefix}
+
+  **Modification Rules:**
+  - `ObjectName(...)` → `agent_code.ObjectName(...)` (if ObjectName is from {repo_name})
+  - `{repo_name}.ObjectName(...)` → `agent_code.ObjectName(...)` 
+  - `external_lib.ObjectName(...)` → Keep unchanged (don't modify external library calls)
+  - Variable names like `my_obj` → Keep unchanged
+
+  **Original Code:**
+  ```python
+  {original_code}
+  ```
+
+  **Example:**
+  Repository name: "flask"
+  Objects to modify: ["MyClass", "my_function"]
+  
+  Original:
+  ```
+  obj1 = MyClass()
+  obj2 = flask.MyClass()
+  result = flask.my_function(input)
+  external = torch.MyClass()  # This is from torch, not flask
+  ```
+  
+  Modified:
+  ```
+  obj1 = agent_code.MyClass()
+  obj2 = agent_code.MyClass()
+  result = agent_code.my_function(input)
+  external = torch.MyClass()  # Keep unchanged - external library
+  ```
+
+  Please return ONLY the modified code, without any explanation, markdown code blocks, or additional formatting. Just the raw Python code:
