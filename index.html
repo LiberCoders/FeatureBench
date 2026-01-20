@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ACE-Bench Leaderboard</title>
+    <meta
+      name="description"
+      content="ACE-Bench leaderboard: execution-based benchmark for end-to-end, feature-oriented agentic coding."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1 class="title">
+          <img class="title-logo" src="./logos/logo.jpg" alt="ACE-Bench logo" />
+          <span>ACE-Bench Leaderboard</span>
+        </h1>
+        <blockquote class="subtitle">
+          ACE-Bench is a benchmark for evaluating agents on <strong>end-to-end development of complex features</strong>. It incorporates an execution-based evaluation protocol and a scalable <strong>test-driven</strong> method that automatically derives tasks from code repositories with minimal human effort.
+        </blockquote>
+      </header>
+
+      <div class="controls" role="region" aria-label="Leaderboard settings">
+        <div class="left-controls">
+          <div class="top-badges" id="topBadges" aria-label="Links"></div>
+
+          <div class="tabs" role="tablist" aria-label="Settings">
+            <button
+              class="tab"
+              id="tab-lite"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panel"
+              data-split="lite"
+            >
+              lite
+            </button>
+            <button
+              class="tab"
+              id="tab-full"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panel"
+              data-split="full"
+            >
+              full
+            </button>
+          </div>
+        </div>
+
+        <div class="right-controls">
+          <div class="filters" aria-label="Filters">
+            <span class="filters-label">Filters:</span>
+
+            <div class="dropdown" data-dropdown="filters">
+              <button
+                class="dropdown-btn"
+                id="filtersBtn"
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                aria-controls="filtersMenu"
+                title="Filters"
+              >
+                <span>All Filters</span>
+                <span class="caret" aria-hidden="true">▾</span>
+              </button>
+              <div class="dropdown-menu" id="filtersMenu" role="menu" aria-labelledby="filtersBtn" hidden>
+                <div class="dd-list" id="filtersList"></div>
+              </div>
+            </div>
+
+            <div class="dropdown" data-dropdown="tags">
+              <button
+                class="dropdown-btn"
+                id="tagsBtn"
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                aria-controls="tagsMenu"
+                title="Tags"
+              >
+                <span>All Tags</span>
+                <span class="caret" aria-hidden="true">▾</span>
+              </button>
+              <div class="dropdown-menu" id="tagsMenu" role="menu" aria-labelledby="tagsBtn" hidden>
+                <input class="dd-search" id="tagsSearch" type="search" placeholder="Search tags..." autocomplete="off" />
+                <div class="dd-scroll" id="tagsList"></div>
+                <div class="dd-muted" id="tagsEmpty" hidden>No matching tags.</div>
+              </div>
+            </div>
+          </div>
+
+          <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+            <span class="theme-icon theme-icon-sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </span>
+            <span class="theme-icon theme-icon-moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M21 14.5A8.5 8.5 0 0 1 9.5 3a6.8 6.8 0 1 0 11.5 11.5Z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
+            <span class="sr-only">Toggle theme</span>
+          </button>
+        </div>
+      </div>
+
+      <section class="card" id="panel" role="tabpanel" aria-labelledby="tab-lite">
+        <div class="table-wrap">
+          <table aria-label="ACE-Bench leaderboard table">
+            <thead>
+              <tr>
+                <th style="text-align: left">Model</th>
+                <th class="num pct">
+                  <span class="th-inner">
+                    %Resolved
+                    <button
+                      class="sort-btn"
+                      type="button"
+                      aria-label="Sort by %Resolved"
+                      aria-pressed="false"
+                      data-sort="resolved"
+                      data-dir="desc"
+                      title="Sort"
+                    >
+                      ▾
+                    </button>
+                  </span>
+                </th>
+                <th class="num pct">
+                  <span class="th-inner">
+                    %Passed
+                    <button
+                      class="sort-btn"
+                      type="button"
+                      aria-label="Sort by %Passed"
+                      aria-pressed="false"
+                      data-sort="passed"
+                      data-dir="desc"
+                      title="Sort"
+                    >
+                      ▾
+                    </button>
+                  </span>
+                </th>
+                <th class="col-org">Org</th>
+                <th class="col-date">
+                  <span class="th-inner">
+                    Date
+                    <button
+                      class="sort-btn"
+                      type="button"
+                      aria-label="Sort by Date"
+                      aria-pressed="false"
+                      data-sort="date"
+                      data-dir="desc"
+                      title="Sort"
+                    >
+                      ▾
+                    </button>
+                  </span>
+                </th>
+                <th class="col-site">Site</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="bottom-tags" aria-label="Links">
+        <a class="tag" href="./contact.html" aria-label="Open contact page" title="Contact">
+          <span class="tag-icon" aria-hidden="true">
+            ✉
+          </span>
+          <span class="tag-text">Contact</span>
+        </a>
+
+        <a class="tag" href="./citation.html" aria-label="Open citation page" title="Citation">
+          <span class="tag-icon" aria-hidden="true">#</span>
+          <span class="tag-text">Citation</span>
+        </a>
+      </div>
+    </div>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

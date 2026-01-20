@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ACE-Bench Leaderboard</title>
+    <meta
+      name="description"
+      content="ACE-Bench leaderboard: execution-based benchmark for end-to-end, feature-oriented agentic coding."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="page-citation">
+    <div class="container">
+      <a class="tag citation-back" href="./index.html" aria-label="Back to leaderboard" title="Back">
+        <span class="tag-text">Back</span>
+      </a>
+
+      <main class="citation" aria-label="Citation">
+        <div class="cite-tabs" role="tablist" aria-label="Citation format">
+          <button class="cite-tab" type="button" role="tab" aria-selected="true" data-format="bibtex">BibTeX</button>
+          <button class="cite-tab" type="button" role="tab" aria-selected="false" data-format="apa">APA</button>
+          <button class="cite-tab" type="button" role="tab" aria-selected="false" data-format="mla">MLA</button>
+        </div>
+
+        <section class="cite-panel" aria-label="Citation content">
+          <p class="cite-lead">If you find ACE-Bench useful, please cite:</p>
+          <div class="cite-box" role="group" aria-label="Citation text">
+            <pre class="cite-pre"><code id="citeText"></code></pre>
+            <button class="cite-copy" id="copyBtn" type="button">Copy</button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./src/citation.js"></script>
+  </body>
+</html>

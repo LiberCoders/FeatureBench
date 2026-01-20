@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "label": "arXiv",
+      "value": "25xx.xxxxx",
+      "href": "https://arxiv.org/abs/2500.00000",
+      "tone": "arxiv"
+    },
+    {
+      "label": "DockerHub",
+      "value": "Images",
+      "href": "https://hub.docker.com/u/libercoders",
+      "tone": "info"
+    },
+    {
+      "label": "HuggingFace",
+      "value": "datasets",
+      "href": "https://huggingface.co/datasets/LiberCoders/ACE-Bench",
+      "tone": "huggingface"
+    },
+    {
+      "label": "GitHub",
+      "value": "Code",
+      "href": "https://github.com/LiberCoders/ACE-Bench",
+      "tone": "github"
+    }
+  ]
+}

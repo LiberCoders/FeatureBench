@@ -1,0 +1,17 @@
+.venv/*
+.vscode/*
+__pycache__/*
+acebench/*
+cases_filter/*
+cases_filter_bk/*
+cases_filter_bk2/*
+cases_verified_200/*
+download_cache/*
+outputs/*
+runs/*
+scripts/*
+tmp/*
+toy_example/*
+config.toml
+.cursor/*
+OpenHands/

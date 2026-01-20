@@ -1,0 +1,164 @@
+[
+  {
+    "model": "Claude Code (routing) + Claude Opus 4.5 (20251101)",
+    "passed": 43.29,
+    "resolved": 11.0,
+    "org": [
+      "./logos/anthropic.png"
+    ],
+    "date": "2026-01-21",
+    "siteUrl": "https://www.anthropic.com/",
+    "filter_1": [
+      "Close Scaffold",
+      "Close Weights"
+    ],
+    "filter_2": [
+      "Model: Claude Opus 4.5",
+      "Scaffold: Claude Code",
+      "Org: Anthropic"
+    ]
+  },
+  {
+    "model": "OpenHands + Qwen3-Coder-30B-A3B-Instruct",
+    "passed": 17.52,
+    "resolved": 1.0,
+    "org": [
+      "./logos/openhands.png",
+      "./logos/qwen.png"
+    ],
+    "date": "2026-01-21",
+    "siteUrl": "https://github.com/OpenHands/OpenHands",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: Qwen3-Coder-30B-A3B-Instruct",
+      "Scaffold: OpenHands",
+      "Org: OpenHands",
+      "Org: Qwen"
+    ]
+  },
+  {
+    "model": "OpenHands (mock) + DeepSeek V3.2",
+    "passed": 26.30,
+    "resolved": 5.5,
+    "org": [
+      "./logos/openhands.png",
+      "./logos/deepseek.png"
+    ],
+    "date": "2026-01-21",
+    "siteUrl": "https://github.com/OpenHands/OpenHands",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: DeepSeek V3.2",
+      "Scaffold: OpenHands",
+      "Org: OpenHands",
+      "Org: DeepSeek"
+    ]
+  },
+  {
+    "model": "OpenHands + Qwen3-Coder-480B-A35B-Instruct",
+    "passed": 24.55,
+    "resolved": 3.5,
+    "org": [
+      "./logos/openhands.png",
+      "./logos/qwen.png"
+    ],
+    "date": "2026-01-21",
+    "siteUrl": "https://github.com/OpenHands/OpenHands",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: Qwen3-Coder-480B-A35B-Instruct",
+      "Scaffold: OpenHands",
+      "Org: OpenHands",
+      "Org: Qwen"
+    ]
+  },
+  {
+    "model": "OpenHands + Claude Opus 4.5 (20251101)",
+    "passed": 45.53,
+    "resolved": 10.5,
+    "org": [
+      "./logos/openhands.png",
+      "./logos/anthropic.png"
+    ],
+    "date": "2026-01-21",
+    "siteUrl": "https://github.com/OpenHands/OpenHands",
+    "filter_1": [
+      "Open Scaffold",
+      "Close Weights"
+    ],
+    "filter_2": [
+      "Model: Claude Opus 4.5",
+      "Scaffold: OpenHands",
+      "Org: OpenHands",
+      "Org: Anthropic"
+    ]
+  },
+  {
+    "model": "OpenHands + Gemini-3-Pro-Preview (low reasoning)",
+    "passed": 30.08,
+    "resolved": 4.5,
+    "org": [
+      "./logos/openhands.png",
+      "./logos/gemini.png"
+    ],
+    "date": "2026-01-21",
+    "siteUrl": "https://github.com/OpenHands/OpenHands",
+    "filter_1": [
+      "Open Scaffold",
+      "Close Weights"
+    ],
+    "filter_2": [
+      "Model: Gemini-3-Pro-Preview",
+      "Scaffold: OpenHands",
+      "Org: OpenHands",
+      "Org: Google"
+    ]
+  },
+  {
+    "model": "Gemini-CLI + Gemini-3-Pro-Preview (low reasoning)",
+    "passed": 32.43,
+    "resolved": 5.0,
+    "org": [
+      "./logos/gemini.png"
+    ],
+    "date": "2026-01-21",
+    "siteUrl": "https://gemini.google.com/app",
+    "filter_1": [
+      "Close Scaffold",
+      "Close Weights"
+    ],
+    "filter_2": [
+      "Model: Gemini-3-Pro-Preview",
+      "Scaffold: Gemini-CLI",
+      "Org: Google"
+    ]
+  },
+  {
+    "model": "Codex + GPT-5.1-Codex (medium reasoning)",
+    "passed": 41.66,
+    "resolved": 12.5,
+    "org": [
+      "./logos/openai.png"
+    ],
+    "date": "2026-01-21",
+    "siteUrl": "https://chatgpt.com/",
+    "filter_1": [
+      "Close Scaffold",
+      "Close Weights"
+    ],
+    "filter_2": [
+      "Model: GPT-5.1-Codex",
+      "Scaffold: Codex",
+      "Org: OpenAI"
+    ]
+  }
+]
