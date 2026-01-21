@@ -610,6 +610,12 @@ EOF""",
         if str(self.env_vars.get("SAVE_COMPLETIONS", "false")).strip().lower() == "true":
             completions_container_path = "/agent-logs/completions"
             completions_host_path = log_dir / "completions"
+            # Remove old completions to avoid mixing runs/attempts
+            if completions_host_path.exists():
+                try:
+                    shutil.rmtree(completions_host_path)
+                except Exception as e:
+                    self.logger.warning(f"Failed to remove old completions at {completions_host_path}: {e}")
             # Copy completions directory from container to host
             copied = self.cm.copy_from_container(
                 container,

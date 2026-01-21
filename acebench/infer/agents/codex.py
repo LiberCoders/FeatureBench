@@ -25,7 +25,11 @@ class CodexAgent(BaseAgent):
     @property
     def install_script(self) -> str:
         """Installation script for Codex CLI."""
-        version = self._kwargs.get("version", "latest")
+        version = self._kwargs.get("version")
+        if not version:
+            version = self.env_vars.get("CODEX_VERSION")
+        if not version or not str(version).strip():
+            version = "latest"
 
         # Best-effort npm package name for the `codex` CLI.
         # If your environment uses a different distribution, adjust here.

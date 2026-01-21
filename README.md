@@ -42,6 +42,7 @@ Evaluate agent-generated patches against ACE-Bench test cases.
 
 > Before running evaluation, we recommend pre-downloading the images to reduce network-related failures. Usage:
 > ```
+> source .venv/bin/activate
 > python acebench/scripts/pull_images.py --mode full
 > python acebench/scripts/pull_images.py --mode lite
 > python acebench/scripts/pull_images.py --mode /path/to/images.txt
@@ -107,6 +108,7 @@ Run agents on ACE-Bench tasks to generate patches.
 
 > Before running Inference, we recommend pre-downloading the images to reduce network-related failures. Usage:
 > ```
+> source .venv/bin/activate
 > python acebench/scripts/pull_images.py --mode full
 > python acebench/scripts/pull_images.py --mode lite
 > python acebench/scripts/pull_images.py --mode /path/to/images.txt

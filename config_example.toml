@@ -32,6 +32,7 @@ base_url = [
 
 [llm.local]
 backend = "vllm"                                     # Backend type: vllm
+api_key = ""                                         # Optional: API key passed to vLLM server
 base_url = "http://localhost:8080/v1"                # vLLM server URL
 
 # ==============================================================================
@@ -80,6 +81,8 @@ CLAUDE_CODE_VERSION = ""
 GEMINI_API_KEY = ""
 GEMINI_MODEL = ""
 GOOGLE_GEMINI_BASE_URL = ""
+# Optional: Lock Gemini CLI version (leave empty to use latest)
+GEMINI_CLI_VERSION = ""
 
 # Codex Agent Configuration (Azure OpenAI supported)
 [infer_config.codex]
@@ -91,3 +94,5 @@ CODEX_MODEL = ""
 OPENAI_BASE_URL = ""
 # Optional: Reasoning effort level for Codex reasoning models; empty defaults to "medium"
 CODEX_REASONING_EFFORT = ""
+# Optional: Lock Codex version (leave empty to use latest)
+CODEX_VERSION = ""

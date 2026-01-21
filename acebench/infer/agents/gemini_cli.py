@@ -26,7 +26,11 @@ class GeminiCliAgent(BaseAgent):
     @property
     def install_script(self) -> str:
         """Installation script for Gemini CLI."""
-        version = self._kwargs.get("version", "latest")
+        version = self._kwargs.get("version")
+        if not version:
+            version = self.env_vars.get("GEMINI_CLI_VERSION")
+        if not version or not str(version).strip():
+            version = "latest"
 
         npm_pkg = f"@google/gemini-cli@{version}"
 

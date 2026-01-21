@@ -73,15 +73,16 @@ class LLMCaller:
             else:
                 self.base_urls = []
             
-            # vLLM mode: auto-detect model name; api_key not required
+            # vLLM mode: auto-detect model name; api_key optional (depends on deployment)
             if self.is_vllm:
                 if not self.base_urls:
                     raise LLMInitException("vLLM config incomplete: missing base_url")
-                # vLLM does not validate API key; use default
-                api_key = "EMPTY"
+                # If user provides api_key, pass through; otherwise use default
+                if not api_key:
+                    api_key = "EMPTY"
                 # Auto-detect model name from vLLM service
                 if not self.llm_model:
-                    self.llm_model = self._fetch_vllm_model_name(self.base_urls[0])
+                    self.llm_model = self._fetch_vllm_model_name(self.base_urls[0], api_key)
                 self.logger.debug(f"Detected vLLM config: backend={backend}, model={self.llm_model}")
             else:
                 if not api_key or not self.base_urls or not self.llm_model:
@@ -139,7 +140,7 @@ class LLMCaller:
             # Standard OpenAI client
             return OpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
     
-    def _fetch_vllm_model_name(self, base_url: str) -> str:
+    def _fetch_vllm_model_name(self, base_url: str, api_key: Optional[str] = None) -> str:
         """
         Auto-fetch model name from a vLLM service.
         
@@ -156,7 +157,10 @@ class LLMCaller:
             # Build /v1/models endpoint URL
             models_url = base_url.rstrip('/') + '/models'
             
-            response = requests.get(models_url, timeout=10)
+            headers = {}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            response = requests.get(models_url, headers=headers, timeout=10)
             response.raise_for_status()
             
             data = response.json()
