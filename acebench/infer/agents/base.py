@@ -339,18 +339,22 @@ class BaseAgent(ABC):
             )
             
             success_run = exit_code == 0
+            success_post_run = self.post_run_hook(container, log_file)
+
+            if success_run and success_post_run:
+                self.logger.info(f"{self.name} agent completed successfully")
+                return True
+
+            if not success_run and success_post_run:
+                self.logger.warning(
+                    f"{self.name} agent exited with code {exit_code}, but post-run hook signaled success; treating run as successful"
+                )
+                return True
+
             if not success_run:
                 raise RuntimeError(f"Agent execution failed with code {exit_code}")
-            
-            # Run post-run hook
-            success_post_run = self.post_run_hook(container, log_file)
-            if not success_post_run:
-                raise RuntimeError("Post-run hook failed. Agent execution may not be successful.")
-            
-            self.logger.info(f"{self.name} agent completed successfully")
-            
-            # if not raise any exception, return True
-            return True
+
+            raise RuntimeError("Post-run hook failed. Agent execution may not be successful.")
             
         except Exception as e:
             self.logger.error(f"Agent execution failed: {e}")
