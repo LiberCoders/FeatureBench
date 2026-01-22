@@ -201,7 +201,7 @@ class BaseAgent(ABC):
     def post_run_hook(
         self,
         container: Container,
-        log_file: Path
+        log_file: Path,
     ) -> bool:
         """
         Post-run hook for agent-specific logging.

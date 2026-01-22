@@ -113,3 +113,8 @@ flags can override metadata (see the argument list below).
   Maximum iterations for OpenHands (`OPENHANDS_MAX_ITERATIONS`).  
   Default: no override (OpenHands default applies).  
   Resume mode: ignored (uses metadata).
+
+- `--force-timeout`  
+  When resuming OpenHands runs, treat attempts with existing `infer.log` TIMEOUT markers as completed so they are not rerun.  
+  Default: disabled.  
+  Resume mode: can override metadata if explicitly provided.

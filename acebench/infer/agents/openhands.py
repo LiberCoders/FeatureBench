@@ -3,6 +3,7 @@ OpenHands agent implementation.
 """
 
 import json
+import re
 import shlex
 import shutil
 from pathlib import Path
@@ -106,6 +107,7 @@ source "$UV_DIR/env" 2>/dev/null || true
 # Configure uv index mirror (TUNA)
 mkdir -p ~/.config/uv
 cat > ~/.config/uv/uv.toml <<'EOF'
+python-install-mirror = "https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download"
 [[index]]
 url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple/"
 default = true
@@ -268,46 +270,45 @@ echo 'export LLM_LOG_COMPLETIONS_FOLDER=/agent-logs/completions' >> ~/.bashrc
         is_gemini_model = 'gemini' in llm_model_lower
 
         # IMPORTANT: Avoid leaking OpenHands' own site-packages into the runtime
-        # BUG: For keep same with before experiment
-#         exit_code, output = self.cm.exec_command(
-#             container,
-#             r"""python3 - << 'EOF'
-# file_path = '/opt/openhands-venv/lib/python3.13/site-packages/openhands/runtime/impl/local/local_runtime.py'
+        exit_code, output = self.cm.exec_command(
+            container,
+            r"""python3 - << 'EOF'
+file_path = '/opt/openhands-venv/lib/python3.13/site-packages/openhands/runtime/impl/local/local_runtime.py'
 
-# with open(file_path, 'r', encoding='utf-8') as f:
-#     content = f.read()
+with open(file_path, 'r', encoding='utf-8') as f:
+    content = f.read()
 
-# lines = content.splitlines(True)
+lines = content.splitlines(True)
 
-# target_idx = None
-# for i, line in enumerate(lines):
-#     s = line.strip()
-#     if not s:
-#         continue
-#     if (
-#         ("env['PYTHONPATH']" in line or 'env["PYTHONPATH"]' in line)
-#         and "os.pathsep.join" in line
-#         and "code_repo_path" in line
-#     ):
-#         target_idx = i
-#         break
+target_idx = None
+for i, line in enumerate(lines):
+    s = line.strip()
+    if not s:
+        continue
+    if (
+        ("env['PYTHONPATH']" in line or 'env["PYTHONPATH"]' in line)
+        and "os.pathsep.join" in line
+        and "code_repo_path" in line
+    ):
+        target_idx = i
+        break
 
-# if target_idx is None:
-#     print("local_runtime.py: PYTHONPATH injection line not found; aborting")
-#     raise SystemExit(2)
+if target_idx is None:
+    print("local_runtime.py: PYTHONPATH injection line not found; aborting")
+    raise SystemExit(2)
 
-# deleted = lines[target_idx].rstrip("\n")
-# del lines[target_idx]
+deleted = lines[target_idx].rstrip("\n")
+del lines[target_idx]
 
-# with open(file_path, 'w', encoding='utf-8') as f:
-#     f.write("".join(lines))
-# EOF""",
-#             log_file=log_file,
-#         )
-#         if exit_code != 0:
-#             raise RuntimeError(
-#                 f"Failed to patch OpenHands local_runtime.py to fix PYTHONPATH leakage (exit_code={exit_code}).\n{output}"
-#             )
+with open(file_path, 'w', encoding='utf-8') as f:
+    f.write("".join(lines))
+EOF""",
+            log_file=log_file,
+        )
+        if exit_code != 0:
+            raise RuntimeError(
+                f"Failed to patch OpenHands local_runtime.py to fix PYTHONPATH leakage (exit_code={exit_code}).\n{output}"
+            )
 
         # NOTE: Do not use a multi-line `sed '1i ...'` here.
         # GNU sed treats the second line as a new command; since it starts with
@@ -605,7 +606,7 @@ EOF""",
         """
         # Determine the destination path for trajectory.json and completions directory
         log_dir = Path(log_file).parent
-        
+
         # Save completions if enabled
         if str(self.env_vars.get("SAVE_COMPLETIONS", "false")).strip().lower() == "true":
             completions_container_path = "/agent-logs/completions"
@@ -669,16 +670,27 @@ EOF""",
                         with open(infer_log_path, "r", encoding="utf-8") as f:
                             infer_log_content = f.read()
                         
+                        force_timeout = str(self.env_vars.get("ACE_FORCE_TIMEOUT", "")).strip().lower() in {"1", "true", "yes", "on"}
+                        if force_timeout:
+                            timeout_pattern = re.compile(r"\[TIMEOUT\s+after\s+([0-9]+)\s+seconds\]")
+                            if timeout_pattern.search(infer_log_content):
+                                self.logger.info(
+                                    "infer.log contains timeout marker; accepting as success due to --force-timeout"
+                                )
+                                return True
+
                         if "RuntimeError: Agent reached maximum iteration." in infer_log_content:
                             self.logger.info(
                                 "Agent reached maximum iteration - treating as successful completion"
                             )
                             return True
+                        
                         elif "AgentStuckInLoopError: Agent got stuck in a loop" in infer_log_content:
                             self.logger.info(
                                 "Agent got stuck in a loop - treating as successful completion"
                             )
                             return True
+                        
                     except Exception as e:
                         self.logger.warning(f"Failed to read infer.log: {e}")
                 

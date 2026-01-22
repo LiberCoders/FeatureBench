@@ -166,6 +166,8 @@ class InferConfig:
     force_native_tool_calling: bool = False
     # Optional task IDs to force rerun even if completed.
     force_rerun_ids: Optional[List[str]] = None
+    # If True, treat prior TIMEOUT attempts as completed when resuming (skip reruns).
+    force_timeout: bool = False
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -188,6 +190,7 @@ class InferConfig:
             "white_box": self.white_box,
             "force_native_tool_calling": self.force_native_tool_calling,
             "force_rerun_ids": self.force_rerun_ids,
+            "force_timeout": self.force_timeout,
         }
 
 
@@ -244,6 +247,7 @@ class RunMetadata:
     without_interface_descriptions: bool = False
     white_box: bool = False
     force_native_tool_calling: bool = False
+    force_timeout: bool = False
     end_time: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
@@ -269,6 +273,7 @@ class RunMetadata:
             "without_interface_descriptions": self.without_interface_descriptions,
             "white_box": self.white_box,
             "force_native_tool_calling": self.force_native_tool_calling,
+            "force_timeout": self.force_timeout,
             "end_time": self.end_time
         }
     

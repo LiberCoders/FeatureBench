@@ -277,6 +277,12 @@ class InferenceRunner:
                 # Avoid inheriting config/env values when not forcing.
                 self.agent_env_vars.pop("LLM_NATIVE_TOOL_CALLING", None)
 
+            # Surface force-timeout behavior to the agent via env.
+            if getattr(config, "force_timeout", False):
+                self.agent_env_vars["ACE_FORCE_TIMEOUT"] = "true"
+            else:
+                self.agent_env_vars.pop("ACE_FORCE_TIMEOUT", None)
+
         # Resume mode: metadata is the source of truth for reproducibility.
         # Non-resume: config/env wins; CLI only fills when config has no setting.
         if self.resume_mode:
@@ -359,7 +365,7 @@ class InferenceRunner:
         
         self.console.print(f"[green]Loaded {len(instances)} task instances[/]")
         return instances
-    
+
     def _get_image_name(self, instance: TaskInstance) -> str:
         """Get Docker image name for an instance."""
         image_name = instance.image_name
@@ -686,6 +692,7 @@ class InferenceRunner:
             without_interface_descriptions=self.config.without_interface_descriptions,
             white_box=getattr(self.config, "white_box", False),
             force_native_tool_calling=getattr(self.config, "force_native_tool_calling", False),
+            force_timeout=getattr(self.config, "force_timeout", False),
         )
         self.output_manager.save_metadata(metadata)
     
@@ -708,6 +715,8 @@ class InferenceRunner:
             self.console.print(f"[white]Levels:[/] [green]all (lv1, lv2)[/]")
         self.console.print(f"[white]Concurrent:[/] [green]{self.config.n_concurrent}[/]")
         self.console.print(f"[white]Attempts:[/] [green]{self.config.n_attempts}[/]")
+        if getattr(self.config, "force_timeout", False):
+            self.console.print("[white]Force timeout skip:[/] [yellow]enabled[/]")
         if getattr(self.config, "without_interface_descriptions", False):
             self.console.print("[white]Prompt:[/] [yellow]without interface descriptions[/]")
         if getattr(self.config, "white_box", False):
@@ -1042,6 +1051,15 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--force-timeout",
+        action="store_true",
+        help=(
+            "When resuming OpenHands runs, treat attempts with existing infer.log TIMEOUT markers as completed "
+            "so they are not rerun."
+        ),
+    )
+
+    parser.add_argument(
         "--without",
         action="store_true",
         help=(
@@ -1112,8 +1130,10 @@ def parse_args() -> argparse.Namespace:
         "--resume",
         type=str,
         default=None,
-        help="Resume from a previous run directory (e.g., runs/2025-12-02__16-06-04). "
-             "Most args are loaded from run_metadata.json; --n-concurrent, --timeout, --proxy-port, --gpu-ids can be overridden"
+        help=(
+            "Resume from a previous run directory (e.g., runs/2025-12-02__16-06-04). "
+            "Most args are loaded from run_metadata.json; --n-concurrent, --timeout, --proxy-port, --gpu-ids, --force-timeout can be overridden"
+        ),
     )
     
     args = parser.parse_args()
@@ -1228,6 +1248,11 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
     if args.gpu_ids is not None and args.gpu_ids != metadata_gpu_ids:
         console.print(f"[cyan]Using --gpu-ids={args.gpu_ids} (overriding metadata value {metadata_gpu_ids})[/]")
 
+    metadata_force_timeout = bool(metadata.get("force_timeout", False))
+    force_timeout = metadata_force_timeout or bool(getattr(args, "force_timeout", False))
+    if getattr(args, "force_timeout", False) and not metadata_force_timeout:
+        console.print("[cyan]Using --force-timeout (overriding metadata value False)[/]")
+
     # Determine max_iters: always use metadata in resume mode.
     max_iters = metadata.get('max_iters')
 
@@ -1259,6 +1284,7 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
         without_interface_descriptions=without_interface_descriptions,
         white_box=white_box,
         force_native_tool_calling=force_native_tool_calling,
+        force_timeout=force_timeout,
         force_rerun_ids=_load_force_rerun_ids(getattr(args, "force_rerun", None)),
     )
     
@@ -1319,6 +1345,7 @@ def main():
             without_interface_descriptions=bool(getattr(args, "without", False)),
             white_box=bool(getattr(args, "white", False)),
             force_native_tool_calling=bool(getattr(args, "native_tool_calling", False)),
+            force_timeout=bool(getattr(args, "force_timeout", False)),
             force_rerun_ids=_load_force_rerun_ids(getattr(args, "force_rerun", None)),
         )
         
