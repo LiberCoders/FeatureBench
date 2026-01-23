@@ -149,6 +149,7 @@ echo 'export LLM_LOG_COMPLETIONS_FOLDER=/agent-logs/completions' >> ~/.bashrc
         return (
             f"SANDBOX_VOLUMES=${{PWD}}:/workspace:rw "
             f"/opt/openhands-venv/bin/python -m openhands.core.main "
+            f"--config-file /agent-logs/openhands-config.toml "
             f"--task {escaped_instruction}"
         )
     
@@ -239,6 +240,14 @@ echo 'export LLM_LOG_COMPLETIONS_FOLDER=/agent-logs/completions' >> ~/.bashrc
         And ignore python path /testbed in /opt/openhands-venv/lib/python3.13/site-packages/openhands/core/main.py
         to avoid using codes under /testbed for openhands
         """
+        # Ensure an empty config.toml exists so OpenHands can apply default condenser logic
+        self.cm.exec_command(
+            container,
+            """if [ ! -f /agent-logs/openhands-config.toml ]; then
+  printf '%s\n' '' > /agent-logs/openhands-config.toml
+fi""",
+            log_file=log_file,
+        )
         self.cm.exec_command(container, "mkdir -p /agent-logs", log_file=log_file)
 
         def _verify_patch(description: str, check_cmd: str) -> None:
