@@ -637,6 +637,28 @@ EOF""",
         
         if not trajectory_copied:
             self.logger.error("Failed to copy trajectory.json from container")
+
+            # If the run timed out and force-timeout is enabled, treat as success.
+            infer_log_path = log_dir / "infer.log"
+            if infer_log_path.exists():
+                try:
+                    with open(infer_log_path, "r", encoding="utf-8") as f:
+                        infer_log_content = f.read()
+
+                    force_timeout = (
+                        str(self.env_vars.get("ACE_FORCE_TIMEOUT", "")).strip().lower()
+                        in {"1", "true", "yes", "on"}
+                    )
+                    if force_timeout:
+                        timeout_pattern = re.compile(r"\[TIMEOUT\s+after\s+([0-9]+)\s+seconds\]")
+                        if timeout_pattern.search(infer_log_content):
+                            self.logger.info(
+                                "infer.log contains timeout marker; accepting as success due to --force-timeout"
+                            )
+                            return True
+                except Exception as e:
+                    self.logger.warning(f"Failed to read infer.log: {e}")
+
             return False
         
         trajectory_path = log_dir / "trajectory.json"
@@ -670,15 +692,6 @@ EOF""",
                         with open(infer_log_path, "r", encoding="utf-8") as f:
                             infer_log_content = f.read()
                         
-                        force_timeout = str(self.env_vars.get("ACE_FORCE_TIMEOUT", "")).strip().lower() in {"1", "true", "yes", "on"}
-                        if force_timeout:
-                            timeout_pattern = re.compile(r"\[TIMEOUT\s+after\s+([0-9]+)\s+seconds\]")
-                            if timeout_pattern.search(infer_log_content):
-                                self.logger.info(
-                                    "infer.log contains timeout marker; accepting as success due to --force-timeout"
-                                )
-                                return True
-
                         if "RuntimeError: Agent reached maximum iteration." in infer_log_content:
                             self.logger.info(
                                 "Agent reached maximum iteration - treating as successful completion"
