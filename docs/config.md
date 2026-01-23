@@ -72,6 +72,7 @@ LLM_BASE_URL = ""     # Optional
 LLM_API_VERSION = ""  # Optional: Azure only
 OPENHANDS_VERSION = "0.62.0" # Optional: pin OpenHands version (empty usually means default/latest)
 SAVE_COMPLETIONS = false      # Optional: whether to save LLM completions (true/false)
+INFER_LOG_RENDER_MODE = "compact" # Optional: compact|full for infer.log rendering
 
 LLM_REASONING_EFFORT = ""     # Optional: Reasoning effort for OpenAI o-series models
 OPENHANDS_MAX_ITERATIONS = "" # Optional: OpenHands agent max iterations (step limit). Upstream default is 500.

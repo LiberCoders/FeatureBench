@@ -62,6 +62,8 @@ LLM_API_VERSION = ""
 OPENHANDS_MAX_ITERATIONS = ""
 # Optional: Save llm completions if true
 SAVE_COMPLETIONS = false
+# Optional: Render infer.log mode (compact|full)
+INFER_LOG_RENDER_MODE = "compact"
 
 # Claude Code Agent Configuration
 [infer_config.claude_code]

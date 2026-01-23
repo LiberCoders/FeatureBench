@@ -11,6 +11,7 @@ from typing import Dict, Optional  # noqa: F401
 
 from acebench.infer.agents.base import BaseAgent
 from acebench.infer.container import DOCKER_HOST_GATEWAY
+from acebench.infer.render_infer_log import render_infer_log
 
 
 class OpenHandsAgent(BaseAgent):
@@ -240,6 +241,8 @@ echo 'export LLM_LOG_COMPLETIONS_FOLDER=/agent-logs/completions' >> ~/.bashrc
         And ignore python path /testbed in /opt/openhands-venv/lib/python3.13/site-packages/openhands/core/main.py
         to avoid using codes under /testbed for openhands
         """
+        self.cm.exec_command(container, "mkdir -p /agent-logs", log_file=log_file)
+
         # Ensure an empty config.toml exists so OpenHands can apply default condenser logic
         self.cm.exec_command(
             container,
@@ -248,7 +251,6 @@ echo 'export LLM_LOG_COMPLETIONS_FOLDER=/agent-logs/completions' >> ~/.bashrc
 fi""",
             log_file=log_file,
         )
-        self.cm.exec_command(container, "mkdir -p /agent-logs", log_file=log_file)
 
         def _verify_patch(description: str, check_cmd: str) -> None:
             exit_code, output = self.cm.exec_command(
@@ -607,6 +609,12 @@ EOF""",
         """
         # Determine the destination path for trajectory.json and completions directory
         log_dir = Path(log_file).parent
+        infer_log_path = log_dir / "infer.log"
+        if infer_log_path.exists():
+            mode = str(self.env_vars.get("INFER_LOG_RENDER_MODE", "compact")).lower()
+            md, html_doc = render_infer_log(infer_log_path, mode=mode)
+            (log_dir / "infer.md").write_text(md, encoding="utf-8")
+            (log_dir / "infer.html").write_text(html_doc, encoding="utf-8")
 
         # Save completions if enabled
         if str(self.env_vars.get("SAVE_COMPLETIONS", "false")).strip().lower() == "true":
@@ -640,7 +648,6 @@ EOF""",
             self.logger.error("Failed to copy trajectory.json from container")
 
             # If the run timed out and force-timeout is enabled, treat as success.
-            infer_log_path = log_dir / "infer.log"
             if infer_log_path.exists():
                 try:
                     with open(infer_log_path, "r", encoding="utf-8") as f:
@@ -687,7 +694,6 @@ EOF""",
                 )
                 
                 # Check if the agent reached maximum iteration (treat as success)
-                infer_log_path = log_dir / "infer.log"
                 if infer_log_path.exists():
                     try:
                         with open(infer_log_path, "r", encoding="utf-8") as f:
