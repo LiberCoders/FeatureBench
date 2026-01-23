@@ -145,8 +145,8 @@ python -m acebench.infer.run_infer \
 
 # Run with specific tasks
 python -m acebench.infer.run_infer \
-    --agent claude_code \
-    --model claude-sonnet-4-20250514 \
+    --agent openhands \
+    --model openai/qwen3-coder-480b-a35b-instruct \
     --task-id "repo__name.commit.test.hash.lv1" \
     --level 1
 ```

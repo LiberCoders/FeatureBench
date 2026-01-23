@@ -32,6 +32,18 @@ flags can override metadata (see the argument list below).
   Model name (e.g., `claude-sonnet-4-20250514`, `gemini-3-pro-preview`).  
   Required unless `--resume` is used.
 
+- `--api-key`  
+  Override agent API key (takes precedence over config).  
+  Saved into `run_metadata.json`; resume uses metadata unless overridden again.
+
+- `--base-url`  
+  Override agent base URL (takes precedence over config).  
+  Saved into `run_metadata.json`; resume uses metadata unless overridden again.
+
+- `--version`  
+  Override agent version (takes precedence over config).  
+  Saved into `run_metadata.json`; resume uses metadata unless overridden again.
+
 - `--dataset`  
   HuggingFace dataset repo name (e.g., `LiberCoders/ACE-Bench`).  
   Default: `LiberCoders/ACE-Bench` in non-resume mode.

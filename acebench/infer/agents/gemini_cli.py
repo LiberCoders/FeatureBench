@@ -93,7 +93,7 @@ echo "Gemini CLI installation complete"
 # """
         escaped_instruction = shlex.quote(instruction)
 
-        model = self.env_vars.get("GEMINI_MODEL") or self._kwargs.get("model")
+        model = self._kwargs.get("model")
         if model and "/" in model:
             model = model.split("/")[-1]
         model_arg = f"-m {shlex.quote(model)}" if model else ""
@@ -176,9 +176,9 @@ echo "Gemini CLI installation complete"
             if self.env_vars.get(key):
                 env_settings[key] = self.env_vars[key]
 
-        # Optional: allow configuring model via env or kwargs.
+        # Optional: allow configuring model via CLI.
         # Normalize provider-style model names like ".../models/gemini-3-pro-preview".
-        model = self.env_vars.get("GEMINI_MODEL") or self._kwargs.get("model")
+        model = self._kwargs.get("model")
         if model and "/" in model:
             model = model.split("/")[-1]
         if model:

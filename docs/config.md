@@ -68,7 +68,6 @@ download_cache_dir = "/abs/path/to/ACE-Bench/download_cache"
 ```toml
 [infer_config.openhands]
 LLM_API_KEY = ""
-LLM_MODEL = ""        # Optional: override command-line --model
 LLM_BASE_URL = ""     # Optional
 LLM_API_VERSION = ""  # Optional: Azure only
 OPENHANDS_VERSION = "0.62.0" # Optional: pin OpenHands version (empty usually means default/latest)
@@ -84,7 +83,6 @@ Example 1: OpenHands + OpenAI
 ```toml
 [infer_config.openhands]
 LLM_API_KEY = "<your-openai-api-key>"
-LLM_MODEL = "gpt-5"
 LLM_BASE_URL = ""            # Fill if needed
 LLM_API_VERSION = ""
 OPENHANDS_VERSION = "0.62.0"
@@ -96,7 +94,6 @@ Example 2: OpenHands + Azure OpenAI
 ```toml
 [infer_config.openhands]
 LLM_API_KEY = "<your-azure-api-key>"
-LLM_MODEL = "<your-deployment-name>"
 LLM_BASE_URL = "https://<resource>.openai.azure.com"
 LLM_API_VERSION = "2024-xx-xx"
 OPENHANDS_VERSION = "0.62.0"
@@ -108,7 +105,6 @@ SAVE_COMPLETIONS = false
 ```toml
 [infer_config.claude_code]
 ANTHROPIC_API_KEY = ""    # Required
-ANTHROPIC_MODEL = ""      # Optional: override command-line --model
 ANTHROPIC_BASE_URL = ""   # Optional
 ```
 
@@ -117,7 +113,6 @@ ANTHROPIC_BASE_URL = ""   # Optional
 ```toml
 [infer_config.gemini_cli]
 GEMINI_API_KEY = ""         # Required
-GEMINI_MODEL = ""           # Optional: override command-line --model
 GOOGLE_GEMINI_BASE_URL = "" # Optional
 ```
 
@@ -126,7 +121,6 @@ GOOGLE_GEMINI_BASE_URL = "" # Optional
 ```toml
 [infer_config.codex]
 OPENAI_API_KEY = ""         # Required
-CODEX_MODEL = ""            # Optional: override command-line --model
 OPENAI_BASE_URL = ""        # Optional
 CODEX_REASONING_EFFORT = "" # Optional: empty defaults to medium
 ```
@@ -136,7 +130,6 @@ Example 1: Codex + OpenAI
 ```toml
 [infer_config.codex]
 OPENAI_API_KEY = "<your-openai-api-key>"
-CODEX_MODEL = "gpt-5.2-codex"
 OPENAI_BASE_URL = ""
 CODEX_REASONING_EFFORT = "medium"
 ```
@@ -146,7 +139,6 @@ Example 2: Codex + Azure OpenAI
 ```toml
 [infer_config.codex]
 OPENAI_API_KEY = "<your-azure-api-key>"
-CODEX_MODEL = "azure/<your-deployment-name>"
 OPENAI_BASE_URL = "https://<resource>.openai.azure.com"
 CODEX_REASONING_EFFORT = "high"
 ```

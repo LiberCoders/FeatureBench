@@ -207,8 +207,8 @@ echo "Claude Code installation complete"
             "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
         }
         
-        # Add model if specified
-        model = self.env_vars.get("ANTHROPIC_MODEL") or self._kwargs.get("model")
+        # Add model if specified (CLI only)
+        model = self._kwargs.get("model")
         if model:
             # Remove provider prefix if present
             if "/" in model:

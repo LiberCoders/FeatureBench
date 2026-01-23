@@ -168,6 +168,10 @@ class InferConfig:
     force_rerun_ids: Optional[List[str]] = None
     # If True, treat prior TIMEOUT attempts as completed when resuming (skip reruns).
     force_timeout: bool = False
+    # Optional: CLI overrides for agent auth/endpoint/version.
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+    version: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -191,6 +195,9 @@ class InferConfig:
             "force_native_tool_calling": self.force_native_tool_calling,
             "force_rerun_ids": self.force_rerun_ids,
             "force_timeout": self.force_timeout,
+            "api_key": self.api_key,
+            "base_url": self.base_url,
+            "version": self.version,
         }
 
 
@@ -248,6 +255,9 @@ class RunMetadata:
     white_box: bool = False
     force_native_tool_calling: bool = False
     force_timeout: bool = False
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+    version: Optional[str] = None
     end_time: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
@@ -274,6 +284,9 @@ class RunMetadata:
             "white_box": self.white_box,
             "force_native_tool_calling": self.force_native_tool_calling,
             "force_timeout": self.force_timeout,
+            "api_key": self.api_key,
+            "base_url": self.base_url,
+            "version": self.version,
             "end_time": self.end_time
         }
     

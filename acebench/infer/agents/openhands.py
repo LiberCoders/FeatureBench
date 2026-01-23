@@ -166,12 +166,8 @@ echo 'export LLM_LOG_COMPLETIONS_FOLDER=/agent-logs/completions' >> ~/.bashrc
             elif self.env_vars.get("OPENAI_API_KEY"):
                 llm_api_key = self.env_vars["OPENAI_API_KEY"]
         
-        # Determine LLM model
-        llm_model = self.env_vars.get("LLM_MODEL")
-        if not llm_model:
-            llm_model = self._kwargs.get("model")
-            if not llm_model:
-                llm_model = self.env_vars.get("ANTHROPIC_MODEL")
+        # Determine LLM model (CLI only)
+        llm_model = self._kwargs.get("model")
         
         # Required environment variables
         env_settings = {
@@ -258,11 +254,7 @@ echo 'export LLM_LOG_COMPLETIONS_FOLDER=/agent-logs/completions' >> ~/.bashrc
                     f"{description} verification: FAILED (exit_code={exit_code})\n{output}"
                 )
 
-        llm_model = (
-            self.env_vars.get("LLM_MODEL")
-            or self._kwargs.get("model")
-            or ""
-        )
+        llm_model = self._kwargs.get("model") or ""
         llm_model_lower = str(llm_model).strip().lower()
 
         is_openhands_0_62_0 = self.venv_name.split('-')[-1] == '0.62.0'

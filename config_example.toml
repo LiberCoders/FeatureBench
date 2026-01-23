@@ -50,18 +50,16 @@ download_cache_dir="/path/to/ACE-Bench/download_cache"
 [infer_config.openhands]
 # Required: LLM API Key (supports OpenAI/Anthropic/Azure, etc.)
 LLM_API_KEY = ""
-# Optional: LLM model name (defaults to --model argument from command line)
-LLM_MODEL = ""
-# Optional: Reasoning effort for OpenAI o-series models
-LLM_REASONING_EFFORT = ""
 # Optional: LLM API Base URL
 LLM_BASE_URL = ""
+# Optional: Lock OpenHands version (leave empty to use latest)
+OPENHANDS_VERSION = "0.62.0"
+# Optional: Reasoning effort for OpenAI o-series models
+LLM_REASONING_EFFORT = ""
 # Azure API Version (required for Azure models only)
 LLM_API_VERSION = ""
 # Optional: OpenHands agent max iterations (step limit). Upstream default is 500.
 OPENHANDS_MAX_ITERATIONS = ""
-# Optional: Lock OpenHands version (leave empty to use latest)
-OPENHANDS_VERSION = "0.62.0"
 # Optional: Save llm completions if true
 SAVE_COMPLETIONS = false
 
@@ -69,8 +67,6 @@ SAVE_COMPLETIONS = false
 [infer_config.claude_code]
 # Required: Anthropic API Key
 ANTHROPIC_API_KEY = ""
-# Optional: Specify the model to use (defaults to --model argument from command line)
-ANTHROPIC_MODEL = ""
 # Optional: Custom API Base URL
 ANTHROPIC_BASE_URL = ""
 # Optional: Lock Claude Code version (leave empty to use latest)
@@ -79,7 +75,6 @@ CLAUDE_CODE_VERSION = ""
 # Gemini CLI Agent Configuration
 [infer_config.gemini_cli]
 GEMINI_API_KEY = ""
-GEMINI_MODEL = ""
 GOOGLE_GEMINI_BASE_URL = ""
 # Optional: Lock Gemini CLI version (leave empty to use latest)
 GEMINI_CLI_VERSION = ""
@@ -88,8 +83,6 @@ GEMINI_CLI_VERSION = ""
 [infer_config.codex]
 # Required: OpenAI API Key
 OPENAI_API_KEY = ""
-# Optional: Specify the model to use (defaults to --model argument from command line)
-CODEX_MODEL = ""
 # Optional: Custom API Base URL
 OPENAI_BASE_URL = ""
 # Optional: Reasoning effort level for Codex reasoning models; empty defaults to "medium"

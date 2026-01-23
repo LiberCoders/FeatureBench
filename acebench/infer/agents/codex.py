@@ -166,7 +166,7 @@ echo "Codex installation complete"
 # """
         escaped_instruction = shlex.quote(instruction)
 
-        model = self.env_vars.get("CODEX_MODEL") or self.env_vars.get("OPENAI_MODEL") or self._kwargs.get("model")
+        model = self._kwargs.get("model")
         # Preserve provider-prefixed model names (e.g., "azure/<deployment>").
         # Codex CLI may use the prefix to select the correct provider/endpoints.
 
@@ -195,12 +195,7 @@ echo "Codex installation complete"
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY is required for codex agent")
 
-        raw_model = (
-            self.env_vars.get("CODEX_MODEL")
-            or self.env_vars.get("OPENAI_MODEL")
-            or self._kwargs.get("model")
-            or ""
-        )
+        raw_model = self._kwargs.get("model") or ""
         base_url = self.env_vars.get("OPENAI_BASE_URL") or ""
         is_azure = raw_model.startswith("azure/") or (".openai.azure.com" in base_url)
 
@@ -220,9 +215,7 @@ echo "Codex installation complete"
             "OPENAI_ORGANIZATION",
             "OPENAI_PROJECT",
             "OPENAI_API_VERSION",
-            "CODEX_MODEL",
             "CODEX_REASONING_EFFORT",
-            "OPENAI_MODEL",
         ]:
             if self.env_vars.get(key):
                 env_settings[key] = self.env_vars[key]

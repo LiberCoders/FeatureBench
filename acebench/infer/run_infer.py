@@ -269,6 +269,46 @@ class InferenceRunner:
         if getattr(config, "runtime_proxy", None) is not None:
             self.agent_env_vars["ACE_RUNTIME_PROXY"] = "true" if config.runtime_proxy else "false"
 
+        # Apply CLI overrides (api_key/base_url/version) with warnings on conflict.
+        api_key_map = {
+            "openhands": "LLM_API_KEY",
+            "claude_code": "ANTHROPIC_API_KEY",
+            "gemini_cli": "GEMINI_API_KEY",
+            "codex": "OPENAI_API_KEY",
+        }
+        base_url_map = {
+            "openhands": "LLM_BASE_URL",
+            "claude_code": "ANTHROPIC_BASE_URL",
+            "gemini_cli": "GOOGLE_GEMINI_BASE_URL",
+            "codex": "OPENAI_BASE_URL",
+        }
+        version_map = {
+            "openhands": "OPENHANDS_VERSION",
+            "claude_code": "CLAUDE_CODE_VERSION",
+            "gemini_cli": "GEMINI_CLI_VERSION",
+            "codex": "CODEX_VERSION",
+        }
+
+        def _apply_override(flag_name: str, value: Optional[str], key_map: Dict[str, str]) -> None:
+            if value is None:
+                return
+            raw = str(value).strip()
+            if not raw:
+                return
+            env_key = key_map.get(config.agent)
+            if not env_key:
+                return
+            existing = self.agent_env_vars.get(env_key)
+            if existing is not None and str(existing).strip() and str(existing).strip() != raw:
+                self.console.print(
+                    f"[yellow]Warning: {flag_name} overrides {env_key} from config.toml[/]"
+                )
+            self.agent_env_vars[env_key] = raw
+
+        _apply_override("--api-key", config.api_key, api_key_map)
+        _apply_override("--base-url", config.base_url, base_url_map)
+        _apply_override("--version", config.version, version_map)
+
         # Force native tool calling for OpenHands when requested.
         if config.agent == "openhands":
             if getattr(config, "force_native_tool_calling", False):
@@ -502,7 +542,8 @@ class InferenceRunner:
                 container_manager=cm,
                 env_vars=self.agent_env_vars,
                 logger=task_logger,
-                model=self.config.model
+                model=self.config.model,
+                version=self.config.version,
             )
             
             if not agent.install(container, log_file):
@@ -628,7 +669,8 @@ class InferenceRunner:
                 container_manager=cm,
                 env_vars=self.agent_env_vars,
                 logger=task_logger,
-                model=self.config.model
+                model=self.config.model,
+                version=self.config.version,
             )
 
             agent.install(container, warmup_log)
@@ -693,6 +735,9 @@ class InferenceRunner:
             white_box=getattr(self.config, "white_box", False),
             force_native_tool_calling=getattr(self.config, "force_native_tool_calling", False),
             force_timeout=getattr(self.config, "force_timeout", False),
+            api_key=self.config.api_key,
+            base_url=self.config.base_url,
+            version=self.config.version,
         )
         self.output_manager.save_metadata(metadata)
     
@@ -707,6 +752,12 @@ class InferenceRunner:
             self.console.print("[bold cyan]Starting ACE-Bench Inference[/]")
         self.console.print(f"[white]Agent:[/] [green]{self.config.agent}[/]")
         self.console.print(f"[white]Model:[/] [green]{self.config.model}[/]")
+        if self.config.api_key is not None and str(self.config.api_key).strip():
+            self.console.print(f"[white]API key:[/] [green]{self.config.api_key}[/]")
+        if self.config.base_url is not None and str(self.config.base_url).strip():
+            self.console.print(f"[white]Base URL:[/] [green]{self.config.base_url}[/]")
+        if self.config.version is not None and str(self.config.version).strip():
+            self.console.print(f"[white]Agent version:[/] [green]{self.config.version}[/]")
         self.console.print(f"[white]Dataset:[/] [green]{self.config.dataset}[/]")
         self.console.print(f"[white]Split:[/] [green]{self.config.split}[/]")
         if self.config.level:
@@ -728,8 +779,7 @@ class InferenceRunner:
             if effective is not None and str(effective).strip():
                 self.console.print(f"[white]Max iters:[/] [green]{effective}[/]")
             # Only show reasoning_effort when the effective model looks like an OpenAI gpt/o-series model.
-            effective_llm_model = self.agent_env_vars.get("LLM_MODEL") or self.config.model
-            model_lower = str(effective_llm_model).strip().lower() if effective_llm_model is not None else ""
+            model_lower = str(self.config.model).strip().lower() if self.config.model is not None else ""
             model_tail = model_lower.split("/", 1)[-1]
             # Treat all gpt-series models as eligible for displaying reasoning_effort.
             is_gpt_series = ("gpt" in model_tail) or model_tail.startswith("gpt")
@@ -969,6 +1019,27 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help="Model name (e.g., claude-sonnet-4-20250514, gpt-4o) (required unless --resume is used)"
+    )
+
+    parser.add_argument(
+        "--api-key",
+        type=str,
+        default=None,
+        help="Override agent API key (takes precedence over config)"
+    )
+
+    parser.add_argument(
+        "--base-url",
+        type=str,
+        default=None,
+        help="Override agent base URL (takes precedence over config)"
+    )
+
+    parser.add_argument(
+        "--version",
+        type=str,
+        default=None,
+        help="Override agent version (takes precedence over config)"
     )
 
     parser.add_argument(
@@ -1264,6 +1335,14 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
 
     # Determine force_native_tool_calling: always use metadata in resume mode.
     force_native_tool_calling = bool(metadata.get("force_native_tool_calling"))
+
+    # Determine api_key/base_url/version: CLI overrides; otherwise use metadata.
+    metadata_api_key = metadata.get("api_key")
+    api_key = args.api_key if args.api_key is not None else metadata_api_key
+    metadata_base_url = metadata.get("base_url")
+    base_url = args.base_url if args.base_url is not None else metadata_base_url
+    metadata_version = metadata.get("version")
+    version = args.version if args.version is not None else metadata_version
     
     # Create config from metadata (n_attempts, split, level always from metadata)
     config = InferConfig(
@@ -1286,6 +1365,9 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
         force_native_tool_calling=force_native_tool_calling,
         force_timeout=force_timeout,
         force_rerun_ids=_load_force_rerun_ids(getattr(args, "force_rerun", None)),
+        api_key=api_key,
+        base_url=base_url,
+        version=version,
     )
     
     return config, resume_dir
@@ -1347,6 +1429,9 @@ def main():
             force_native_tool_calling=bool(getattr(args, "native_tool_calling", False)),
             force_timeout=bool(getattr(args, "force_timeout", False)),
             force_rerun_ids=_load_force_rerun_ids(getattr(args, "force_rerun", None)),
+            api_key=args.api_key,
+            base_url=args.base_url,
+            version=args.version,
         )
         
         # Run inference
