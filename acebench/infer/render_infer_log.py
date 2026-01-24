@@ -45,6 +45,7 @@ class LogBlock:
     header: str
     lines: list[str]
     name: str | None = None  # Action/Observation class name
+    action_id: int | None = None
 
 
 def _iter_blocks(lines: Iterable[str]) -> Iterable[LogBlock]:
@@ -85,6 +86,8 @@ def _escape(s: str) -> str:
 def _block_to_md(block: LogBlock) -> str:
     _infer_name(block)
     title = block.name or block.kind
+    if block.action_id is not None:
+        title = f"{title} #{block.action_id}"
     body = "\n".join(block.lines).strip("\n")
     return f"### {title}\n\n```\n{body}\n```\n"
 
@@ -99,8 +102,11 @@ def _block_to_html(block: LogBlock) -> str:
     kind_cls = block.kind.lower()
     name_cls = (name or "unknown").lower()
     title = name or block.kind
+    if block.action_id is not None:
+        title = f"{title} #{block.action_id}"
     return (
-        f"<details class='block {kind_cls} {name_cls}'>"
+        f"<details class='block {kind_cls} {name_cls}'"
+        f"{'' if block.action_id is None else f' data-action-id=\"{block.action_id}\"'}>"
         f"<summary class='block-title'>"
         f"<div class='title-row'>"
         f"<span class='block-kind'>{_escape(title)}</span>"
@@ -177,39 +183,57 @@ def render_infer_log(log_path: Path, mode: str) -> tuple[str, str]:
         keep = {"USER_ACTION", "ACTION"}
 
     blocks = [b for b in blocks if b.kind in keep]
+    action_id = 1
+    for block in blocks:
+        if block.kind in {"ACTION", "USER_ACTION"}:
+            block.action_id = action_id
+            action_id += 1
 
     md = "\n".join(_block_to_md(b) for b in blocks)
     html_doc = _render_html(blocks, title=str(log_path))
     return md, html_doc
 
 
+def _render_one(log_path: Path, mode: str) -> None:
+    md, html_doc = render_infer_log(log_path, mode=mode)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    (log_path.parent / "infer.md").write_text(md, encoding="utf-8")
+    (log_path.parent / "infer.html").write_text(html_doc, encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Render OpenHands infer.log into infer.md and infer.html."
     )
-    parser.add_argument("log_path", help="Path to infer.log")
+    parser.add_argument("log_path", help="Path to infer.log or a directory containing infer.log files")
     parser.add_argument(
         "--mode",
-        default="compact",
+        default="full",
         choices=("compact", "full"),
         help="Render mode (compact|full)",
-    )
-    parser.add_argument(
-        "--out-dir",
-        default=None,
-        help="Output directory (defaults to infer.log directory)",
     )
     args = parser.parse_args()
 
     log_path = Path(args.log_path)
-    out_dir = Path(args.out_dir) if args.out_dir else log_path.parent
 
-    md, html_doc = render_infer_log(log_path, mode=args.mode)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "infer.md").write_text(md, encoding="utf-8")
-    (out_dir / "infer.html").write_text(html_doc, encoding="utf-8")
-    print(f"wrote {out_dir / 'infer.md'}")
-    print(f"wrote {out_dir / 'infer.html'}")
+    if log_path.is_dir():
+        logs = sorted(log_path.rglob("infer.log"))
+        if not logs:
+            print(f"no infer.log found under {log_path}")
+            return
+        ok = 0
+        for infer_log in logs:
+            try:
+                _render_one(infer_log, mode=args.mode)
+                ok += 1
+            except Exception as exc:  # pragma: no cover - best-effort rendering
+                print(f"failed: {infer_log} ({exc})")
+        print(f"rendered {ok}/{len(logs)} infer.log files")
+        return
+
+    _render_one(log_path, mode=args.mode)
+    print(f"wrote {log_path.parent / 'infer.md'}")
+    print(f"wrote {log_path.parent / 'infer.html'}")
 
 
 if __name__ == "__main__":

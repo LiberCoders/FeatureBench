@@ -18,6 +18,7 @@ runs/
 OpenHands/
 .cursor/*
 .github/skills/
+ms-swift/
 
 # Environments
 .env

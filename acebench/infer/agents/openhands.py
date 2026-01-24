@@ -631,7 +631,7 @@ EOF""",
         log_dir = Path(log_file).parent
         infer_log_path = log_dir / "infer.log"
         if infer_log_path.exists():
-            mode = str(self.env_vars.get("INFER_LOG_RENDER_MODE", "compact")).lower()
+            mode = str(self.env_vars.get("INFER_LOG_RENDER_MODE", "full")).lower()
             md, html_doc = render_infer_log(infer_log_path, mode=mode)
             (log_dir / "infer.md").write_text(md, encoding="utf-8")
             (log_dir / "infer.html").write_text(html_doc, encoding="utf-8")
