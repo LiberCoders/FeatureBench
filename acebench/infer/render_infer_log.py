@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import html
 import re
 from dataclasses import dataclass
@@ -11,28 +12,29 @@ from typing import Iterable
 
 BLOCK_HEADER_RE = re.compile(r"^\d{2}:\d{2}:\d{2} - (USER_ACTION|ACTION|OBSERVATION)\b")
 ACTION_NAME_RE = re.compile(r"(?:\]|\*\*|\b)([A-Za-z0-9_]+Action)\b")
-OBS_NAME_RE = re.compile(r"\*\*([A-Za-z0-9_]+Observation)\*\*")
+OBS_NAME_RE = re.compile(r"(?:\]|\*\*|\b)([A-Za-z0-9_]+Observation)\b")
 PREVIEW_LINE_COUNT = 3
 ACTION_COLORS = {
-    "filereadaction": "#3b82f6",
-    "filewriteaction": "#10b981",
-    "fileeditaction": "#22c55e",
-    "cmdrunaction": "#f59e0b",
+    "messageaction": "#a3e635",
+    "recallaction": "#a855f7",
+    "filereadaction": "#4e7cf9",
+    "filewriteaction": "#059669",
+    "fileeditaction": "#fc5fda",
+    "cmdrunaction": "#d44359",
+    "agentthinkaction": "#a3e635",
+    "agentfinishaction": "#14b8a6",
+    
     "browseurlaction": "#a855f7",
     "browseinteractiveaction": "#8b5cf6",
     "ipythonruncellaction": "#0ea5e9",
-    "agentfinishaction": "#14b8a6",
     "agentrejectaction": "#ef4444",
     "agentdelegateaction": "#f97316",
     "changeagentstateaction": "#eab308",
-    "messageaction": "#84cc16",
     "systemmessageaction": "#6366f1",
-    "agentthinkaction": "#64748b",
-    "recallaction": "#06b6d4",
     "mcpaction": "#ec4899",
     "tasktrackingaction": "#d97706",
     "looprecoveryaction": "#ef4444",
-    "nullaction": "#94a3b8",
+    "nullaction": "#857D7D",
 }
 
 
@@ -131,7 +133,7 @@ def _render_html(blocks: list[LogBlock], title: str) -> str:
         "      --muted: #9aa4b2;\n"
         "      --action: #3b82f6;\n"
         "      --user: #22c55e;\n"
-        "      --obs: #f59e0b;\n"
+        "      --obs: #64748b;\n"
         "      --accent: #2f3747;\n"
         "    }\n"
         "    * { box-sizing: border-box; }\n"
@@ -178,3 +180,36 @@ def render_infer_log(log_path: Path, mode: str) -> tuple[str, str]:
     md = "\n".join(_block_to_md(b) for b in blocks)
     html_doc = _render_html(blocks, title=str(log_path))
     return md, html_doc
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Render OpenHands infer.log into infer.md and infer.html."
+    )
+    parser.add_argument("log_path", help="Path to infer.log")
+    parser.add_argument(
+        "--mode",
+        default="compact",
+        choices=("compact", "full"),
+        help="Render mode (compact|full)",
+    )
+    parser.add_argument(
+        "--out-dir",
+        default=None,
+        help="Output directory (defaults to infer.log directory)",
+    )
+    args = parser.parse_args()
+
+    log_path = Path(args.log_path)
+    out_dir = Path(args.out_dir) if args.out_dir else log_path.parent
+
+    md, html_doc = render_infer_log(log_path, mode=args.mode)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "infer.md").write_text(md, encoding="utf-8")
+    (out_dir / "infer.html").write_text(html_doc, encoding="utf-8")
+    print(f"wrote {out_dir / 'infer.md'}")
+    print(f"wrote {out_dir / 'infer.html'}")
+
+
+if __name__ == "__main__":
+    main()

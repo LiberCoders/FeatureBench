@@ -243,14 +243,34 @@ echo 'export LLM_LOG_COMPLETIONS_FOLDER=/agent-logs/completions' >> ~/.bashrc
         """
         self.cm.exec_command(container, "mkdir -p /agent-logs", log_file=log_file)
 
-        # Ensure an empty config.toml exists so OpenHands can apply default condenser logic
-        self.cm.exec_command(
-            container,
-            """if [ ! -f /agent-logs/openhands-config.toml ]; then
+        condenser_enabled = (
+            str(self.env_vars.get("ENABLE_CONDENSER", "true")).strip().lower()
+            not in {"0", "false", "no", "off"}
+        )
+        if condenser_enabled:
+            # Ensure an empty config.toml exists so OpenHands can apply default condenser logic
+            self.cm.exec_command(
+                container,
+                """if [ ! -f /agent-logs/openhands-config.toml ]; then
   printf '%s\n' '' > /agent-logs/openhands-config.toml
 fi""",
-            log_file=log_file,
-        )
+                log_file=log_file,
+            )
+        else:
+            self.cm.exec_command(
+                container,
+                """cat > /agent-logs/openhands-config.toml <<'EOF'
+[core]
+enable_default_condenser = false
+
+[condenser]
+type = "noop"
+
+[agent]
+enable_history_truncation = false
+EOF""",
+                log_file=log_file,
+            )
 
         def _verify_patch(description: str, check_cmd: str) -> None:
             exit_code, output = self.cm.exec_command(
@@ -708,6 +728,15 @@ EOF""",
                         elif "AgentStuckInLoopError: Agent got stuck in a loop" in infer_log_content:
                             self.logger.info(
                                 "Agent got stuck in a loop - treating as successful completion"
+                            )
+                            return True
+                        
+                        elif (
+                            "LLMContextWindowExceedError" in infer_log_content
+                            or "ContextWindowExceededError" in infer_log_content
+                        ):
+                            self.logger.info(
+                                "Agent hit context window limit - treating as successful completion"
                             )
                             return True
                         

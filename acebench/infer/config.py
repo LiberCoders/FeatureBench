@@ -157,8 +157,13 @@ class InferConfigLoader:
         # Merge agent-specific config
         agent_config = self.get_agent_config(agent_name)
         for key, value in agent_config.items():
-            if value:  # Only include non-empty values
-                env_vars[key] = str(value)
+            if value is None:
+                continue
+            if isinstance(value, str) and not value:
+                continue
+            if isinstance(value, (list, dict)) and not value:
+                continue
+            env_vars[key] = str(value)
 
         # [infer] defaults (applied only if not explicitly set elsewhere)
         no_proxy_hosts = self.get_no_proxy_hosts()
@@ -306,4 +311,3 @@ class DatasetLoader:
             print(f"Warning: Failed to load split '{split}': {e}")
         
         return all_instances
-
