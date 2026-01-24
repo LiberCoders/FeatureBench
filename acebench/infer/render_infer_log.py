@@ -23,16 +23,17 @@ ACTION_COLORS = {
     "cmdrunaction": "#d44359",
     "agentthinkaction": "#a3e635",
     "agentfinishaction": "#14b8a6",
-    
+    "ipythonruncellaction": "#0ea5e9",
+    "tasktrackingaction": "#d97706",
+    "condensationaction": "#ff0000",
+
     "browseurlaction": "#a855f7",
     "browseinteractiveaction": "#8b5cf6",
-    "ipythonruncellaction": "#0ea5e9",
     "agentrejectaction": "#ef4444",
     "agentdelegateaction": "#f97316",
     "changeagentstateaction": "#eab308",
     "systemmessageaction": "#6366f1",
     "mcpaction": "#ec4899",
-    "tasktrackingaction": "#d97706",
     "looprecoveryaction": "#ef4444",
     "nullaction": "#857D7D",
 }
