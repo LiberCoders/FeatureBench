@@ -32,11 +32,11 @@ class OpenHandsAgent(BaseAgent):
         
         # Determine installation source
         if git_version:
-            install_cmd = f"uv pip install git+https://github.com/All-Hands-AI/OpenHands.git@{git_version}"
+            install_args = f"git+https://github.com/All-Hands-AI/OpenHands.git@{git_version}"
         elif version:
-            install_cmd = f"uv pip install --prerelease=allow openhands-ai=={version}"
+            install_args = f"--prerelease=allow openhands-ai=={version}"
         else:
-            install_cmd = "uv pip install --prerelease=allow openhands-ai"
+            install_args = "--prerelease=allow openhands-ai"
 
         version_label = git_version or version or "latest"
         venv_name = f"openhands-venv-3.13-{version_label}"
@@ -114,6 +114,17 @@ url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple/"
 default = true
 EOF
 
+PRIMARY_INDEX_URL="https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple/"
+FALLBACK_INDEX_URL="${{UV_FALLBACK_INDEX_URL:-https://pypi.org/simple/}}"
+
+uv_pip_install_with_fallback() {{
+    if "$UV_BIN" pip install --index-url "$PRIMARY_INDEX_URL" "$@"; then
+        return 0
+    fi
+    echo "Primary index failed; retrying with $FALLBACK_INDEX_URL" >&2
+    "$UV_BIN" pip install --index-url "$FALLBACK_INDEX_URL" "$@"
+}}
+
 # Install Python via uv (downloads cached via UV_CACHE_DIR)
 $UV_BIN python install $PY_VERSION
 
@@ -127,8 +138,8 @@ source "$VENV_DIR/bin/activate"
 export SKIP_VSCODE_BUILD=true
 
 ADD_DEPS='deprecated typing_extensions numpy>=2.0.0'
-{install_cmd}
-uv pip install $ADD_DEPS
+uv_pip_install_with_fallback {install_args}
+uv_pip_install_with_fallback $ADD_DEPS
 
 # venv is already at fixed path used by runner
 mkdir -p /opt

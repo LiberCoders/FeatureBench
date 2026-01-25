@@ -327,12 +327,13 @@ class RuntimeHandler:
                 container, "cd /testbed && git add -A", log_file=log_file
             )
             
-            # Remove binary files from git staging
-            binary_remove_cmd = """
-            cd /testbed && for file in $(git diff --cached --name-only --diff-filter=ACMRT); do
-                if file "$file" | grep -q "binary\\|executable\\|data"; then
-                    git reset HEAD "$file" 2>/dev/null || true
-                fi
+            # Remove binary files from git staging using Git's own detection.
+            binary_remove_cmd = r"""
+            cd /testbed || exit 1
+            git diff --cached --numstat --no-renames --diff-filter=ACMRTD \
+            | awk -F '\t' '$1=="-" || $2=="-" {print $3}' \
+            | while IFS= read -r file; do
+                git reset HEAD -- "$file" >/dev/null 2>&1 || true
             done
             """
             self.cm.exec_command(container, binary_remove_cmd, log_file=log_file)
@@ -427,4 +428,3 @@ class RuntimeHandler:
         if had_trailing_newline and cleaned and not cleaned.endswith("\n"):
             cleaned += "\n"
         return cleaned
-
