@@ -76,7 +76,7 @@ flags can override metadata (see the argument list below).
 
 - `--timeout`  
   Timeout per task (seconds).  
-  Default: `7200`.  
+  Default: `3600`.  
   Resume mode: can override metadata if explicitly provided.
 
 - `--resume`  

@@ -1117,8 +1117,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--timeout",
         type=int,
-        default=7200,
-        help="Timeout per task in seconds (default: 7200 = 2 hours)"
+        default=3600,
+        help="Timeout per task in seconds (default: 3600 = 1 hour)"
     )
 
     parser.add_argument(

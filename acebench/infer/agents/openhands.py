@@ -255,7 +255,7 @@ echo 'export LLM_LOG_COMPLETIONS_FOLDER=/agent-logs/completions' >> ~/.bashrc
         self.cm.exec_command(container, "mkdir -p /agent-logs", log_file=log_file)
 
         condenser_enabled = (
-            str(self.env_vars.get("ENABLE_CONDENSER", "true")).strip().lower()
+            str(self.env_vars.get("ENABLE_CONDENSER", "false")).strip().lower()
             not in {"0", "false", "no", "off"}
         )
         if condenser_enabled:

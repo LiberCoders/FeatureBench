@@ -62,8 +62,8 @@ LLM_API_VERSION = ""
 OPENHANDS_MAX_ITERATIONS = ""
 # Optional: Save llm completions if true
 SAVE_COMPLETIONS = false
-# Optional: Enable OpenHands condensation (default true). Set false to disable all condensers.
-ENABLE_CONDENSER = true
+# Optional: Enable OpenHands condensation (default false). Set true to enable condensers.
+ENABLE_CONDENSER = false
 # Optional: Render infer.log mode (compact|full)
 INFER_LOG_RENDER_MODE = "full"
 

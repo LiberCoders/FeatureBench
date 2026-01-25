@@ -178,7 +178,7 @@ python -m acebench.infer.run_infer \
 | `--level` | Task levels to process (`1`, `2`) | `1` and `2` |
 | `--split` | Dataset split to load | `full` |
 | `--output-dir, -o` | Output directory | `runs` |
-| `--timeout` | Timeout per task in seconds | `7200` |
+| `--timeout` | Timeout per task in seconds | `3600` |
 | `--proxy-port` | Proxy port for container network | None |
 | `--gpu-ids` | Comma-separated GPU IDs (e.g., `0,1,2,3`) | All available |
 | `--resume` | Resume from previous run directory | None |
