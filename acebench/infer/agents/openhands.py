@@ -750,6 +750,12 @@ EOF""",
                                 "Agent hit context window limit - treating as successful completion"
                             )
                             return True
+
+                        elif "min() iterable argument is empty" in infer_log_content:
+                            self.logger.info(
+                                "Agent hit min() iterable argument is empty - treating as successful completion"
+                            )
+                            return True
                         
                     except Exception as e:
                         self.logger.warning(f"Failed to read infer.log: {e}")
