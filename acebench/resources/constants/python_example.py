@@ -44,6 +44,7 @@ SPECS_ACCELERATE = {
         "custom_docker_args": [   # custom Docker container runtime args
         ]
     },
+    "use_uv": False,      # if True, prefix test commands with "uv run"
 
     # test discovery config
     "test_scanner_cmd": TEST_DISCOVERY_DEFAULT,

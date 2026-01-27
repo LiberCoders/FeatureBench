@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
 from acebench.utils.logger import print_build_report, create_test_runner_logger
+from acebench.utils.command_utils import apply_uv_run_prefix
 from acebench.utils.parser.pytest_parser import PytestParser
 
 
@@ -204,7 +205,7 @@ class TestRunner:
 			raise RuntimeError(f"{specs_name}: no p2p test files found")
 		
 		# Get test command and timeout
-		test_cmd = specs.get("test_cmd")
+		test_cmd = apply_uv_run_prefix(specs.get("test_cmd"), specs)
 		timeout_one = specs.get("timeout_one")
 		if timeout_one is not None:
 			test_cmd = f"{test_cmd} --timeout={timeout_one}"

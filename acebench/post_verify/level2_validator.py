@@ -9,6 +9,7 @@ from tqdm import tqdm
 
 from acebench.utils.logger import create_level2_validator_logger
 from acebench.utils.parser.pytest_parser import PytestParser
+from acebench.utils.command_utils import apply_uv_run_prefix
 
 
 @dataclass
@@ -165,7 +166,7 @@ class Level2Validator:
                 self.logger.warning(f"Failed to install dummy agent_code package: {e}")
             
             # 5. Run test file
-            test_cmd = self.data_item.specs.get("test_cmd")
+            test_cmd = apply_uv_run_prefix(self.data_item.specs.get("test_cmd"), self.data_item.specs)
             timeout_test = self.data_item.specs.get("timeout_run", 300)
             
             # Build full test command

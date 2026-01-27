@@ -11,6 +11,7 @@ import os
 
 from acebench.utils.logger import create_f2p_validator_logger
 from acebench.utils.parser.pytest_parser import PytestParser
+from acebench.utils.command_utils import apply_uv_run_prefix
 
 
 @dataclass
@@ -149,7 +150,7 @@ class F2PValidator:
                     os.unlink(tmp_file_path)
             
             # 3. Run f2p tests
-            test_cmd = self.data_item.specs.get("test_cmd")
+            test_cmd = apply_uv_run_prefix(self.data_item.specs.get("test_cmd"), self.data_item.specs)
             timeout_test = self.data_item.specs.get("timeout_run", 300)
             
             # Build full test command

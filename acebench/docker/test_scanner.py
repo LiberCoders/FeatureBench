@@ -12,6 +12,7 @@ from tqdm import tqdm
 import tempfile
 
 from acebench.utils.logger import print_build_report, create_test_scanner_logger
+from acebench.utils.command_utils import apply_uv_run_prefix
 
 
 class TestScanner:
@@ -213,7 +214,7 @@ class TestScanner:
 			- log_file_path: Log file path
 		"""
 		# Get discovery command and timeout
-		test_scanner_cmd = specs.get("test_scanner_cmd")
+		test_scanner_cmd = apply_uv_run_prefix(specs.get("test_scanner_cmd"), specs)
 		timeout_scanner = specs.get("timeout_scanner", 300)
 		if isinstance(timeout_scanner, (int, float)) and timeout_scanner < 0:
 			# Allow timeout_scanner = -1 to mean no limit

@@ -185,6 +185,7 @@ def get_test_config_from_repo_settings(repo_settings: dict) -> dict:
         "test_cmd": repo_settings.get("test_cmd", "pytest -rA -p no:cacheprovider --color=no"),
         "timeout_run": repo_settings.get("timeout_run", 600),
         "timeout_one": repo_settings.get("timeout_one", 10),
+        "use_uv": repo_settings.get("use_uv", False),
     }
 
 

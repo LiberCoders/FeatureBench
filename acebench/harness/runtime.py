@@ -29,6 +29,7 @@ from acebench.harness.utils import (
     parse_repo_settings,
 )
 from acebench.harness.test_parsers import MAP_REPO_TO_TEST_CMD
+from acebench.utils.command_utils import apply_uv_run_prefix
 
 
 def _normalize_patch_content(patch_content: str) -> str:
@@ -282,6 +283,7 @@ def run_instance_level1(
             base_test_cmd = test_config["test_cmd"]
         timeout_one = test_config["timeout_one"]
         test_cmd = build_test_command(base_test_cmd, timeout_one)
+        test_cmd = apply_uv_run_prefix(test_cmd, test_config)
 
         # Use timeout_run from repo_settings if not overridden
         effective_timeout = timeout if timeout else test_config.get("timeout_run", 1800)
@@ -543,6 +545,7 @@ def run_instance_level2(
             base_test_cmd = test_config["test_cmd"]
         timeout_one = test_config["timeout_one"]
         test_cmd = build_test_command(base_test_cmd, timeout_one)
+        test_cmd = apply_uv_run_prefix(test_cmd, test_config)
 
         # Use timeout_run from repo_settings if not overridden
         effective_timeout = timeout if timeout else test_config.get("timeout_run", 1800)

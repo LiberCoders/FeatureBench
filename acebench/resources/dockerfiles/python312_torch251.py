@@ -24,9 +24,6 @@ pkg-config \
 cmake \
 meson \
 ninja-build \
-libhdf5-dev \
-libhdf5-103-1 \
-hdf5-tools \
 libffi-dev \
 libtiff-dev \
 libpng-dev \
@@ -91,7 +88,8 @@ RUN conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pk
 # Create pytorch_base conda environment with specified Python version and install PyTorch
 RUN /bin/bash -c "source /opt/miniconda3/etc/profile.d/conda.sh && \
     conda create -n pytorch_base python={python_version} -y && \
-    conda activate pytorch_base"
+    conda activate pytorch_base && \
+    pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://mirrors.nju.edu.cn/pytorch/whl/cu121"
 
 RUN adduser --disabled-password --gecos 'dog' nonroot
 

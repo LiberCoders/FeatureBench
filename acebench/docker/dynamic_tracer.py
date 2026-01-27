@@ -12,6 +12,7 @@ from tqdm import tqdm
 from datetime import datetime
 
 from acebench.utils.logger import print_build_report, create_dynamic_tracer_logger
+from acebench.utils.command_utils import apply_uv_run_prefix
 from acebench.classification.file_analyzer import FunctionClassVisitor
 
 
@@ -314,6 +315,7 @@ class DynamicTracer:
 		"""
 		container_id = None
 		is_timeout = False
+		specs = self.repo_manager.loaded_repos.get(specs_name, {}).get("specs", {})
 		
 		# Create log file paths (normal and collect)
 		log_file_path, collect_log_file_path = create_dynamic_tracer_logger(
@@ -351,6 +353,7 @@ class DynamicTracer:
 			
 			# 3. Run normal tracing (pytest execution)
 			trace_cmd = f"python /tmp/dynamic_script.py {test_file} /testbed -o /tmp/trace_result.json --pytest-args {dynamic_cmd}"
+			trace_cmd = apply_uv_run_prefix(trace_cmd, specs)
 
 			result = self.image_manager.exec_in_container(
 				container_id,
@@ -374,6 +377,7 @@ class DynamicTracer:
 			
 			# 6. Run collect-phase tracing (pytest --collect-only)
 			collect_trace_cmd = f"python /tmp/dynamic_script.py {test_file} /testbed -o /tmp/trace_result_collect.json --pytest-args '--collect-only'"
+			collect_trace_cmd = apply_uv_run_prefix(collect_trace_cmd, specs)
 			
 			collect_result = self.image_manager.exec_in_container(
 				container_id,

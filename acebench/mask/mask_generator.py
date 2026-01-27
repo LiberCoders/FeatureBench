@@ -19,6 +19,7 @@ from acebench.mask.signature_extractor import (
 )
 from acebench.mask.mask_validator import MaskValidator, ValidationResult
 from acebench.utils.logger import create_mask_generator_logger
+from acebench.utils.command_utils import apply_uv_run_prefix
 from acebench.utils.parser.pytest_parser import PytestParser
 
 logger = logging.getLogger(__name__)
@@ -1324,6 +1325,7 @@ class MaskGenerator:
         
         try:
             cmd = f"pytest --collect-only {test_file}"
+            cmd = apply_uv_run_prefix(cmd, self.data_item.specs)
             result = self.image_manager.exec_in_container(
                 container_id,
                 cmd,
@@ -1378,7 +1380,7 @@ class MaskGenerator:
             # No p2p tests; return success
             return True, None, None
         
-        test_cmd = self.data_item.specs.get("test_cmd")
+        test_cmd = apply_uv_run_prefix(self.data_item.specs.get("test_cmd"), self.data_item.specs)
         timeout_test = self.data_item.specs.get("timeout_run", 300)
         
         # Ensure all p2p test files are unmasked (use original versions)
