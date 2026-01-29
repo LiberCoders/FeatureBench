@@ -55,6 +55,8 @@ class DynamicTracer:
 		self._missing_container_files: Set[Tuple[str, str]] = set()
 		# Track known non-Python files to avoid repeated warnings
 		self._non_python_files: Set[str] = set()
+		# Track ignored files (e.g., .venv) to avoid repeated warnings
+		self._ignored_paths: Set[str] = set()
 	
 	def run(self, max_workers: Optional[int] = None) -> None:
 		"""
@@ -598,6 +600,14 @@ class DynamicTracer:
 			Definitions dict: {qualified_name::lineno: (start_line, end_line, type)}
 		"""
 		host_path_obj = Path(host_path)
+
+		# Skip .venv files entirely
+		ignore_key = container_path or str(host_path_obj)
+		if self._is_ignored_path(ignore_key):
+			if ignore_key not in self._ignored_paths:
+				self._ignored_paths.add(ignore_key)
+				tqdm.write(f"⚠️ {specs_name}: Skipping .venv file: {ignore_key}")
+			return None
 		missing_key = (specs_name, container_path)
 		# If file missing, copy from container (avoid repeated attempts)
 		if (not host_path_obj.exists()
@@ -667,3 +677,11 @@ class DynamicTracer:
 			return False
 		except Exception as e:
 			return False
+
+	def _is_ignored_path(self, path_str: str) -> bool:
+		"""Return True if the path should be ignored (e.g., .venv)."""
+		try:
+			parts = Path(path_str).parts
+			return ".venv" in parts
+		except Exception:
+			return "/.venv/" in path_str
