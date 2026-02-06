@@ -14,13 +14,16 @@ import json
 import logging
 import re
 import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from rich.console import Console
+from rich.console import Console, Group
+from rich.live import Live
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
+from rich.table import Table
 
 from acebench.infer.agents import get_agent
 from acebench.infer.config import InferConfigLoader, DatasetLoader
@@ -229,10 +232,25 @@ setup_console_logging()
 logger = logging.getLogger(__name__)
 
 
+class RunningTasksView:
+    """Dynamic renderable for currently running tasks."""
+
+    def __init__(self, runner: "InferenceRunner"):
+        self.runner = runner
+
+    def __rich__(self) -> Table:
+        return self.runner._build_running_tasks_table()
+
+
 class InferenceRunner:
     """Main inference runner class."""
     
-    def __init__(self, config: InferConfig, resume_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        config: InferConfig,
+        resume_dir: Optional[Path] = None,
+        config_path: Optional[Path] = None,
+    ):
         """
         Initialize the inference runner.
         
@@ -245,7 +263,7 @@ class InferenceRunner:
         self.resume_mode = resume_dir is not None
         
         # Load configuration
-        self.config_loader = InferConfigLoader()
+        self.config_loader = InferConfigLoader(config_path=config_path)
         self.cache_dir = self.config_loader.get_cache_dir()
         
         # Set output directory
@@ -275,18 +293,21 @@ class InferenceRunner:
             "claude_code": "ANTHROPIC_API_KEY",
             "gemini_cli": "GEMINI_API_KEY",
             "codex": "OPENAI_API_KEY",
+            "mini_swe_agent": "MSWEA_API_KEY",
         }
         base_url_map = {
             "openhands": "LLM_BASE_URL",
             "claude_code": "ANTHROPIC_BASE_URL",
             "gemini_cli": "GOOGLE_GEMINI_BASE_URL",
             "codex": "OPENAI_BASE_URL",
+            "mini_swe_agent": "MSWEA_BASE_URL",
         }
         version_map = {
             "openhands": "OPENHANDS_VERSION",
             "claude_code": "CLAUDE_CODE_VERSION",
             "gemini_cli": "GEMINI_CLI_VERSION",
             "codex": "CODEX_VERSION",
+            "mini_swe_agent": "MINI_SWE_AGENT_VERSION",
         }
 
         def _apply_override(flag_name: str, value: Optional[str], key_map: Dict[str, str]) -> None:
@@ -378,6 +399,59 @@ class InferenceRunner:
 
         # Optional GPU scheduler (initialized in run() after dataset is loaded)
         self._gpu_scheduler: Optional[GpuScheduler] = None
+        # Track currently running tasks for live terminal display.
+        self._running_tasks_lock = threading.Lock()
+        self._running_tasks: Dict[Tuple[str, int], datetime] = {}
+
+    @staticmethod
+    def _format_elapsed(total_seconds: float) -> str:
+        """Format elapsed seconds as HH:MM:SS."""
+        seconds = max(0, int(total_seconds))
+        hours, rem = divmod(seconds, 3600)
+        minutes, secs = divmod(rem, 60)
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+    def _mark_task_started(self, task_id: str, attempt: int) -> None:
+        """Record task start for live running-task display."""
+        with self._running_tasks_lock:
+            self._running_tasks[(task_id, attempt)] = datetime.now()
+
+    def _mark_task_finished(self, task_id: str, attempt: int) -> None:
+        """Remove task from live running-task display."""
+        with self._running_tasks_lock:
+            self._running_tasks.pop((task_id, attempt), None)
+
+    def _snapshot_running_tasks(self) -> List[Tuple[str, int, datetime]]:
+        """Get running tasks sorted by launch time."""
+        with self._running_tasks_lock:
+            items = list(self._running_tasks.items())
+        items.sort(key=lambda item: item[1])
+        return [(task_id, attempt, started_at) for (task_id, attempt), started_at in items]
+
+    def _build_running_tasks_table(self) -> Table:
+        """Build a table showing currently running tasks."""
+        table = Table(
+            show_header=False,
+            box=None,
+            pad_edge=False,
+            expand=True,
+        )
+        table.add_column("Running Task", style="bright_black")
+        table.add_column("Elapsed", justify="right", width=10, style="bright_black")
+
+        running = self._snapshot_running_tasks()
+        if not running:
+            table.add_row("[dim]No active task[/]", "")
+            return table
+
+        now = datetime.now()
+        multi_attempt = self.config.n_attempts > 1
+        for idx, (task_id, attempt, started_at) in enumerate(running, start=1):
+            label = task_id if not multi_attempt else f"{task_id} (attempt {attempt})"
+            indexed_label = f"[{idx}] {label}"
+            elapsed = self._format_elapsed((now - started_at).total_seconds())
+            table.add_row(indexed_label, elapsed)
+        return table
     
     def _load_dataset(self) -> List[TaskInstance]:
         """Load dataset from HuggingFace."""
@@ -466,6 +540,9 @@ class InferenceRunner:
             metadata=instance.metadata,
             success=False
         )
+
+        # Start live timing once task setup is complete.
+        self._mark_task_started(task_id, attempt)
         
         try:
             # Get Docker image
@@ -596,6 +673,9 @@ class InferenceRunner:
                 f.write(f"\n\nFATAL ERROR: {e}\n")
         
         finally:
+            # Remove from live running-task display as soon as task completes.
+            self._mark_task_finished(task_id, attempt)
+
             # Clean up container
             if container is not None:
                 try:
@@ -895,8 +975,8 @@ class InferenceRunner:
                 self.console.print("[bold green]All tasks already completed![/]")
                 return
             
-            # Process tasks with rich progress bar
-            with Progress(
+            # Process tasks with rich progress bar + live running-task list
+            progress = Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
@@ -905,15 +985,19 @@ class InferenceRunner:
                 TimeElapsedColumn(),
                 console=self.console,
                 refresh_per_second=10,
-            ) as progress:
-                
-                task_progress = progress.add_task(
-                    "[cyan]Processing...",
-                    total=total_tasks,
-                    success=0,
-                    failure=0
-                )
-                
+            )
+            task_progress = progress.add_task(
+                "[cyan]Processing...",
+                total=total_tasks,
+                success=0,
+                failure=0,
+            )
+
+            with Live(
+                Group(progress, RunningTasksView(self)),
+                console=self.console,
+                refresh_per_second=10,
+            ):
                 if self.config.n_concurrent == 1:
                     # Sequential processing
                     for instance, attempt in tasks:
@@ -1007,10 +1091,26 @@ def parse_args() -> argparse.Namespace:
     dataset_provided = "--dataset" in argv
     
     parser.add_argument(
+        "--config-path",
+        type=str,
+        default=None,
+        help=(
+            "Path to inference config.toml. "
+            "If not provided, uses default discovery (searching upward from acebench/infer)."
+        ),
+    )
+
+    parser.add_argument(
         "--agent", "-a",
         type=str,
         default=None,
-        choices=["claude_code", "gemini_cli", "openhands", "codex"],
+        choices=[
+            "claude_code",
+            "gemini_cli",
+            "openhands",
+            "codex",
+            "mini_swe_agent",
+        ],
         help="Agent to use for inference (required unless --resume is used)"
     )
     
@@ -1376,6 +1476,7 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
 def main():
     """Main entry point."""
     args = parse_args()
+    config_path = Path(args.config_path).expanduser() if args.config_path else None
     
     # Handle resume mode
     if args.resume:
@@ -1387,7 +1488,7 @@ def main():
         config, output_dir = load_resume_config(resume_dir, args)
         
         # Run inference in resume mode
-        runner = InferenceRunner(config, resume_dir=output_dir)
+        runner = InferenceRunner(config, resume_dir=output_dir, config_path=config_path)
         runner.run()
     else:
         # Normal mode - validate required arguments
@@ -1435,10 +1536,9 @@ def main():
         )
         
         # Run inference
-        runner = InferenceRunner(config)
+        runner = InferenceRunner(config, config_path=config_path)
         runner.run()
 
 
 if __name__ == "__main__":
     main()
-

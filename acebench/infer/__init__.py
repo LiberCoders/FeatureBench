@@ -6,7 +6,7 @@ on ACE-Bench instances and generating patches.
 
 Main components:
 - run_infer: Main entry point for running inference
-- agents: Agent implementations (claude_code, gemini_cli, openhands, codex)
+- agents: Agent implementations (claude_code, gemini_cli, mini_swe_agent, openhands, codex)
 - container: Docker container management
 - runtime: Runtime initialization and completion
 - output: Thread-safe output management
@@ -37,6 +37,7 @@ from acebench.infer.agents import (
     BaseAgent,
     ClaudeCodeAgent,
     GeminiCliAgent,
+    MiniSweAgent,
     OpenHandsAgent,
     CodexAgent,
 )
@@ -75,6 +76,7 @@ __all__ = [
     "BaseAgent",
     "ClaudeCodeAgent",
     "GeminiCliAgent",
+    "MiniSweAgent",
     "OpenHandsAgent",
     "CodexAgent",
 ]

@@ -345,9 +345,20 @@ class BaseAgent(ABC):
                 self.logger.info(f"{self.name} agent completed successfully")
                 return True
 
-            if not success_run and success_post_run:
+            # special handling for openhands under --force-timeout
+            force_timeout = (
+                str(self.env_vars.get("ACE_FORCE_TIMEOUT", "")).strip().lower()
+                in {"1", "true", "yes", "on"}
+            )
+            if (
+                not success_run
+                and success_post_run
+                and self.name == "openhands"
+                and force_timeout
+            ):
                 self.logger.warning(
-                    f"{self.name} agent exited with code {exit_code}, but post-run hook signaled success; treating run as successful"
+                    "openhands exited with non-zero status, but post-run hook accepted it "
+                    "under --force-timeout; treating run as successful"
                 )
                 return True
 
@@ -376,4 +387,3 @@ class BaseAgent(ABC):
                 f.write("\n" + "=" * 60 + "\n")
                 f.write(f"END Agent Execution: {self.name}\n")
                 f.write("=" * 60 + "\n\n")
-

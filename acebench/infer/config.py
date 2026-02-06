@@ -6,7 +6,6 @@ import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from urllib.parse import urlparse
 import toml
 
 
@@ -76,70 +75,6 @@ class InferConfigLoader:
             return Path(path).expanduser()
         return None
 
-    def get_no_proxy_hosts(self) -> Optional[str]:
-        """Get comma-separated NO_PROXY host list from [infer].
-
-        Supports either a string or a list in config.toml:
-
-        - [infer].no_proxy_hosts = "yunwu.ai,api3.wlai.vip"
-        - [infer].no_proxy_hosts = ["https://yunwu.ai/v1", "api3.wlai.vip"]
-
-        Values may be full URLs; we normalize to hostnames.
-        """
-        infer_cfg = self._config.get("infer", {}) or {}
-        raw = infer_cfg.get("no_proxy_hosts")
-        if raw is None:
-            return None
-
-        items: List[str] = []
-        if isinstance(raw, list):
-            for v in raw:
-                if v is None:
-                    continue
-                s = str(v).strip()
-                if s:
-                    items.append(s)
-        else:
-            s = str(raw).strip()
-            if not s:
-                return None
-            # Allow either comma-separated or whitespace-separated.
-            for part in s.replace("\n", ",").split(","):
-                part = part.strip()
-                if not part:
-                    continue
-                for tok in part.split():
-                    tok = tok.strip()
-                    if tok:
-                        items.append(tok)
-
-        normalized: List[str] = []
-        for item in items:
-            v = item.strip()
-            if not v:
-                continue
-
-            host: Optional[str] = None
-            if "://" in v:
-                parsed = urlparse(v)
-                host = parsed.hostname
-            else:
-                # Allow "host/path" input; keep only host.
-                host = v.split("/", 1)[0].strip()
-
-            if host:
-                normalized.append(host)
-
-        # Dedupe while preserving order.
-        seen = set()
-        uniq: List[str] = []
-        for h in normalized:
-            if h not in seen:
-                seen.add(h)
-                uniq.append(h)
-
-        return ",".join(uniq) if uniq else None
-
     def get_agent_env_vars(self, agent_name: str) -> Dict[str, str]:
         """
         Get environment variables for a specific agent.
@@ -164,11 +99,6 @@ class InferConfigLoader:
             if isinstance(value, (list, dict)) and not value:
                 continue
             env_vars[key] = str(value)
-
-        # [infer] defaults (applied only if not explicitly set elsewhere)
-        no_proxy_hosts = self.get_no_proxy_hosts()
-        if no_proxy_hosts:
-            env_vars.setdefault("ACE_NO_PROXY_HOSTS", no_proxy_hosts)
 
         self._apply_agent_defaults_and_validate(agent_name, env_vars)
         

@@ -14,6 +14,7 @@ class AgentName(str, Enum):
     """Supported agent names."""
     CLAUDE_CODE = "claude_code"
     GEMINI_CLI = "gemini_cli"
+    MINI_SWE_AGENT = "mini_swe_agent"
     OPENHANDS = "openhands"
     CODEX = "codex"
 
@@ -338,4 +339,3 @@ class TaskPaths:
     def ensure_dirs(self) -> None:
         """Create all necessary directories."""
         self.attempt_dir.mkdir(parents=True, exist_ok=True)
-

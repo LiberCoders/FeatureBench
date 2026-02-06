@@ -248,25 +248,6 @@ echo "Codex installation complete"
 
         lines.extend(self._get_proxy_unset_lines())
 
-        # Proxy bypass configuration (append selected gateways to NO_PROXY).
-        lines.extend(
-            [
-                "",
-                "# Proxy bypass for selected gateways",
-                '# Always bypass proxies for local loopback',
-                'ACE_NO_PROXY_LOOPBACK="${ACE_NO_PROXY_LOOPBACK:-localhost,127.0.0.1,::1}"',
-                'ACE_NO_PROXY_HOSTS="${ACE_NO_PROXY_HOSTS:-yunwu.ai,api3.wlai.vip,dashscope.aliyuncs.com}"',
-                'ACE_NO_PROXY_ALL="${ACE_NO_PROXY_LOOPBACK},${ACE_NO_PROXY_HOSTS}"',
-                '_ace_no_proxy_current="${NO_PROXY:-${no_proxy:-}}"',
-                'if [ -n "$_ace_no_proxy_current" ]; then',
-                '  export NO_PROXY="${_ace_no_proxy_current},${ACE_NO_PROXY_ALL}"',
-                "else",
-                '  export NO_PROXY="${ACE_NO_PROXY_ALL}"',
-                "fi",
-                'export no_proxy="$NO_PROXY"',
-            ]
-        )
-
         # If the user is targeting Azure via the Codex CLI, Codex expects a config file
         # at ~/.codex/config.toml describing the provider wiring.
         # See: base_url must include /openai/v1 and env_key must reference an env var.

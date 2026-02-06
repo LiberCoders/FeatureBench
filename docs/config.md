@@ -43,7 +43,7 @@ When harness loads the HuggingFace dataset during evaluation, it uses `HF_ENDPOI
 
 ## B. Infer
 
-The core idea of infer is: run an agent inside a container (e.g. `claude_code/openhands/codex/...`) and let it generate a patch for each task.
+The core idea of infer is: run an agent inside a container (e.g. `claude_code/openhands/codex/mini_swe_agent/...`) and let it generate a patch for each task.
 
 How infer reads `config.toml`:
 
@@ -70,7 +70,7 @@ download_cache_dir = "/abs/path/to/ACE-Bench/download_cache"
 LLM_API_KEY = ""
 LLM_BASE_URL = ""     # Optional
 LLM_API_VERSION = ""  # Optional: Azure only
-OPENHANDS_VERSION = "0.62.0" # Optional: pin OpenHands version (empty usually means default/latest)
+OPENHANDS_VERSION = "" # Optional: pin OpenHands version (empty usually means default/latest)
 SAVE_COMPLETIONS = false      # Optional: whether to save LLM completions (true/false)
 INFER_LOG_RENDER_MODE = "compact" # Optional: compact|full for infer.log rendering
 
@@ -142,6 +142,16 @@ Example 2: Codex + Azure OpenAI
 OPENAI_API_KEY = "<your-azure-api-key>"
 OPENAI_BASE_URL = "https://<resource>.openai.azure.com"
 CODEX_REASONING_EFFORT = "high"
+```
+
+### B6. [infer_config.mini_swe_agent]
+
+```toml
+[infer_config.mini_swe_agent]
+MSWEA_API_KEY = ""
+MSWEA_BASE_URL = ""
+MSWEA_COST_TRACKING = ""
+MINI_SWE_AGENT_VERSION = ""
 ```
 
 ---

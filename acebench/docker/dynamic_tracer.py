@@ -606,7 +606,7 @@ class DynamicTracer:
 		if self._is_ignored_path(ignore_key):
 			if ignore_key not in self._ignored_paths:
 				self._ignored_paths.add(ignore_key)
-				tqdm.write(f"⚠️ {specs_name}: Skipping .venv file: {ignore_key}")
+				# tqdm.write(f"⚠️ {specs_name}: Skipping .venv file: {ignore_key}")
 			return None
 		missing_key = (specs_name, container_path)
 		# If file missing, copy from container (avoid repeated attempts)

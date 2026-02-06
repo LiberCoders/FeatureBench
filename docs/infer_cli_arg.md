@@ -25,11 +25,12 @@ flags can override metadata (see the argument list below).
 ### Core
 
 - `--agent, -a`  
-  Agent to use: `claude_code`, `gemini_cli`, `openhands`, `codex`.  
+  Agent to use: `claude_code`, `gemini_cli`, `openhands`, `codex`, `mini_swe_agent`.  
   Required unless `--resume` is used.
 
 - `--model, -m`  
   Model name (e.g., `claude-sonnet-4-20250514`, `gemini-3-pro-preview`).  
+  For `openhands` or `mini_swe_agent`, use `provider/model` format.  
   Required unless `--resume` is used.
 
 - `--api-key`  

@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import shutil
+import threading
 import traceback
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -28,8 +29,10 @@ from typing import Any
 
 import pandas as pd
 from datasets import load_dataset
-from rich.console import Console
+from rich.console import Console, Group
+from rich.live import Live
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
+from rich.table import Table
 
 from acebench.harness.constants import (
     EvalType,
@@ -73,6 +76,68 @@ console = Console()
 
 
 DEFAULT_DATASET = "LiberCoders/ACE-Bench"
+
+
+class RunningTasksTracker:
+    """Track currently running evaluation tasks for rich live display."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._running_tasks: dict[tuple[str, int], datetime] = {}
+
+    @staticmethod
+    def _format_elapsed(total_seconds: float) -> str:
+        seconds = max(0, int(total_seconds))
+        hours, rem = divmod(seconds, 3600)
+        minutes, secs = divmod(rem, 60)
+        return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+    def mark_started(self, instance_id: str, n_attempt: int) -> None:
+        with self._lock:
+            self._running_tasks[(instance_id, n_attempt)] = datetime.now()
+
+    def mark_finished(self, instance_id: str, n_attempt: int) -> None:
+        with self._lock:
+            self._running_tasks.pop((instance_id, n_attempt), None)
+
+    def _snapshot(self) -> list[tuple[str, int, datetime]]:
+        with self._lock:
+            items = list(self._running_tasks.items())
+        items.sort(key=lambda item: item[1])
+        return [(instance_id, n_attempt, started_at) for (instance_id, n_attempt), started_at in items]
+
+    def build_table(self) -> Table:
+        table = Table(
+            show_header=False,
+            box=None,
+            pad_edge=False,
+            expand=True,
+        )
+        table.add_column("Running Task", style="bright_black")
+        table.add_column("Elapsed", justify="right", width=10, style="bright_black")
+
+        running = self._snapshot()
+        if not running:
+            table.add_row("[dim]No active task[/]", "")
+            return table
+
+        now = datetime.now()
+        for idx, (instance_id, n_attempt, started_at) in enumerate(running, start=1):
+            label = instance_id if n_attempt == 1 else f"{instance_id} (attempt {n_attempt})"
+            indexed_label = f"[{idx}] {label}"
+            elapsed = self._format_elapsed((now - started_at).total_seconds())
+            table.add_row(indexed_label, elapsed)
+        return table
+
+
+class RunningTasksView:
+    """Live renderable for currently running harness tasks."""
+
+    def __init__(self, tracker: RunningTasksTracker):
+        self._tracker = tracker
+
+    def __rich__(self) -> Table:
+        return self._tracker.build_table()
 
 
 def setup_logger(name: str, log_file: Path) -> logging.Logger:
@@ -138,6 +203,7 @@ def run_instance(
     docker_runtime_config: dict | None = None,
     gpu_scheduler: GpuScheduler | None = None,
     force_rerun_ids: set[str] | None = None,
+    running_tasks_tracker: RunningTasksTracker | None = None,
 ) -> dict[str, Any]:
     """
     Run evaluation for a single instance.
@@ -189,6 +255,9 @@ def run_instance(
     container_manager = EvalContainerManager(logger)
 
     try:
+        if running_tasks_tracker is not None:
+            running_tasks_tracker.mark_started(instance_id, n_attempt)
+
         # Parse repo_settings for docker runtime config (or reuse precomputed)
         docker_runtime_config = docker_runtime_config or {}
         if not docker_runtime_config:
@@ -324,6 +393,9 @@ def run_instance(
                 gpu_scheduler.release(gpu_lease)
             except Exception as e:
                 logger.warning(f"Error releasing GPU lease: {e}")
+
+        if running_tasks_tracker is not None:
+            running_tasks_tracker.mark_finished(instance_id, n_attempt)
 
 
 def load_dataset_from_hf(console: Console, split: str, dataset: str) -> pd.DataFrame:
@@ -660,7 +732,8 @@ def main():
 
     # Run evaluations in parallel with rich progress
     results = []
-    with Progress(
+    running_tasks_tracker = RunningTasksTracker()
+    progress = Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
@@ -669,15 +742,20 @@ def main():
         TimeElapsedColumn(),
         console=console,
         refresh_per_second=10,
-    ) as progress:
+    )
 
-        task_progress = progress.add_task(
-            "[cyan]Evaluating...",
-            total=total_tasks,
-            resolved=0,
-            failed=0
-        )
+    task_progress = progress.add_task(
+        "[cyan]Evaluating...",
+        total=total_tasks,
+        resolved=0,
+        failed=0
+    )
 
+    with Live(
+        Group(progress, RunningTasksView(running_tasks_tracker)),
+        console=console,
+        refresh_per_second=10,
+    ):
         with ThreadPoolExecutor(max_workers=args.n_concurrent) as executor:
             futures = {
                 executor.submit(
@@ -693,6 +771,7 @@ def main():
                     docker_runtime_config,
                     gpu_scheduler,
                     force_rerun_ids,
+                    running_tasks_tracker,
                 ): instance[KEY_INSTANCE_ID]
                 for instance, pred, docker_runtime_config in instances_to_eval
             }

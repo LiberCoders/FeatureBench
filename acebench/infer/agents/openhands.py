@@ -144,6 +144,16 @@ uv_pip_install_with_fallback $ADD_DEPS
 # venv is already at fixed path used by runner
 mkdir -p /opt
 
+OPENHANDS_INSTALLED_VERSION="$("$VENV_DIR/bin/python" - <<'PY'
+import importlib.metadata
+try:
+    print(importlib.metadata.version("openhands-ai"))
+except Exception:
+    print("unknown")
+PY
+)"
+echo "OpenHands version: $OPENHANDS_INSTALLED_VERSION"
+
 echo "OpenHands installation complete"
 
 echo 'export LOG_ALL_EVENTS=true' >> ~/.bashrc
@@ -153,16 +163,13 @@ echo 'export LLM_LOG_COMPLETIONS_FOLDER=/agent-logs/completions' >> ~/.bashrc
     
     def get_run_command(self, instruction: str) -> str:
         """Get the command to run OpenHands."""
-#         instruction = """
-# please create a hello-world.txt containing your self-introduction under testbed.   
-# """
         escaped_instruction = shlex.quote(instruction)
-        
+
         return (
-            f"SANDBOX_VOLUMES=${{PWD}}:/workspace:rw "
-            f"/opt/openhands-venv/bin/python -m openhands.core.main "
-            f"--config-file /agent-logs/openhands-config.toml "
-            f"--task {escaped_instruction}"
+            "set -o pipefail; "
+            "SANDBOX_VOLUMES=${PWD}:/workspace:rw "
+            "/opt/openhands-venv/bin/python -m openhands.core.main "
+            f"--config-file /agent-logs/openhands-config.toml --task {escaped_instruction}"
         )
     
     def get_env_setup_script(self) -> str:
@@ -224,33 +231,11 @@ echo 'export LLM_LOG_COMPLETIONS_FOLDER=/agent-logs/completions' >> ~/.bashrc
 
         lines.extend(self._get_proxy_unset_lines())
 
-        # Proxy bypass for selected gateways (avoid flaky proxy TLS issues).
-        # We append to existing NO_PROXY/no_proxy instead of overwriting.
-        lines.extend(
-            [
-                "",
-                "# Proxy bypass for selected gateways",
-                '# Always bypass proxies for local loopback (OpenHands LocalRuntime uses localhost:<port>)',
-                'ACE_NO_PROXY_LOOPBACK="${ACE_NO_PROXY_LOOPBACK:-localhost,127.0.0.1,::1}"',
-                'ACE_NO_PROXY_HOSTS="${ACE_NO_PROXY_HOSTS:-yunwu.ai,api3.wlai.vip,dashscope.aliyuncs.com}"',
-                'ACE_NO_PROXY_ALL="${ACE_NO_PROXY_LOOPBACK},${ACE_NO_PROXY_HOSTS}"',
-                '_ace_no_proxy_current="${NO_PROXY:-${no_proxy:-}}"',
-                'if [ -n "$_ace_no_proxy_current" ]; then',
-                '  export NO_PROXY="${_ace_no_proxy_current},${ACE_NO_PROXY_ALL}"',
-                "else",
-                '  export NO_PROXY="${ACE_NO_PROXY_ALL}"',
-                "fi",
-                'export no_proxy="$NO_PROXY"',
-            ]
-        )
-
         return "\n".join(lines)
     
     def pre_run_hook(self, container, log_file) -> bool:
         """
-        Create agent logs directory before running.
-        And ignore python path /testbed in /opt/openhands-venv/lib/python3.13/site-packages/openhands/core/main.py
-        to avoid using codes under /testbed for openhands
+        Create agent logs directory and prepare OpenHands runtime config.
         """
         self.cm.exec_command(container, "mkdir -p /agent-logs", log_file=log_file)
 
@@ -298,10 +283,9 @@ EOF""",
 
         llm_model = self._kwargs.get("model") or ""
         llm_model_lower = str(llm_model).strip().lower()
-
-        is_openhands_0_62_0 = self.venv_name.split('-')[-1] == '0.62.0'
-        is_claude_model = 'claude' in llm_model_lower
-        is_gemini_model = 'gemini' in llm_model_lower
+        is_openhands_0_62_0 = self.venv_name.split("-")[-1] == "0.62.0"
+        is_claude_model = "claude" in llm_model_lower
+        is_gemini_model = "gemini" in llm_model_lower
 
         # IMPORTANT: Avoid leaking OpenHands' own site-packages into the runtime
         exit_code, output = self.cm.exec_command(

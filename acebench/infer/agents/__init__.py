@@ -6,6 +6,7 @@ from acebench.infer.agents.base import BaseAgent
 from acebench.infer.agents.codex import CodexAgent
 from acebench.infer.agents.claude_code import ClaudeCodeAgent
 from acebench.infer.agents.gemini_cli import GeminiCliAgent
+from acebench.infer.agents.mini_swe_agent import MiniSweAgent
 from acebench.infer.agents.openhands import OpenHandsAgent
 
 __all__ = [
@@ -13,6 +14,7 @@ __all__ = [
     "CodexAgent",
     "ClaudeCodeAgent",
     "GeminiCliAgent",
+    "MiniSweAgent",
     "OpenHandsAgent"
 ]
 
@@ -32,6 +34,7 @@ def get_agent(agent_name: str, **kwargs) -> BaseAgent:
         "codex": CodexAgent,
         "claude_code": ClaudeCodeAgent,
         "gemini_cli": GeminiCliAgent,
+        "mini_swe_agent": MiniSweAgent,
         "openhands": OpenHandsAgent
     }
     
@@ -40,4 +43,3 @@ def get_agent(agent_name: str, **kwargs) -> BaseAgent:
         raise ValueError(f"Unknown agent: {agent_name}. Available: {list(agents.keys())}")
     
     return agent_class(**kwargs)
-

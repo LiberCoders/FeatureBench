@@ -12,17 +12,9 @@
 
 ---
 
-# ACE-Bench: Benchmarking Agentic Coding in End-to-End Development of Complex Features
-
-> ACE-Bench is a benchmark for evaluating agents on **end-to-end development of complex features**. It incorporates an execution-based evaluation protocol and a scalable **test-driven** method that automatically derives tasks from code repositories with minimal human effort.
-
-<p align="center">
-  <img src="docs/pics/workflow.png" style="height: 30em" alt="workflow">
-</p>
-
 ## 📰 News
 
-🎁 **2026.01.18**: We now support one-click inference for mainstream agent frameworks, including OpenHands, Claude Code, Codex, and Gemini CLI. All supported agent frameworks can be found [here](acebench/infer/agents/). We have also open-sourced the ACE-Bench data pipeline.
+🎁 **2026.02.06**: We now support one-click inference for mainstream agent frameworks, including OpenHands, Claude Code, Codex, Gemini CLI, and mini-swe-agent. All supported agent frameworks can be found [here](acebench/infer/agents/). We have also open-sourced the ACE-Bench data pipeline.
 
 ## 🚀 Quickstart
 
@@ -170,7 +162,7 @@ python -m acebench.infer.run_infer \
 
 | Argument | Description | Default |
 |----------|-------------|---------|
-| `--agent, -a` | Agent to use (`claude_code`, `openhands`) | Required |
+| `--agent, -a` | Agent to use (`claude_code`, `gemini_cli`, `openhands`, `codex`, `mini_swe_agent`) | Required |
 | `--model, -m` | Model name (e.g., `claude-sonnet-4-20250514`) | Required |
 | `--n-concurrent` | Number of concurrent tasks | `1` |
 | `--n-attempts` | Number of attempts per task | `1` |
