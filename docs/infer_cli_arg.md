@@ -1,28 +1,32 @@
 # ACE-Bench Infer CLI Arguments
 
-This document describes all CLI arguments supported by `acebench.infer.run_infer`.
+This document describes all CLI arguments supported by `ace infer`.
 
-## Basic Usage
+## 1 Basic Usage
 
 ```bash
-python -m acebench.infer.run_infer \
+ace infer \
   --agent gemini_cli \
   --model gemini-3-pro-preview
 ```
 
-## Resume Mode
+## 2 Resume Mode
 
 ```bash
-python -m acebench.infer.run_infer \
+ace infer \
   --resume runs/2025-12-02__16-06-04
 ```
 
 In resume mode, most arguments are loaded from `run_metadata.json`. Only a few
 flags can override metadata (see the argument list below).
 
-## Argument Reference
+## 3 Argument Reference
 
 ### Core
+
+- `--config-path`  
+  Path to `config.toml`.  
+  If not provided, uses default discovery (searching upward from `acebench/infer`). 
 
 - `--agent, -a`  
   Agent to use: `claude_code`, `gemini_cli`, `openhands`, `codex`, `mini_swe_agent`.  
@@ -31,7 +35,7 @@ flags can override metadata (see the argument list below).
 - `--model, -m`  
   Model name (e.g., `claude-sonnet-4-20250514`, `gemini-3-pro-preview`).  
   For `openhands` or `mini_swe_agent`, use `provider/model` format.  
-  Required unless `--resume` is used.
+  Required unless `--resume` is used. 
 
 - `--api-key`  
   Override agent API key (takes precedence over config).  
@@ -91,7 +95,7 @@ flags can override metadata (see the argument list below).
 ### Networking / Runtime
 
 - `--proxy-port`  
-  Proxy port for container network (host gateway).  
+  Proxy port for container network (host gateway) (e.g., `--proxy-port 7890`).  
   Default: `None`.  
   Resume mode: can override metadata if explicitly provided.
 
@@ -131,3 +135,18 @@ flags can override metadata (see the argument list below).
   When resuming OpenHands runs, treat attempts with existing `infer.log` TIMEOUT markers as completed so they are not rerun.  
   Default: disabled.  
   Resume mode: can override metadata if explicitly provided.
+
+## Section 4: Output Directory Structure
+
+```
+runs/{timestamp}/
+├── output.jsonl                  # Inference results (one JSON per line)
+├── run_metadata.json             # Run configuration and metadata
+├── run_summary_{timestamp}.json  # Run summary of success and failure
+└── run_outputs/ 
+    └── {task_id}/
+        └── attempt-{n}/
+            ├── infer.log         # Agent execution log
+            ├── run.log           # Runtime log
+            └── patch.diff        # Generated patch
+```

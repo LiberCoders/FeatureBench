@@ -398,7 +398,12 @@ def run_instance(
             running_tasks_tracker.mark_finished(instance_id, n_attempt)
 
 
-def load_dataset_from_hf(console: Console, split: str, dataset: str) -> pd.DataFrame:
+def load_dataset_from_hf(
+    console: Console,
+    split: str,
+    dataset: str,
+    config_path: str | None = None,
+) -> pd.DataFrame:
     """
     Load dataset from HuggingFace using config.toml settings.
 
@@ -414,7 +419,8 @@ def load_dataset_from_hf(console: Console, split: str, dataset: str) -> pd.DataF
         raise ValueError("dataset must be a non-empty string")
 
     try:
-        config_loader = InferConfigLoader()
+        resolved_path = Path(config_path).expanduser() if config_path else None
+        config_loader = InferConfigLoader(resolved_path)
         env_vars = config_loader.env_vars
         hf_token = env_vars.get("HF_TOKEN")
     except FileNotFoundError:
@@ -466,6 +472,12 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
+    parser.add_argument(
+        "--config-path",
+        type=str,
+        default=None,
+        help="Path to config.toml (used for HF_TOKEN/HF_ENDPOINT when loading dataset)",
+    )
     parser.add_argument(
         "--predictions-path", "-p",
         type=str,
@@ -634,7 +646,7 @@ def main():
     console.print()
 
     # Load dataset
-    dataset = load_dataset_from_hf(console, args.split, args.dataset)
+    dataset = load_dataset_from_hf(console, args.split, args.dataset, args.config_path)
 
     # Load predictions
     console.print(f"[bold blue]Loading predictions...[/]")

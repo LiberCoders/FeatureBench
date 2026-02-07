@@ -4,6 +4,7 @@ Commands:
   - ace infer ...   -> acebench.infer.run_infer
   - ace eval ...    -> acebench.harness.run_evaluation
   - ace pull ...    -> acebench.scripts.pull_images
+  - ace data ...    -> acebench.pipeline
 """
 
 from __future__ import annotations
@@ -21,21 +22,25 @@ def _print_help(stream=None) -> None:
         "  ace infer [INFER_ARGS...]\n"
         "  ace eval [EVAL_ARGS...]\n"
         "  ace pull [PULL_ARGS...]\n"
+        "  ace data [PIPELINE_ARGS...]\n"
         "\n"
         "Core commands:\n"
         "  infer  Run inference (supports all existing run_infer args)\n"
         "  eval   Run harness evaluation (supports all existing harness args)\n"
         "  pull   Pre-pull images (supports --mode, and other pull_images args)\n"
+        "  data   Run data pipeline (supports acebench-pipeline args)\n"
         "\n"
         "Examples:\n"
         "  ace infer --agent mini_swe_agent --model openai/gpt-4o --split lite\n"
         "  ace eval --predictions-path runs/xxx/output.jsonl --split lite\n"
         "  ace pull --mode full\n"
+        "  ace data --config-path constants/python_new.py --output-dir runs/data\n"
         "\n"
         "Use command-specific help:\n"
         "  ace infer --help\n"
         "  ace eval --help\n"
         "  ace pull --help\n"
+        "  ace data --help\n"
     )
 
 
@@ -88,6 +93,12 @@ def _dispatch_pull(args: Sequence[str]) -> int:
         return 1
 
 
+def _dispatch_data(args: Sequence[str]) -> int:
+    from acebench.pipeline import main as pipeline_main
+
+    return _run_with_patched_argv("ace data", args, pipeline_main)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(argv if argv is not None else sys.argv[1:])
 
@@ -106,6 +117,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _dispatch_eval(command_args)
     if command == "pull":
         return _dispatch_pull(command_args)
+    if command == "data":
+        return _dispatch_data(command_args)
 
     print(f"Unknown command: {command}", file=sys.stderr)
     _print_help(stream=sys.stderr)

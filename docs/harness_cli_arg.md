@@ -1,17 +1,21 @@
 # ACE-Bench Harness CLI Arguments
 
-This document describes all CLI arguments supported by `acebench.harness.run_evaluation`.
+This document describes all CLI arguments supported by `ace eval`.
 
-## Basic Usage
+## 1 Basic Usage
 
 ```bash
-python -m acebench.harness.run_evaluation \
-  --predictions-path runs/2026-01-17__12-54-55/output.jsonl
+ace eval \
+  -p runs/2026-01-17__12-54-55/output.jsonl
 ```
 
-## Argument Reference
+## 2 Argument Reference
 
 ### Core
+
+- `--config-path`  
+  Path to `config.toml` (used for `HF_TOKEN` / `HF_ENDPOINT` when loading dataset).  
+  If not provided, uses default discovery (searching upward from `acebench/infer`).
 
 - `--predictions-path, -p`  
   Path to predictions JSONL file (typically `runs/<timestamp>/output.jsonl`).  
@@ -34,7 +38,7 @@ python -m acebench.harness.run_evaluation \
   Default: all available.
 
 - `--proxy-port`  
-  Proxy port for container network (host gateway).  
+  Proxy port for container network (host gateway) (e.g., `--proxy-port 7890`).  
   Default: `None`.
 
 - `--review-codes`  
@@ -59,3 +63,32 @@ python -m acebench.harness.run_evaluation \
 - `--force-rerun`  
   Force rerun specified task IDs even if `report.json` already exists.  
   Accepts space-separated task IDs or a `.txt` file path (one task_id per line).
+
+## Section 3: Output Directory Structure
+
+```
+runs/{timestamp}/
+├── report.json               # Evaluation summary
+└── eval_outputs/
+    └── {instance_id}/
+        └── attempt-{n}/
+            ├── run_instance.log  # Evaluation log
+            ├── test_output.txt   # Test execution output
+            ├── patch.diff        # Applied patch
+            └── report.json       # Instance evaluation result
+```
+
+## Section 4: Summarize results
+
+Summarize `eval_outputs` and generate a CSV report.
+
+```bash
+python acebench/scripts/cal_eval_outputs.py --path <eval_outputs_dir> --attempt-mode <attempt_mode>
+```
+
+`<attempt_mode>` can be `best`, `worst`, or a number (e.g., `1`, `2`, `3`). Default: `best`.
+
+When `<attempt_mode>` is a number `k` and `--merge` is enabled, attempts 1..k are merged:
+- pass_rate: average over the first k attempts
+- resolved: pass@k style (success if any of the first k succeeds)
+- prompt_tokens/completion_tokens: sum over the first k, then take the mean
