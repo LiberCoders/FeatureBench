@@ -1,6 +1,6 @@
-# ACE-Bench Leaderboard
+# FeatureBench Leaderboard
 
-Static ACE-Bench leaderboard page.
+Static FeatureBench leaderboard page.
 
 ## Data (backend)
 

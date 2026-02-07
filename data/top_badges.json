@@ -15,13 +15,13 @@
     {
       "label": "HuggingFace",
       "value": "datasets",
-      "href": "https://huggingface.co/datasets/LiberCoders/ACE-Bench",
+      "href": "https://huggingface.co/datasets/LiberCoders/FeatureBench",
       "tone": "huggingface"
     },
     {
       "label": "GitHub",
       "value": "Code",
-      "href": "https://github.com/LiberCoders/ACE-Bench",
+      "href": "https://github.com/LiberCoders/FeatureBench",
       "tone": "github"
     }
   ]

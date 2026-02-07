@@ -7,7 +7,7 @@ function initThemeFromStorageOrSystem() {
   /** @type {string | null} */
   let stored = null;
   try {
-    stored = localStorage.getItem("acebench.theme");
+    stored = localStorage.getItem("featurebench.theme");
   } catch {
     stored = null;
   }

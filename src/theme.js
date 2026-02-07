@@ -2,7 +2,7 @@ export function applyTheme(theme, themeToggle) {
   const next = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = next;
   try {
-    localStorage.setItem("acebench.theme", next);
+    localStorage.setItem("featurebench.theme", next);
   } catch {
     // ignore
   }
@@ -14,7 +14,7 @@ export function applyTheme(theme, themeToggle) {
 export function initTheme(themeToggle) {
   let stored = null;
   try {
-    stored = localStorage.getItem("acebench.theme");
+    stored = localStorage.getItem("featurebench.theme");
   } catch {
     stored = null;
   }

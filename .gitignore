@@ -1,7 +1,7 @@
 .venv/*
 .vscode/*
-__pycache__/*
-acebench/*
+**/__pycache__/*
+featurebench/*
 cases_filter/*
 cases_filter_bk/*
 cases_filter_bk2/*
@@ -15,3 +15,5 @@ toy_example/*
 config.toml
 .cursor/*
 OpenHands/
+featurebench/resources/constants/python_new.py
+featurebench/resources/constants/python_old.py
