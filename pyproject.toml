@@ -1,7 +1,7 @@
 [project]
-name = "ace-bench"
+name = "featurebench"
 version = "0.1.0"
-description = "ACEBench Pipeline - A test-driven data generation pipeline for building and evaluating feature-level coding benchmarks"
+description = "FeatureBench Pipeline - A test-driven data generation pipeline for building and evaluating feature-level coding benchmarks"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -24,14 +24,15 @@ dependencies = [
 ]
 
 [project.scripts]
-ace = "acebench.cli:main"
+fb = "featurebench.cli:main"
+featurebench = "featurebench.cli:main"
 
 [build-system]
 requires = ["hatchling>=1.24.2"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["acebench"]
+packages = ["featurebench"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

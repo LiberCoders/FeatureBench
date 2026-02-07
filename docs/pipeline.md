@@ -1,6 +1,6 @@
-# ACE-Bench Data Pipeline (Dataset Generation)
+# FeatureBench Data Pipeline (Dataset Generation)
 
-This document describes the data pipeline entrypoint `acebench.pipeline`, its
+This document describes the data pipeline entrypoint `featurebench.pipeline`, its
 CLI arguments, and the repo specs defined in `python.py`.
 
 ## Pipeline Stages
@@ -22,7 +22,7 @@ The **data** stage performs:
 ### Core
 
 - `--config-path`  
-  Path to the repo specs Python module (e.g. `acebench/resources/constants/python.py`).
+  Path to the repo specs Python module (e.g. `featurebench/resources/constants/python.py`).
 
 - `--global-config-path`  
   Path to `config.toml` for global env vars and LLM config.  
@@ -56,7 +56,7 @@ The **data** stage performs:
 
 - `--repos-dir`  
   Optional override for local repo storage.  
-  Default: `acebench/resources/repos`.
+  Default: `featurebench/resources/repos`.
 
 ## Advanced Debugging (`--debug`)
 
@@ -106,7 +106,7 @@ dictionary describes how to build, run, and filter a repo.
 ### Image Build and Install
 
 - `base_image`  
-  Base image template name (matches `acebench/resources/dockerfiles/<name>.py`).
+  Base image template name (matches `featurebench/resources/dockerfiles/<name>.py`).
 
 - `rebuild_base_image`  
   Force rebuild of the base image.

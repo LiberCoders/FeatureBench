@@ -1,11 +1,11 @@
-# ACE-Bench Infer CLI Arguments
+# FeatureBench Infer CLI Arguments
 
-This document describes all CLI arguments supported by `ace infer`.
+This document describes all CLI arguments supported by `fb infer`.
 
 ## 1 Basic Usage
 
 ```bash
-ace infer \
+fb infer \
   --agent gemini_cli \
   --model gemini-3-pro-preview
 ```
@@ -13,7 +13,7 @@ ace infer \
 ## 2 Resume Mode
 
 ```bash
-ace infer \
+fb infer \
   --resume runs/2025-12-02__16-06-04
 ```
 
@@ -26,7 +26,7 @@ flags can override metadata (see the argument list below).
 
 - `--config-path`  
   Path to `config.toml`.  
-  If not provided, uses default discovery (searching upward from `acebench/infer`). 
+  If not provided, uses default discovery (searching upward from `featurebench/infer`). 
 
 - `--agent, -a`  
   Agent to use: `claude_code`, `gemini_cli`, `openhands`, `codex`, `mini_swe_agent`.  
@@ -50,8 +50,8 @@ flags can override metadata (see the argument list below).
   Saved into `run_metadata.json`; resume uses metadata unless overridden again.
 
 - `--dataset`  
-  HuggingFace dataset repo name (e.g., `LiberCoders/ACE-Bench`).  
-  Default: `LiberCoders/ACE-Bench` in non-resume mode.
+  HuggingFace dataset repo name (e.g., `LiberCoders/FeatureBench`).  
+  Default: `LiberCoders/FeatureBench` in non-resume mode.
 
 - `--split`  
   Dataset split name (e.g., `lite`, `full`).  

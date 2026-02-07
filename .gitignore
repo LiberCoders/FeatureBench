@@ -7,11 +7,11 @@ cases_filter/*
 *outputs/
 *log/
 *logs/
-acebench/resources/repos
-acebench/resources/constants/*
-!acebench/resources/constants/python_example.py
-!acebench/resources/constants/full_images.txt
-!acebench/resources/constants/lite_images.txt
+featurebench/resources/repos
+featurebench/resources/constants/*
+!featurebench/resources/constants/python_example.py
+!featurebench/resources/constants/full_images.txt
+!featurebench/resources/constants/lite_images.txt
 config.toml
 tmp/
 runs/

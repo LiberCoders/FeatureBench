@@ -1,1 +1,0 @@
-"""ACE-Bench evaluation harness."""

@@ -1,10 +1,10 @@
-# ACE-Bench Configuration Guide: config.toml
+# FeatureBench Configuration Guide: config.toml
 
-ACE-Bench has three major workflows:
+FeatureBench has three major workflows:
 
 - **harness (evaluation)**: runs tests on inference outputs and produces a report.
-- **infer (inference)**: runs different agents on ACE-Bench benchmark tasks to generate patches.
-- **data pipeline (dataset generation)**: builds ACE-Bench-style tasks automatically from real repositories.
+- **infer (inference)**: runs different agents on FeatureBench benchmark tasks to generate patches.
+- **data pipeline (dataset generation)**: builds FeatureBench-style tasks automatically from real repositories.
 
 The repo-root `config.toml` is the single configuration file that manages what all three workflows need at runtime.
 
@@ -56,7 +56,7 @@ How infer reads `config.toml`:
 
 ```toml
 [infer]
-download_cache_dir = "/abs/path/to/ACE-Bench/download_cache"
+download_cache_dir = "/abs/path/to/FeatureBench/download_cache"
 ```
 
 - `download_cache_dir`: host-side cache directory that will be mounted into the container at `/download`.

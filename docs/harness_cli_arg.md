@@ -1,11 +1,11 @@
-# ACE-Bench Harness CLI Arguments
+# FeatureBench Harness CLI Arguments
 
-This document describes all CLI arguments supported by `ace eval`.
+This document describes all CLI arguments supported by `fb eval`.
 
 ## 1 Basic Usage
 
 ```bash
-ace eval \
+fb eval \
   -p runs/2026-01-17__12-54-55/output.jsonl
 ```
 
@@ -15,7 +15,7 @@ ace eval \
 
 - `--config-path`  
   Path to `config.toml` (used for `HF_TOKEN` / `HF_ENDPOINT` when loading dataset).  
-  If not provided, uses default discovery (searching upward from `acebench/infer`).
+  If not provided, uses default discovery (searching upward from `featurebench/infer`).
 
 - `--predictions-path, -p`  
   Path to predictions JSONL file (typically `runs/<timestamp>/output.jsonl`).  
@@ -47,8 +47,8 @@ ace eval \
   Default: `false`.
 
 - `--dataset`  
-  HuggingFace dataset repo name (e.g., `LiberCoders/ACE-Bench`).  
-  Default: `LiberCoders/ACE-Bench`.
+  HuggingFace dataset repo name (e.g., `LiberCoders/FeatureBench`).  
+  Default: `LiberCoders/FeatureBench`.
 
 - `--split`  
   Dataset split name (e.g., `lite`, `full`).  
@@ -83,7 +83,7 @@ runs/{timestamp}/
 Summarize `eval_outputs` and generate a CSV report.
 
 ```bash
-python acebench/scripts/cal_eval_outputs.py --path <eval_outputs_dir> --attempt-mode <attempt_mode>
+python featurebench/scripts/cal_eval_outputs.py --path <eval_outputs_dir> --attempt-mode <attempt_mode>
 ```
 
 `<attempt_mode>` can be `best`, `worst`, or a number (e.g., `1`, `2`, `3`). Default: `best`.

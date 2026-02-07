@@ -44,7 +44,7 @@ base_url = "http://localhost:8080/v1"                # vLLM server URL
 # Optional: Host cache directory for agent downloads; will be mounted to /download inside containers
 # Set to empty to disable cache mount (each container will re-download/install)
 # Use an absolute path here
-download_cache_dir="/path/to/ACE-Bench/download_cache"
+download_cache_dir="/path/to/FeatureBench/download_cache"
 
 # OpenHands Agent Configuration
 [infer_config.openhands]
@@ -100,7 +100,7 @@ CODEX_VERSION = ""
 MSWEA_API_KEY = ""
 # Optional: Base URL passed through to provider envs
 MSWEA_BASE_URL = ""
-# Optional: Cost tracking mode (default behavior in ACE adapter is ignore_errors)
+# Optional: Cost tracking mode (default behavior in FB adapter is ignore_errors)
 MSWEA_COST_TRACKING = ""
 # Optional: Lock mini_swe_agent version (leave empty to use latest)
 MINI_SWE_AGENT_VERSION = ""
