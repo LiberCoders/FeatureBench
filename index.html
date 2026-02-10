@@ -3,205 +3,934 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>FeatureBench Leaderboard</title>
+    <title>FeatureBench</title>
     <meta
       name="description"
-      content="FeatureBench leaderboard: execution-based benchmark for end-to-end, feature-oriented agentic coding."
+      content="FeatureBench is an execution-based benchmark for end-to-end, feature-oriented agentic coding."
     />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Sora:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f8fb;
+        --surface: #ffffff;
+        --text: #0f1728;
+        --muted: #586276;
+        --line: #dde4ef;
+        --line-strong: #c4cfde;
+        --accent: #0f1728;
+        --accent-soft: #2f5dff;
+        --focus: #2f5dff;
+        --card-shadow: 0 16px 46px rgba(15, 23, 40, 0.08);
+        --hero-wave-fill: rgba(193, 202, 217, 0.3);
+        --hero-wave-shadow: rgba(124, 136, 159, 0.26);
+        --font-ui: "Manrope", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-head: "Sora", "Plus Jakarta Sans", "Manrope", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #0b1220;
+        --surface: #101a2c;
+        --text: #e8eefb;
+        --muted: #9aa8c0;
+        --line: #24344f;
+        --line-strong: #345076;
+        --accent: #e8eefb;
+        --accent-soft: #8db0ff;
+        --focus: #8db0ff;
+        --card-shadow: 0 22px 54px rgba(1, 4, 12, 0.45);
+        --hero-wave-fill: rgba(58, 83, 123, 0.34);
+        --hero-wave-shadow: rgba(109, 144, 206, 0.32);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        font-family: var(--font-ui);
+        color: var(--text);
+        background:
+          radial-gradient(820px 420px at 10% -20%, rgba(79, 117, 255, 0.12), transparent 70%),
+          radial-gradient(740px 420px at 88% -18%, rgba(57, 103, 255, 0.1), transparent 72%),
+          var(--bg);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .shell {
+        width: 100%;
+        margin: 0 auto 74px;
+      }
+
+      main {
+        width: min(1180px, 100% - 28px);
+        margin: 0 auto;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        background: color-mix(in srgb, var(--surface) 92%, transparent 8%);
+        backdrop-filter: blur(10px);
+      }
+
+      .topbar-content {
+        width: min(1180px, 100% - 28px);
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 12px 0;
+      }
+
+      .topbar-left {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .brand-home {
+        height: 42px;
+        padding: 0 14px 0 10px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--surface) 82%, var(--line) 18%);
+        font-weight: 800;
+        font-size: 15px;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+      }
+
+      .brand-home img {
+        width: 23px;
+        height: 23px;
+        border-radius: 999px;
+        object-fit: cover;
+        border: 1px solid var(--line-strong);
+      }
+
+      .main-nav {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .main-nav a {
+        height: 40px;
+        padding: 0 16px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        line-height: 1;
+        font-weight: 700;
+        letter-spacing: 0.005em;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .main-nav a:hover,
+      .main-nav a[aria-current="page"] {
+        border-color: var(--line);
+        color: var(--text);
+        background: color-mix(in srgb, var(--surface) 70%, var(--line) 30%);
+      }
+
+      .topbar-right {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .icon-btn {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .icon-btn:hover {
+        border-color: var(--line-strong);
+      }
+
+      .icon-btn.active {
+        border-color: color-mix(in srgb, var(--accent-soft) 45%, var(--line-strong) 55%);
+        background: color-mix(in srgb, var(--accent-soft) 14%, var(--surface) 86%);
+      }
+
+      .icon-btn svg {
+        width: 18px;
+        height: 18px;
+        display: block;
+      }
+
+      .brand-home:focus-visible,
+      .main-nav a:focus-visible,
+      .icon-btn:focus-visible,
+      .resource-pill:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      .hero {
+        margin-top: 36px;
+        position: relative;
+        isolation: isolate;
+        padding-bottom: 18px;
+        overflow: hidden;
+      }
+
+      .hero::after {
+        content: none;
+      }
+
+      .kicker {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .hero h1 {
+        margin: 16px 0 18px;
+        font-family: var(--font-head);
+        font-size: clamp(2rem, 4.9vw, 4.36rem);
+        line-height: 1.02;
+        letter-spacing: -0.024em;
+        font-weight: 700;
+        max-width: 16ch;
+        text-wrap: pretty;
+      }
+
+      .hero p {
+        margin: 0;
+        max-width: 64ch;
+        font-size: clamp(1.02rem, 2.3vw, 1.24rem);
+        line-height: 1.58;
+        color: var(--muted);
+      }
+
+      .hero-wave {
+        position: absolute;
+        left: -2%;
+        right: -2%;
+        bottom: -2px;
+        height: 60%;
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .hero-wave svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        transform-origin: 50% 100%;
+        animation: hero-wave-breathe 11s ease-in-out infinite;
+        will-change: transform;
+      }
+
+      .hero-wave-fill {
+        fill: var(--hero-wave-fill);
+        animation: hero-wave-fill 11s ease-in-out infinite;
+        transform-origin: 50% 100%;
+        will-change: transform, opacity;
+      }
+
+      .hero-wave-shadow {
+        fill: none;
+        stroke: var(--hero-wave-shadow);
+        stroke-width: 8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        opacity: 0.6;
+        filter: blur(3.2px);
+        animation: hero-wave-shadow 9s ease-in-out infinite;
+        transform-origin: 50% 100%;
+        will-change: transform, opacity, filter;
+      }
+
+      .stats {
+        margin-top: 44px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .stat-card {
+        padding: 20px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--surface) 92%, transparent 8%);
+        box-shadow: var(--card-shadow);
+      }
+
+      .stat-label {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.3;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .stat-value {
+        margin: 10px 0 6px;
+        font-family: var(--font-head);
+        font-size: clamp(2rem, 4vw, 2.35rem);
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+
+      .stat-sub {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+
+      .resource-row {
+        margin-top: 18px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .resource-pill {
+        height: 34px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 13px;
+        line-height: 1;
+        font-weight: 700;
+      }
+
+      .resource-main {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+      }
+
+      .resource-icon {
+        width: 16px;
+        height: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .resource-icon svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+      }
+
+      .resource-icon img {
+        width: 16px;
+        height: 16px;
+        display: block;
+        object-fit: contain;
+      }
+
+      .resource-name {
+        white-space: nowrap;
+        color: var(--text);
+      }
+
+      .resource-value {
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .resource-icon .provider-github {
+        color: var(--text);
+      }
+
+      .scroll-cue {
+        margin-top: 18px;
+        display: flex;
+        justify-content: center;
+      }
+
+      .scroll-cue-btn {
+        width: 42px;
+        height: 42px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--surface) 88%, transparent 12%);
+        color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        animation: bob 1.8s ease-in-out infinite;
+      }
+
+      .scroll-cue-btn:hover {
+        border-color: var(--line-strong);
+        color: var(--text);
+      }
+
+      .scroll-cue-btn svg {
+        width: 18px;
+        height: 18px;
+        display: block;
+      }
+
+      .more-content {
+        margin-top: 72px;
+        padding-top: 8px;
+      }
+
+      .more-content h2 {
+        margin: 0 0 12px;
+        font-family: var(--font-head);
+        font-size: clamp(1.5rem, 3vw, 2.1rem);
+        letter-spacing: -0.02em;
+      }
+
+      .more-content p {
+        margin: 0;
+        max-width: 68ch;
+        color: var(--muted);
+        font-size: 1.02rem;
+        line-height: 1.6;
+      }
+
+      .placeholder-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .placeholder-card {
+        border: 1px dashed var(--line-strong);
+        border-radius: 14px;
+        background: color-mix(in srgb, var(--surface) 84%, transparent 16%);
+        min-height: 124px;
+        padding: 16px;
+      }
+
+      .placeholder-card h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+      }
+
+      .placeholder-card p {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+
+      [data-reveal] {
+        opacity: 0;
+        transform: translateY(16px);
+        animation: rise 620ms ease forwards;
+        animation-delay: var(--delay, 0ms);
+      }
+
+      @keyframes rise {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes bob {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(4px);
+        }
+      }
+
+      @keyframes hero-wave-breathe {
+        0%,
+        100% {
+          transform: translate3d(0, 0, 0) scale(1, 1);
+        }
+        50% {
+          transform: translate3d(-0.6%, -3px, 0) scale(1.012, 1.014);
+        }
+      }
+
+      @keyframes hero-wave-fill {
+        0%,
+        100% {
+          opacity: 0.96;
+          transform: translate3d(0, 0, 0);
+        }
+        50% {
+          opacity: 1;
+          transform: translate3d(0.25%, -2px, 0);
+        }
+      }
+
+      @keyframes hero-wave-shadow {
+        0%,
+        100% {
+          opacity: 0.56;
+          filter: blur(3.2px);
+          transform: translate3d(0, 0, 0);
+        }
+        50% {
+          opacity: 0.76;
+          filter: blur(4.5px);
+          transform: translate3d(0.6%, -4px, 0);
+        }
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+
+      @media (max-width: 980px) {
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .placeholder-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 780px) {
+        .topbar-content,
+        main {
+          width: min(1180px, 100% - 16px);
+        }
+
+        .topbar {
+          border-bottom: 1px solid var(--line);
+        }
+
+        .topbar-content {
+          flex-wrap: wrap;
+          row-gap: 10px;
+          padding: 10px 0;
+        }
+
+        .topbar-left {
+          width: 100%;
+          display: block;
+        }
+
+        .brand-home {
+          margin-bottom: 8px;
+        }
+
+        .main-nav {
+          overflow-x: auto;
+          padding-bottom: 2px;
+        }
+
+        .hero {
+          margin-top: 26px;
+          padding-bottom: 12px;
+        }
+
+        .more-content {
+          margin-top: 56px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        [data-reveal] {
+          opacity: 1;
+          transform: none;
+          animation: none;
+        }
+
+        .hero-wave svg,
+        .hero-wave-fill,
+        .hero-wave-shadow {
+          animation: none;
+          transform: none;
+          filter: blur(3.2px);
+        }
+      }
+    </style>
   </head>
   <body>
-    <div class="container">
-      <header>
-        <h1 class="title">
-          <img class="title-logo" src="./logos/logo.jpg" alt="FeatureBench logo" />
-          <span>FeatureBench Leaderboard</span>
-        </h1>
-        <blockquote class="subtitle">
-          FeatureBench is a benchmark for evaluating agents on <strong>end-to-end development of complex features</strong>. It incorporates an execution-based evaluation protocol and a scalable <strong>test-driven</strong> method that automatically derives tasks from code repositories with minimal human effort.
-        </blockquote>
-      </header>
+    <div class="shell">
+      <header class="topbar" data-reveal style="--delay: 20ms">
+        <div class="topbar-content">
+          <div class="topbar-left">
+            <a class="brand-home" href="./" aria-current="page">
+              <img src="./leaderboard/logos/logo.jpg" alt="FeatureBench fox logo" />
+              <span>Home</span>
+            </a>
 
-      <div class="controls" role="region" aria-label="Leaderboard settings">
-        <div class="left-controls">
-          <div class="top-badges" id="topBadges" aria-label="Links"></div>
-
-          <div class="tabs" role="tablist" aria-label="Settings">
-            <button
-              class="tab"
-              id="tab-lite"
-              role="tab"
-              aria-selected="false"
-              aria-controls="panel"
-              data-split="lite"
-            >
-              lite
-            </button>
-            <button
-              class="tab"
-              id="tab-full"
-              role="tab"
-              aria-selected="false"
-              aria-controls="panel"
-              data-split="full"
-            >
-              full
-            </button>
-          </div>
-        </div>
-
-        <div class="right-controls">
-          <div class="filters" aria-label="Filters">
-            <span class="filters-label">Filters:</span>
-
-            <div class="dropdown" data-dropdown="filters">
-              <button
-                class="dropdown-btn"
-                id="filtersBtn"
-                type="button"
-                aria-haspopup="menu"
-                aria-expanded="false"
-                aria-controls="filtersMenu"
-                title="Filters"
-              >
-                <span>All Filters</span>
-                <span class="caret" aria-hidden="true">▾</span>
-              </button>
-              <div class="dropdown-menu" id="filtersMenu" role="menu" aria-labelledby="filtersBtn" hidden>
-                <div class="dd-list" id="filtersList"></div>
-              </div>
-            </div>
-
-            <div class="dropdown" data-dropdown="tags">
-              <button
-                class="dropdown-btn"
-                id="tagsBtn"
-                type="button"
-                aria-haspopup="menu"
-                aria-expanded="false"
-                aria-controls="tagsMenu"
-                title="Tags"
-              >
-                <span>All Tags</span>
-                <span class="caret" aria-hidden="true">▾</span>
-              </button>
-              <div class="dropdown-menu" id="tagsMenu" role="menu" aria-labelledby="tagsBtn" hidden>
-                <input class="dd-search" id="tagsSearch" type="search" placeholder="Search tags..." autocomplete="off" />
-                <div class="dd-scroll" id="tagsList"></div>
-                <div class="dd-muted" id="tagsEmpty" hidden>No matching tags.</div>
-              </div>
-            </div>
+            <nav class="main-nav" aria-label="Primary">
+              <a href="./leaderboard/">Leaderboard</a>
+              <a href="./tasks/">Tasks</a>
+              <a href="./news/">News</a>
+            </nav>
           </div>
 
-          <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle theme" title="Toggle theme">
-            <span class="theme-icon theme-icon-sun" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <div class="topbar-right" aria-label="Theme and links">
+            <button
+              class="icon-btn"
+              id="themeLight"
+              type="button"
+              aria-label="Use light theme"
+              aria-pressed="false"
+              title="Light"
+            >
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.9" />
                 <path
-                  d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"
+                  d="M12 2.5v2.3M12 19.2v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.3M19.2 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"
                   stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-                  stroke="currentColor"
-                  stroke-width="2"
+                  stroke-width="1.9"
                   stroke-linecap="round"
                 />
               </svg>
-            </span>
-            <span class="theme-icon theme-icon-moon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <span class="sr-only">Light theme</span>
+            </button>
+
+            <button
+              class="icon-btn"
+              id="themeDark"
+              type="button"
+              aria-label="Use dark theme"
+              aria-pressed="false"
+              title="Dark"
+            >
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path
-                  d="M21 14.5A8.5 8.5 0 0 1 9.5 3a6.8 6.8 0 1 0 11.5 11.5Z"
+                  d="M20 14.4a8.7 8.7 0 1 1-10.4-10.4A7 7 0 0 0 20 14.4Z"
                   stroke="currentColor"
-                  stroke-width="2"
+                  stroke-width="1.9"
                   stroke-linejoin="round"
                 />
               </svg>
-            </span>
-            <span class="sr-only">Toggle theme</span>
-          </button>
+              <span class="sr-only">Dark theme</span>
+            </button>
+
+            <a
+              class="icon-btn"
+              href="https://github.com/LiberCoders/FeatureBench"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open GitHub"
+              title="GitHub"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path
+                  d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.2c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.09-.73.09-.73 1.2.08 1.83 1.23 1.83 1.23 1.08 1.84 2.82 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.39 1.23-3.23-.12-.31-.53-1.54.12-3.21 0 0 1.01-.32 3.3 1.23A11.4 11.4 0 0 1 12 6.8c1.01 0 2.03.14 2.98.42 2.29-1.55 3.3-1.23 3.3-1.23.65 1.67.24 2.9.12 3.21.77.84 1.23 1.92 1.23 3.23 0 4.62-2.81 5.64-5.49 5.94.43.38.81 1.13.81 2.28v3.38c0 .32.22.7.82.58A12 12 0 0 0 12 .5Z"
+                />
+              </svg>
+              <span class="sr-only">GitHub</span>
+            </a>
+          </div>
         </div>
-      </div>
+      </header>
 
-      <section class="card" id="panel" role="tabpanel" aria-labelledby="tab-lite">
-        <div class="table-wrap">
-          <table aria-label="FeatureBench leaderboard table">
-            <thead>
-              <tr>
-                <th style="text-align: left">Model</th>
-                <th class="num pct">
-                  <span class="th-inner">
-                    %Resolved
-                    <button
-                      class="sort-btn"
-                      type="button"
-                      aria-label="Sort by %Resolved"
-                      aria-pressed="false"
-                      data-sort="resolved"
-                      data-dir="desc"
-                      title="Sort"
-                    >
-                      ▾
-                    </button>
-                  </span>
-                </th>
-                <th class="num pct">
-                  <span class="th-inner">
-                    %Passed
-                    <button
-                      class="sort-btn"
-                      type="button"
-                      aria-label="Sort by %Passed"
-                      aria-pressed="false"
-                      data-sort="passed"
-                      data-dir="desc"
-                      title="Sort"
-                    >
-                      ▾
-                    </button>
-                  </span>
-                </th>
-                <th class="col-org">Org</th>
-                <th class="col-date">
-                  <span class="th-inner">
-                    Date
-                    <button
-                      class="sort-btn"
-                      type="button"
-                      aria-label="Sort by Date"
-                      aria-pressed="false"
-                      data-sort="date"
-                      data-dir="desc"
-                      title="Sort"
-                    >
-                      ▾
-                    </button>
-                  </span>
-                </th>
-                <th class="col-site">Site</th>
-              </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-          </table>
+      <main>
+        <section class="hero" data-reveal style="--delay: 120ms">
+          <p class="kicker">Feature-Oriented Agentic Coding Benchmark</p>
+          <h1>Beyond bug fixing: benchmarking real feature development.</h1>
+          <p>
+            FeatureBench measures end-to-end development of complex features through execution-based evaluation and
+            scalable test-driven task generation from real repositories.
+          </p>
+          <div class="hero-wave" aria-hidden="true">
+            <svg viewBox="0 0 1200 340" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                class="hero-wave-fill"
+                d="M0 296 C170 288 330 271 520 256 C690 243 780 220 852 176 C915 138 975 117 1062 104 C1120 96 1165 90 1200 86 L1200 340 L0 340 Z"
+              />
+              <path
+                class="hero-wave-shadow"
+                d="M-10 296 C160 288 330 271 520 256 C690 243 780 220 852 176 C915 138 975 117 1062 104 C1120 96 1165 90 1210 86"
+              />
+            </svg>
+          </div>
+        </section>
+
+        <section class="stats" data-reveal style="--delay: 200ms" aria-label="Leaderboard Snapshot">
+          <article class="stat-card">
+            <p class="stat-label">Best %Resolved (Full)</p>
+            <p class="stat-value" id="resolvedBest">--</p>
+            <p class="stat-sub" id="resolvedSub">Loading latest results...</p>
+          </article>
+
+          <article class="stat-card">
+            <p class="stat-label">Best %Passed (Full)</p>
+            <p class="stat-value" id="fullBest">--</p>
+            <p class="stat-sub" id="fullSub">Loading latest results...</p>
+          </article>
+
+          <article class="stat-card">
+            <p class="stat-label">Latest Update</p>
+            <p class="stat-value" id="latestDate">--</p>
+            <p class="stat-sub" id="latestSub">Reading local benchmark data...</p>
+          </article>
+        </section>
+
+        <section class="resource-row" id="resourceRow" data-reveal style="--delay: 260ms" aria-label="Project Links"></section>
+
+        <div class="scroll-cue" data-reveal style="--delay: 310ms">
+          <a class="scroll-cue-btn" href="#more-content" aria-label="Scroll down for more">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M12 5.6v12.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+              <path d="m7.8 14.8 4.2 4.2 4.2-4.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </a>
         </div>
-      </section>
 
-      <div class="bottom-tags" aria-label="Links">
-        <a class="tag" href="./contact.html" aria-label="Open contact page" title="Contact">
-          <span class="tag-icon" aria-hidden="true">
-            ✉
-          </span>
-          <span class="tag-text">Contact</span>
-        </a>
-
-        <a class="tag" href="./citation.html" aria-label="Open citation page" title="Citation">
-          <span class="tag-icon" aria-hidden="true">#</span>
-          <span class="tag-text">Citation</span>
-        </a>
-      </div>
+        <section class="more-content" id="more-content" data-reveal style="--delay: 360ms" aria-label="More Content Placeholder">
+          <h2>More Content Coming Soon</h2>
+          <p>
+            This section is a placeholder for expanded project content, including methodology details, task taxonomy,
+            and analysis examples.
+          </p>
+          <div class="placeholder-grid">
+            <article class="placeholder-card">
+              <h3>Method Overview</h3>
+              <p>Placeholder for benchmark protocol and evaluation pipeline diagrams.</p>
+            </article>
+            <article class="placeholder-card">
+              <h3>Task Cases</h3>
+              <p>Placeholder for representative feature development tasks and difficulty bands.</p>
+            </article>
+            <article class="placeholder-card">
+              <h3>Error Analysis</h3>
+              <p>Placeholder for failure mode analysis and qualitative run breakdowns.</p>
+            </article>
+          </div>
+        </section>
+      </main>
     </div>
 
-    <script type="module" src="./src/app.js"></script>
+    <script>
+      (function () {
+        const root = document.documentElement;
+        const lightBtn = document.getElementById("themeLight");
+        const darkBtn = document.getElementById("themeDark");
+        const themeStorageKey = "featurebench.theme";
+
+        function applyTheme(theme) {
+          const safe = theme === "dark" ? "dark" : "light";
+          root.dataset.theme = safe;
+          lightBtn.classList.toggle("active", safe === "light");
+          darkBtn.classList.toggle("active", safe === "dark");
+          lightBtn.setAttribute("aria-pressed", safe === "light" ? "true" : "false");
+          darkBtn.setAttribute("aria-pressed", safe === "dark" ? "true" : "false");
+          try {
+            localStorage.setItem(themeStorageKey, safe);
+          } catch {
+            // ignore storage issues
+          }
+        }
+
+        function initTheme() {
+          let stored = "light";
+          try {
+            stored = localStorage.getItem(themeStorageKey) || "light";
+          } catch {
+            stored = "light";
+          }
+          applyTheme(stored);
+        }
+
+        function formatPercent(value) {
+          const number = Number(value);
+          if (!Number.isFinite(number)) return "--";
+          return `${number.toFixed(2)}%`;
+        }
+
+        function formatDate(isoDate) {
+          if (!isoDate) return "--";
+          const date = new Date(`${isoDate}T00:00:00Z`);
+          if (Number.isNaN(date.getTime())) return isoDate;
+          return date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            timeZone: "UTC",
+          });
+        }
+
+        function maxNumeric(rows, key) {
+          let best = null;
+          for (const row of rows) {
+            const value = Number(row?.[key]);
+            if (!Number.isFinite(value)) continue;
+            if (best === null || value > best) best = value;
+          }
+          return best;
+        }
+
+        async function loadSnapshot() {
+          try {
+            const [liteRes, fullRes] = await Promise.all([
+              fetch("./leaderboard/data/lite.json", { cache: "no-store" }),
+              fetch("./leaderboard/data/full.json", { cache: "no-store" }),
+            ]);
+            if (!liteRes.ok || !fullRes.ok) throw new Error("failed to fetch data");
+
+            const [liteRows, fullRows] = await Promise.all([liteRes.json(), fullRes.json()]);
+            const lite = Array.isArray(liteRows) ? liteRows : [];
+            const full = Array.isArray(fullRows) ? fullRows : [];
+
+            const fullResolvedBest = maxNumeric(full, "resolved");
+            const fullBest = maxNumeric(full, "passed");
+            const latestIso = [...lite, ...full]
+              .map((item) => String(item?.date || ""))
+              .filter(Boolean)
+              .sort()
+              .at(-1);
+
+            document.getElementById("resolvedBest").textContent = formatPercent(fullResolvedBest);
+            document.getElementById("fullBest").textContent = formatPercent(fullBest);
+            document.getElementById("latestDate").textContent = formatDate(latestIso);
+
+            document.getElementById("resolvedSub").textContent = `${full.length} runs in full split`;
+            document.getElementById("fullSub").textContent = `${full.length} runs in full split`;
+            document.getElementById("latestSub").textContent = "Auto-read from leaderboard data";
+          } catch {
+            document.getElementById("resolvedSub").textContent = "Unable to load full data";
+            document.getElementById("fullSub").textContent = "Unable to load full data";
+            document.getElementById("latestSub").textContent = "Serve via HTTP to load snapshot";
+          }
+        }
+
+        function iconMarkup(label) {
+          const key = String(label || "").toLowerCase();
+          if (key.includes("arxiv") || key.includes("arvix")) {
+            return '<img src="./assets/icons/arvix-logo.svg" alt="" />';
+          }
+          if (key.includes("docker")) {
+            return '<img src="./assets/icons/docker-logo.svg" alt="" />';
+          }
+          if (key.includes("huggingface")) {
+            return '<img src="./assets/icons/hf-logo.svg" alt="" />';
+          }
+          if (key.includes("github")) {
+            return `
+              <svg class="provider-github" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.2c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.09-.73.09-.73 1.2.08 1.83 1.23 1.83 1.23 1.08 1.84 2.82 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.39 1.23-3.23-.12-.31-.53-1.54.12-3.21 0 0 1.01-.32 3.3 1.23A11.4 11.4 0 0 1 12 6.8c1.01 0 2.03.14 2.98.42 2.29-1.55 3.3-1.23 3.3-1.23.65 1.67.24 2.9.12 3.21.77.84 1.23 1.92 1.23 3.23 0 4.62-2.81 5.64-5.49 5.94.43.38.81 1.13.81 2.28v3.38c0 .32.22.7.82.58A12 12 0 0 0 12 .5Z" />
+              </svg>`;
+          }
+          return '<span aria-hidden="true">#</span>';
+        }
+
+        async function loadResources() {
+          const row = document.getElementById("resourceRow");
+          if (!row) return;
+
+          const fallback = [
+            { label: "arXiv", value: "25xx.xxxxx", href: "https://arxiv.org/abs/2500.00000" },
+            { label: "DockerHub", value: "Images", href: "https://hub.docker.com/u/libercoders" },
+            { label: "HuggingFace", value: "datasets", href: "https://huggingface.co/datasets/LiberCoders/FeatureBench" },
+            { label: "GitHub", value: "Code", href: "https://github.com/LiberCoders/FeatureBench" },
+          ];
+
+          function render(items) {
+            row.innerHTML = "";
+            for (const item of items) {
+              const label = String(item?.label || "Link");
+              const value = String(item?.value || "open");
+              const a = document.createElement("a");
+              a.className = "resource-pill";
+              a.href = String(item?.href || "#");
+              a.target = "_blank";
+              a.rel = "noopener noreferrer";
+
+              const left = document.createElement("span");
+              left.className = "resource-main";
+
+              const icon = document.createElement("span");
+              icon.className = "resource-icon";
+              icon.innerHTML = iconMarkup(label);
+
+              const name = document.createElement("span");
+              name.className = "resource-name";
+              name.textContent = label;
+
+              const right = document.createElement("span");
+              right.className = "resource-value";
+              right.textContent = value;
+
+              left.append(icon, name);
+              a.append(left, right);
+              row.appendChild(a);
+            }
+          }
+
+          try {
+            const res = await fetch("./leaderboard/data/top_badges.json", { cache: "no-store" });
+            if (!res.ok) throw new Error("failed to fetch links");
+            const payload = await res.json();
+            const items = Array.isArray(payload?.items) ? payload.items : [];
+            render(items.length ? items : fallback);
+          } catch {
+            render(fallback);
+          }
+        }
+
+        initTheme();
+        lightBtn.addEventListener("click", () => applyTheme("light"));
+        darkBtn.addEventListener("click", () => applyTheme("dark"));
+
+        loadSnapshot();
+        loadResources();
+      })();
+    </script>
   </body>
 </html>

@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FeatureBench News</title>
+    <meta name="description" content="FeatureBench updates and release notes." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f8fb;
+        --surface: #ffffff;
+        --text: #0f1728;
+        --muted: #586276;
+        --line: #dde4ef;
+        --line-strong: #c4cfde;
+        --accent-soft: #2f5dff;
+        --focus: #2f5dff;
+        --font-ui: "Manrope", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-head: "Sora", "Manrope", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #0b1220;
+        --surface: #101a2c;
+        --text: #e8eefb;
+        --muted: #9aa8c0;
+        --line: #24344f;
+        --line-strong: #345076;
+        --accent-soft: #8db0ff;
+        --focus: #8db0ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--font-ui);
+        color: var(--text);
+        background:
+          radial-gradient(820px 420px at 10% -20%, rgba(79, 117, 255, 0.12), transparent 70%),
+          radial-gradient(740px 420px at 88% -18%, rgba(57, 103, 255, 0.1), transparent 72%),
+          var(--bg);
+      }
+
+      .shell {
+        width: min(1180px, 100% - 28px);
+        margin: 22px auto 74px;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 12px;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--surface) 88%, transparent 12%);
+        backdrop-filter: blur(10px);
+      }
+
+      .topbar-left {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .brand-home {
+        height: 42px;
+        padding: 0 14px 0 10px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--surface) 82%, var(--line) 18%);
+        font-weight: 800;
+        font-size: 15px;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .brand-home img {
+        width: 23px;
+        height: 23px;
+        border-radius: 999px;
+        object-fit: cover;
+        border: 1px solid var(--line-strong);
+      }
+
+      .main-nav {
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .main-nav a {
+        height: 40px;
+        padding: 0 16px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        line-height: 1;
+        font-weight: 700;
+        letter-spacing: 0.005em;
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      .main-nav a:hover,
+      .main-nav a[aria-current="page"] {
+        border-color: var(--line);
+        color: var(--text);
+        background: color-mix(in srgb, var(--surface) 70%, var(--line) 30%);
+      }
+
+      .topbar-right {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .icon-btn {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .icon-btn.active {
+        border-color: color-mix(in srgb, var(--accent-soft) 45%, var(--line-strong) 55%);
+        background: color-mix(in srgb, var(--accent-soft) 14%, var(--surface) 86%);
+      }
+
+      .icon-btn svg {
+        width: 18px;
+        height: 18px;
+        display: block;
+      }
+
+      .panel {
+        margin-top: 74px;
+      }
+
+      .panel h1 {
+        margin: 0 0 14px;
+        font-family: var(--font-head);
+        font-size: clamp(2rem, 5vw, 3rem);
+        letter-spacing: -0.02em;
+      }
+
+      .panel p {
+        margin: 0;
+        max-width: 70ch;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.6;
+      }
+
+      .news-list {
+        margin: 28px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 12px;
+      }
+
+      .news-item {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        border-radius: 14px;
+        padding: 18px;
+      }
+
+      .news-date {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .news-title {
+        margin: 8px 0 8px;
+        font-size: 1.05rem;
+        line-height: 1.35;
+      }
+
+      .news-body {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+
+      @media (max-width: 780px) {
+        .shell {
+          width: min(1180px, 100% - 16px);
+        }
+
+        .topbar {
+          border-radius: 18px;
+          flex-wrap: wrap;
+          row-gap: 10px;
+        }
+
+        .topbar-left {
+          width: 100%;
+          display: block;
+        }
+
+        .brand-home {
+          margin-bottom: 8px;
+        }
+
+        .main-nav {
+          overflow-x: auto;
+          padding-bottom: 2px;
+        }
+
+        .panel {
+          margin-top: 42px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="topbar-left">
+          <a class="brand-home" href="../">
+            <img src="../leaderboard/logos/logo.jpg" alt="FeatureBench fox logo" />
+            <span>Home</span>
+          </a>
+
+          <nav class="main-nav" aria-label="Primary">
+            <a href="../leaderboard/">Leaderboard</a>
+            <a href="../tasks/">Tasks</a>
+            <a href="./" aria-current="page">News</a>
+          </nav>
+        </div>
+
+        <div class="topbar-right" aria-label="Theme and links">
+          <button class="icon-btn" id="themeLight" type="button" aria-label="Use light theme" aria-pressed="false" title="Light">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.9" />
+              <path
+                d="M12 2.5v2.3M12 19.2v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.3M19.2 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+          <button class="icon-btn" id="themeDark" type="button" aria-label="Use dark theme" aria-pressed="false" title="Dark">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path
+                d="M20 14.4a8.7 8.7 0 1 1-10.4-10.4A7 7 0 0 0 20 14.4Z"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+          <a
+            class="icon-btn"
+            href="https://github.com/LiberCoders/FeatureBench"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open GitHub"
+            title="GitHub"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path
+                d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.2c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.09-.73.09-.73 1.2.08 1.83 1.23 1.83 1.23 1.08 1.84 2.82 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.39 1.23-3.23-.12-.31-.53-1.54.12-3.21 0 0 1.01-.32 3.3 1.23A11.4 11.4 0 0 1 12 6.8c1.01 0 2.03.14 2.98.42 2.29-1.55 3.3-1.23 3.3-1.23.65 1.67.24 2.9.12 3.21.77.84 1.23 1.92 1.23 3.23 0 4.62-2.81 5.64-5.49 5.94.43.38.81 1.13.81 2.28v3.38c0 .32.22.7.82.58A12 12 0 0 0 12 .5Z"
+              />
+            </svg>
+          </a>
+        </div>
+      </header>
+
+      <main class="panel">
+        <h1>News</h1>
+        <p>Recent updates for FeatureBench artifacts and leaderboard snapshots.</p>
+
+        <ul class="news-list" id="newsList" aria-label="Project News">
+          <li class="news-item">
+            <p class="news-date" id="latestDate">Loading...</p>
+            <h2 class="news-title">Leaderboard snapshot refreshed</h2>
+            <p class="news-body" id="latestBody">Reading local benchmark data.</p>
+          </li>
+          <li class="news-item">
+            <p class="news-date">Resource</p>
+            <h2 class="news-title">Project links</h2>
+            <p class="news-body">Code, dataset, and deployment assets are listed on the homepage and leaderboard.</p>
+          </li>
+        </ul>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        const root = document.documentElement;
+        const lightBtn = document.getElementById("themeLight");
+        const darkBtn = document.getElementById("themeDark");
+        const themeStorageKey = "featurebench.theme";
+
+        function applyTheme(theme) {
+          const safe = theme === "dark" ? "dark" : "light";
+          root.dataset.theme = safe;
+          lightBtn.classList.toggle("active", safe === "light");
+          darkBtn.classList.toggle("active", safe === "dark");
+          lightBtn.setAttribute("aria-pressed", safe === "light" ? "true" : "false");
+          darkBtn.setAttribute("aria-pressed", safe === "dark" ? "true" : "false");
+          try {
+            localStorage.setItem(themeStorageKey, safe);
+          } catch {
+            // ignore
+          }
+        }
+
+        function initTheme() {
+          let stored = "light";
+          try {
+            stored = localStorage.getItem(themeStorageKey) || "light";
+          } catch {
+            stored = "light";
+          }
+          applyTheme(stored);
+        }
+
+        function formatDate(isoDate) {
+          if (!isoDate) return "Unknown";
+          const date = new Date(`${isoDate}T00:00:00Z`);
+          if (Number.isNaN(date.getTime())) return isoDate;
+          return date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            timeZone: "UTC",
+          });
+        }
+
+        async function loadLatestNews() {
+          try {
+            const [liteRes, fullRes] = await Promise.all([
+              fetch("../leaderboard/data/lite.json", { cache: "no-store" }),
+              fetch("../leaderboard/data/full.json", { cache: "no-store" }),
+            ]);
+            if (!liteRes.ok || !fullRes.ok) throw new Error("failed to fetch data");
+
+            const [liteRows, fullRows] = await Promise.all([liteRes.json(), fullRes.json()]);
+            const lite = Array.isArray(liteRows) ? liteRows : [];
+            const full = Array.isArray(fullRows) ? fullRows : [];
+            const latestIso = [...lite, ...full]
+              .map((item) => String(item?.date || ""))
+              .filter(Boolean)
+              .sort()
+              .at(-1);
+
+            const latestDate = document.getElementById("latestDate");
+            const latestBody = document.getElementById("latestBody");
+            latestDate.textContent = formatDate(latestIso);
+            latestBody.textContent = `${lite.length} lite runs and ${full.length} full runs are available in the current snapshot.`;
+          } catch {
+            document.getElementById("latestDate").textContent = "Unavailable";
+            document.getElementById("latestBody").textContent = "Serve this site over HTTP to read the latest local files.";
+          }
+        }
+
+        initTheme();
+        lightBtn.addEventListener("click", () => applyTheme("light"));
+        darkBtn.addEventListener("click", () => applyTheme("dark"));
+        loadLatestNews();
+      })();
+    </script>
+  </body>
+</html>
