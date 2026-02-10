@@ -17,3 +17,4 @@ config.toml
 OpenHands/
 featurebench/resources/constants/python_new.py
 featurebench/resources/constants/python_old.py
+ms-swift/*
