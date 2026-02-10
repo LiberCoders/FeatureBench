@@ -8,12 +8,28 @@
       name="description"
       content="FeatureBench is an execution-based benchmark for end-to-end, feature-oriented agentic coding."
     />
+    <script>
+      (() => {
+        let stored = null;
+        try {
+          stored = localStorage.getItem("featurebench.theme");
+        } catch {
+          stored = null;
+        }
+        const prefersDark =
+          window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const theme =
+          stored === "dark" || stored === "light" ? stored : prefersDark ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Sora:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="./assets/css/topbar.css" />
     <style>
       :root {
         color-scheme: light;
@@ -26,6 +42,7 @@
         --accent: #0f1728;
         --accent-soft: #2f5dff;
         --focus: #2f5dff;
+        --hero-title-soft: #8f6325;
         --card-shadow: 0 16px 46px rgba(15, 23, 40, 0.08);
         --hero-wave-fill: rgba(193, 202, 217, 0.3);
         --hero-wave-shadow: rgba(124, 136, 159, 0.26);
@@ -44,6 +61,7 @@
         --accent: #e8eefb;
         --accent-soft: #8db0ff;
         --focus: #8db0ff;
+        --hero-title-soft: #a8b6cf;
         --card-shadow: 0 22px 54px rgba(1, 4, 12, 0.45);
         --hero-wave-fill: rgba(58, 83, 123, 0.34);
         --hero-wave-shadow: rgba(109, 144, 206, 0.32);
@@ -83,134 +101,20 @@
         margin: 0 auto;
       }
 
-      .topbar {
-        position: sticky;
-        top: 0;
-        z-index: 40;
-        width: 100%;
-        border: 0;
-        border-bottom: 1px solid var(--line);
-        background: color-mix(in srgb, var(--surface) 92%, transparent 8%);
-        backdrop-filter: blur(10px);
-      }
-
-      .topbar-content {
-        width: min(1180px, 100% - 28px);
-        margin: 0 auto;
+      .intro-fold {
+        min-height: calc(100vh - 56px);
+        min-height: calc(100dvh - 56px);
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 20px;
-        padding: 12px 0;
+        flex-direction: column;
       }
 
-      .topbar-left {
-        min-width: 0;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-      }
-
-      .brand-home {
-        height: 42px;
-        padding: 0 14px 0 10px;
-        border-radius: 999px;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        border: 1px solid var(--line);
-        background: color-mix(in srgb, var(--surface) 82%, var(--line) 18%);
-        font-weight: 800;
-        font-size: 15px;
-        line-height: 1;
-        letter-spacing: 0.01em;
-        white-space: nowrap;
-      }
-
-      .brand-home img {
-        width: 23px;
-        height: 23px;
-        border-radius: 999px;
-        object-fit: cover;
-        border: 1px solid var(--line-strong);
-      }
-
-      .main-nav {
-        min-width: 0;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .main-nav a {
-        height: 40px;
-        padding: 0 16px;
-        border-radius: 999px;
-        border: 1px solid transparent;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 15px;
-        line-height: 1;
-        font-weight: 700;
-        letter-spacing: 0.005em;
-        color: var(--muted);
-        white-space: nowrap;
-      }
-
-      .main-nav a:hover,
-      .main-nav a[aria-current="page"] {
-        border-color: var(--line);
-        color: var(--text);
-        background: color-mix(in srgb, var(--surface) 70%, var(--line) 30%);
-      }
-
-      .topbar-right {
-        flex-shrink: 0;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .icon-btn {
-        width: 40px;
-        height: 40px;
-        padding: 0;
-        border-radius: 999px;
-        border: 1px solid var(--line);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--surface);
-        color: var(--text);
-        cursor: pointer;
-      }
-
-      .icon-btn:hover {
-        border-color: var(--line-strong);
-      }
-
-      .icon-btn.active {
-        border-color: color-mix(in srgb, var(--accent-soft) 45%, var(--line-strong) 55%);
-        background: color-mix(in srgb, var(--accent-soft) 14%, var(--surface) 86%);
-      }
-
-      .icon-btn svg {
-        width: 18px;
-        height: 18px;
-        display: block;
-      }
-
-      .brand-home:focus-visible,
-      .main-nav a:focus-visible,
-      .icon-btn:focus-visible,
       .resource-pill:focus-visible {
         outline: 2px solid var(--focus);
         outline-offset: 2px;
       }
 
       .hero {
-        margin-top: 36px;
+        margin-top: 24px;
         position: relative;
         isolation: isolate;
         padding-bottom: 18px;
@@ -239,6 +143,26 @@
         font-weight: 700;
         max-width: 16ch;
         text-wrap: pretty;
+      }
+
+      .hero h1 span {
+        display: block;
+      }
+
+      .hero h1 span + span {
+        margin-top: 0.36em;
+      }
+
+      .hero-brand {
+        text-decoration-line: underline;
+        text-decoration-thickness: 0.045em;
+        text-underline-offset: 0.18em;
+        text-decoration-color: color-mix(in srgb, var(--line-strong) 70%, transparent 30%);
+      }
+
+      .hero-soft {
+        color: var(--hero-title-soft);
+        font-style: normal;
       }
 
       .hero p {
@@ -289,7 +213,7 @@
       }
 
       .stats {
-        margin-top: 44px;
+        margin-top: 30px;
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 12px;
@@ -327,7 +251,7 @@
       }
 
       .resource-row {
-        margin-top: 18px;
+        margin-top: 14px;
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
@@ -391,7 +315,8 @@
       }
 
       .scroll-cue {
-        margin-top: 18px;
+        margin-top: auto;
+        padding-top: 14px;
         display: flex;
         justify-content: center;
       }
@@ -421,49 +346,218 @@
       }
 
       .more-content {
-        margin-top: 72px;
+        margin-top: 64px;
         padding-top: 8px;
+        padding-bottom: 78px;
+        display: grid;
+        gap: 26px;
+        justify-items: center;
+      }
+
+      .more-intro {
+        width: min(960px, 100%);
+        max-width: none;
+      }
+
+      .more-kicker {
+        margin: 0;
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: var(--muted);
       }
 
       .more-content h2 {
-        margin: 0 0 12px;
+        margin: 10px 0 12px;
         font-family: var(--font-head);
-        font-size: clamp(1.5rem, 3vw, 2.1rem);
+        font-size: clamp(1.4rem, 2.3vw, 1.92rem);
+        line-height: 1.15;
         letter-spacing: -0.02em;
       }
 
-      .more-content p {
+      .more-intro p {
         margin: 0;
-        max-width: 68ch;
+        max-width: none;
         color: var(--muted);
-        font-size: 1.02rem;
+        font-size: 1rem;
         line-height: 1.6;
       }
 
-      .placeholder-grid {
-        margin-top: 18px;
+      .story-panel {
+        border-top: 1px solid var(--line);
+        padding-top: 20px;
+        width: min(960px, 100%);
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
+        gap: 10px;
       }
 
-      .placeholder-card {
-        border: 1px dashed var(--line-strong);
-        border-radius: 14px;
-        background: color-mix(in srgb, var(--surface) 84%, transparent 16%);
-        min-height: 124px;
-        padding: 16px;
-      }
-
-      .placeholder-card h3 {
-        margin: 0 0 8px;
-        font-size: 1rem;
-      }
-
-      .placeholder-card p {
+      .story-kicker {
         margin: 0;
-        font-size: 0.95rem;
+        font-size: 11px;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        font-weight: 700;
         color: var(--muted);
+      }
+
+      .story-panel h3 {
+        margin: 8px 0 8px;
+        font-family: var(--font-head);
+        font-size: clamp(1.14rem, 1.65vw, 1.44rem);
+        letter-spacing: -0.012em;
+      }
+
+      .story-panel p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.62;
+        font-size: 0.98rem;
+      }
+
+      .story-list {
+        margin: 6px 0 0;
+        padding: 0 0 0 18px;
+        display: grid;
+        gap: 6px;
+      }
+
+      .story-list li {
+        color: color-mix(in srgb, var(--muted) 94%, var(--text) 6%);
+        line-height: 1.5;
+      }
+
+      .story-media {
+        width: min(560px, 100%);
+        margin: 8px auto 0;
+        border: 0;
+        background: transparent;
+      }
+
+      .story-media img {
+        width: auto;
+        max-width: 100%;
+        max-height: 380px;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+      }
+
+      .story-caption {
+        margin: 10px auto 0;
+        max-width: min(560px, 100%);
+        padding: 0;
+        border-top: 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+        line-height: 1.45;
+        text-align: center;
+      }
+
+      .story-media-row {
+        width: min(860px, 100%);
+        margin: 8px auto 0;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        align-items: start;
+      }
+
+      .story-media-row .story-media {
+        width: 100%;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .story-media-row .story-media img {
+        width: 100%;
+        height: 280px;
+        max-height: none;
+        object-fit: contain;
+        object-position: center top;
+      }
+
+      .story-media-row .story-caption {
+        max-width: none;
+        margin: 8px 0 0;
+      }
+
+      .story-facts {
+        margin-top: 6px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, max-content));
+        gap: 8px;
+        align-items: center;
+      }
+
+      .story-fact {
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--surface) 95%, transparent 5%);
+        padding: 6px 10px;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 6px;
+      }
+
+      .fact-value {
+        margin: 0;
+        font-family: var(--font-head);
+        font-size: 1rem;
+        line-height: 1;
+      }
+
+      .fact-label {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.2;
+      }
+
+      .paper-table-wrap {
+        width: min(960px, 100%);
+        margin: 8px auto 0;
+        overflow-x: auto;
+      }
+
+      .paper-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 820px;
+      }
+
+      .paper-table th,
+      .paper-table td {
+        border: 1px solid var(--line);
+        padding: 8px 10px;
+        font-size: 0.86rem;
+        line-height: 1.35;
+        text-align: left;
+        white-space: nowrap;
+      }
+
+      .paper-table th {
+        background: color-mix(in srgb, var(--surface) 78%, var(--line) 22%);
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      .paper-table tbody tr:nth-child(even) {
+        background: color-mix(in srgb, var(--surface) 86%, transparent 14%);
+      }
+
+      .citation-pre {
+        margin: 8px 0 0;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--surface) 90%, transparent 10%);
+        color: var(--text);
+        font-family: "SFMono-Regular", Menlo, Consolas, Monaco, "Liberation Mono", monospace;
+        font-size: 0.82rem;
+        line-height: 1.45;
+        overflow-x: auto;
+        white-space: pre;
       }
 
       [data-reveal] {
@@ -542,49 +636,48 @@
           grid-template-columns: 1fr;
         }
 
-        .placeholder-grid {
+        .story-facts {
+          grid-template-columns: repeat(2, minmax(0, max-content));
+        }
+
+        .story-media-row {
           grid-template-columns: 1fr;
+        }
+
+        .story-media-row .story-media img {
+          height: auto;
+          max-height: 340px;
         }
       }
 
       @media (max-width: 780px) {
-        .topbar-content,
         main {
           width: min(1180px, 100% - 16px);
         }
 
-        .topbar {
-          border-bottom: 1px solid var(--line);
-        }
-
-        .topbar-content {
-          flex-wrap: wrap;
-          row-gap: 10px;
-          padding: 10px 0;
-        }
-
-        .topbar-left {
-          width: 100%;
-          display: block;
-        }
-
-        .brand-home {
-          margin-bottom: 8px;
-        }
-
-        .main-nav {
-          overflow-x: auto;
-          padding-bottom: 2px;
+        .intro-fold {
+          min-height: calc(100vh - 50px);
+          min-height: calc(100dvh - 50px);
         }
 
         .hero {
-          margin-top: 26px;
+          margin-top: 18px;
           padding-bottom: 12px;
         }
 
         .more-content {
           margin-top: 56px;
         }
+
+        .story-panel {
+          padding-top: 22px;
+        }
+
+        .story-facts {
+          grid-template-columns: 1fr;
+          justify-items: start;
+        }
+
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -611,7 +704,7 @@
           <div class="topbar-left">
             <a class="brand-home" href="./" aria-current="page">
               <img src="./leaderboard/logos/logo.jpg" alt="FeatureBench fox logo" />
-              <span>Home</span>
+              <span>FeatureBench</span>
             </a>
 
             <nav class="main-nav" aria-label="Primary">
@@ -681,78 +774,253 @@
       </header>
 
       <main>
-        <section class="hero" data-reveal style="--delay: 120ms">
-          <p class="kicker">Feature-Oriented Agentic Coding Benchmark</p>
-          <h1>Beyond bug fixing: benchmarking real feature development.</h1>
-          <p>
-            FeatureBench measures end-to-end development of complex features through execution-based evaluation and
-            scalable test-driven task generation from real repositories.
-          </p>
-          <div class="hero-wave" aria-hidden="true">
-            <svg viewBox="0 0 1200 340" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                class="hero-wave-fill"
-                d="M0 296 C170 288 330 271 520 256 C690 243 780 220 852 176 C915 138 975 117 1062 104 C1120 96 1165 90 1200 86 L1200 340 L0 340 Z"
-              />
-              <path
-                class="hero-wave-shadow"
-                d="M-10 296 C160 288 330 271 520 256 C690 243 780 220 852 176 C915 138 975 117 1062 104 C1120 96 1165 90 1210 86"
-              />
-            </svg>
+        <section class="intro-fold" aria-label="Hero Fold">
+          <section class="hero" data-reveal style="--delay: 120ms">
+            <p class="kicker">Feature-Oriented Agentic Coding Benchmark</p>
+            <h1>
+              <span class="hero-brand">FeatureBench:</span>
+              <span>Beyond <em class="hero-soft">bug</em> fixing.</span>
+              <span>Ship real <em class="hero-soft">features</em>.</span>
+            </h1>
+            <p>
+              FeatureBench measures end-to-end development of complex features through execution-based evaluation and
+              scalable test-driven task generation from real repositories.
+            </p>
+            <div class="hero-wave" aria-hidden="true">
+              <svg viewBox="0 0 1200 340" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  class="hero-wave-fill"
+                  d="M0 322 C160 316 320 304 500 286 C670 268 760 236 840 178 C915 122 990 86 1088 68 C1146 58 1182 52 1200 50 L1200 340 L0 340 Z"
+                />
+                <path
+                  class="hero-wave-shadow"
+                  d="M-10 322 C150 316 320 304 500 286 C670 268 760 236 840 178 C915 122 990 86 1088 68 C1146 58 1182 52 1210 50"
+                />
+              </svg>
+            </div>
+          </section>
+
+          <section class="stats" data-reveal style="--delay: 200ms" aria-label="Leaderboard Snapshot">
+            <article class="stat-card">
+              <p class="stat-label">Best %Resolved (Full)</p>
+              <p class="stat-value" id="resolvedBest">--</p>
+              <p class="stat-sub" id="resolvedSub">Loading latest results...</p>
+            </article>
+
+            <article class="stat-card">
+              <p class="stat-label">Best %Passed (Full)</p>
+              <p class="stat-value" id="fullBest">--</p>
+              <p class="stat-sub" id="fullSub">Loading latest results...</p>
+            </article>
+
+            <article class="stat-card">
+              <p class="stat-label">Latest Update</p>
+              <p class="stat-value" id="latestDate">--</p>
+              <p class="stat-sub" id="latestSub">Reading local benchmark data...</p>
+            </article>
+          </section>
+
+          <section class="resource-row" id="resourceRow" data-reveal style="--delay: 260ms" aria-label="Project Links"></section>
+
+          <div class="scroll-cue" data-reveal style="--delay: 310ms">
+            <a class="scroll-cue-btn" href="#more-content" aria-label="Scroll down for more">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M12 5.6v12.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+                <path d="m7.8 14.8 4.2 4.2 4.2-4.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </a>
           </div>
         </section>
 
-        <section class="stats" data-reveal style="--delay: 200ms" aria-label="Leaderboard Snapshot">
-          <article class="stat-card">
-            <p class="stat-label">Best %Resolved (Full)</p>
-            <p class="stat-value" id="resolvedBest">--</p>
-            <p class="stat-sub" id="resolvedSub">Loading latest results...</p>
-          </article>
-
-          <article class="stat-card">
-            <p class="stat-label">Best %Passed (Full)</p>
-            <p class="stat-value" id="fullBest">--</p>
-            <p class="stat-sub" id="fullSub">Loading latest results...</p>
-          </article>
-
-          <article class="stat-card">
-            <p class="stat-label">Latest Update</p>
-            <p class="stat-value" id="latestDate">--</p>
-            <p class="stat-sub" id="latestSub">Reading local benchmark data...</p>
-          </article>
-        </section>
-
-        <section class="resource-row" id="resourceRow" data-reveal style="--delay: 260ms" aria-label="Project Links"></section>
-
-        <div class="scroll-cue" data-reveal style="--delay: 310ms">
-          <a class="scroll-cue-btn" href="#more-content" aria-label="Scroll down for more">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path d="M12 5.6v12.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
-              <path d="m7.8 14.8 4.2 4.2 4.2-4.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </a>
-        </div>
-
-        <section class="more-content" id="more-content" data-reveal style="--delay: 360ms" aria-label="More Content Placeholder">
-          <h2>More Content Coming Soon</h2>
-          <p>
-            This section is a placeholder for expanded project content, including methodology details, task taxonomy,
-            and analysis examples.
-          </p>
-          <div class="placeholder-grid">
-            <article class="placeholder-card">
-              <h3>Method Overview</h3>
-              <p>Placeholder for benchmark protocol and evaluation pipeline diagrams.</p>
-            </article>
-            <article class="placeholder-card">
-              <h3>Task Cases</h3>
-              <p>Placeholder for representative feature development tasks and difficulty bands.</p>
-            </article>
-            <article class="placeholder-card">
-              <h3>Error Analysis</h3>
-              <p>Placeholder for failure mode analysis and qualitative run breakdowns.</p>
-            </article>
+        <section class="more-content" id="more-content" aria-label="FeatureBench Overview">
+          <div class="more-intro" data-reveal style="--delay: 80ms">
+            <p class="more-kicker">Inside FeatureBench</p>
+            <h2>A benchmark for end-to-end development of complex features</h2>
+            <p>
+              FeatureBench evaluates agentic coding beyond bug fixing. It targets feature-level implementation with
+              execution-based verification and explicit callable interfaces, so scoring is reproducible and grounded in
+              real repository behavior.
+            </p>
           </div>
+
+          <article class="story-panel" data-reveal style="--delay: 180ms">
+            <p class="story-kicker">Collection Pipeline</p>
+            <h3>Scalable, test-driven instance construction from repositories</h3>
+            <p>
+              The pipeline validates fail-to-pass and pass-to-pass tests, traces runtime dependencies, extracts feature
+              patches, and then post-verifies the modified codebase. This enables automated generation of executable and
+              continually updatable benchmark instances with minimal manual intervention.
+            </p>
+            <ul class="story-list">
+              <li>Dependency graph is built from dynamic tracing, not static heuristics only.</li>
+              <li>Post verification enforces F2P fail and P2P pass conditions before patch replay.</li>
+              <li>Problem statements are synthesized with explicit interfaces and import paths.</li>
+            </ul>
+            <div class="story-media-row" aria-label="Collection pipeline figures">
+              <figure class="story-media">
+                <img src="./assets/images/wrokflow.png" alt="FeatureBench collection workflow and pipeline steps" loading="lazy" />
+                <figcaption class="story-caption">Collection workflow and verification pipeline.</figcaption>
+              </figure>
+              <figure class="story-media">
+                <img src="./assets/images/bench_statics.png" alt="FeatureBench dataset statistics and composition" loading="lazy" />
+                <figcaption class="story-caption">Dataset composition and benchmark scale statistics.</figcaption>
+              </figure>
+            </div>
+          </article>
+
+          <article class="story-panel" data-reveal style="--delay: 230ms">
+            <p class="story-kicker">Empirical Results</p>
+            <h3>Frontier agents still face a large feature-development gap</h3>
+            <p>
+              In the paper baseline, Claude Opus 4.5 reaches 74.4% resolved on SWE-bench but only 11.0% on
+              FeatureBench Full, while GPT-5.1-Codex reaches 12.5%. The gap suggests current agents are still far from
+              stable real-world feature shipping.
+            </p>
+            <div class="story-facts" aria-label="Benchmark quick facts">
+              <div class="story-fact">
+                <p class="fact-value">200</p>
+                <p class="fact-label">Full tasks</p>
+              </div>
+              <div class="story-fact">
+                <p class="fact-value">30</p>
+                <p class="fact-label">Lite tasks</p>
+              </div>
+              <div class="story-fact">
+                <p class="fact-value">3825</p>
+                <p class="fact-label">Environments</p>
+              </div>
+              <div class="story-fact">
+                <p class="fact-value">24</p>
+                <p class="fact-label">Repositories</p>
+              </div>
+            </div>
+            <div class="paper-table-wrap" role="region" aria-label="Paper results table" tabindex="0">
+              <table class="paper-table">
+                <thead>
+                  <tr>
+                    <th>Scaffold</th>
+                    <th>Model</th>
+                    <th>Lite %Passed</th>
+                    <th>Lite %Resolved</th>
+                    <th>Lite Token I/O</th>
+                    <th>Full %Passed</th>
+                    <th>Full %Resolved</th>
+                    <th>Full Token I/O</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>OpenHands</td>
+                    <td>Qwen3-Coder-480B-A35B-Instruct</td>
+                    <td>38.31</td>
+                    <td>6.7</td>
+                    <td>2.6M / 16k</td>
+                    <td>24.55</td>
+                    <td>3.5</td>
+                    <td>2.0M / 14k</td>
+                  </tr>
+                  <tr>
+                    <td>OpenHands</td>
+                    <td>DeepSeek-V3.2</td>
+                    <td>35.94</td>
+                    <td>6.7</td>
+                    <td>3.1M / 24k</td>
+                    <td>26.30</td>
+                    <td>5.5</td>
+                    <td>3.1M / 23k</td>
+                  </tr>
+                  <tr>
+                    <td>OpenHands</td>
+                    <td>Gemini-3-Pro-Preview (low reasoning)</td>
+                    <td>45.14</td>
+                    <td>10.0</td>
+                    <td>6.0M / 41k</td>
+                    <td>30.08</td>
+                    <td>4.5</td>
+                    <td>6.2M / 40k</td>
+                  </tr>
+                  <tr>
+                    <td>Gemini-CLI</td>
+                    <td>Gemini-3-Pro-Preview (low reasoning)</td>
+                    <td>43.38</td>
+                    <td>10.0</td>
+                    <td>2.6M / 13k</td>
+                    <td>32.43</td>
+                    <td>5.0</td>
+                    <td>2.5M / 12k</td>
+                  </tr>
+                  <tr>
+                    <td>Claude Code (routing)</td>
+                    <td>Claude Opus 4.5</td>
+                    <td>59.12</td>
+                    <td>20.0</td>
+                    <td>9.0M / 35k</td>
+                    <td>43.29</td>
+                    <td>11.0</td>
+                    <td>7.5M / 34k</td>
+                  </tr>
+                  <tr>
+                    <td>Codex</td>
+                    <td>GPT-5.1-Codex (medium reasoning)</td>
+                    <td>60.22</td>
+                    <td>20.0</td>
+                    <td>6.6M / 39k</td>
+                    <td>41.66</td>
+                    <td>12.5</td>
+                    <td>6.3M / 39k</td>
+                  </tr>
+                  <tr>
+                    <td>OpenHands</td>
+                    <td>Claude Opus 4.5</td>
+                    <td>67.18</td>
+                    <td>20.0</td>
+                    <td>8.8M / 29k</td>
+                    <td>45.53</td>
+                    <td>10.5</td>
+                    <td>8.1M / 29k</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="story-panel" data-reveal style="--delay: 270ms">
+            <p class="story-kicker">Complexity & Time Analysis</p>
+            <h3>Pass rate varies with code complexity and task creation time</h3>
+            <p>
+              We also analyze how pass rate shifts across code complexity bands and temporal slices. The figure below
+              summarizes pass-rate trends over lines of pending implementation and task creation periods.
+            </p>
+            <figure class="story-media">
+              <img src="./assets/images/pass_rate.png" alt="FeatureBench pass rate versus code complexity and creation time" loading="lazy" />
+              <figcaption class="story-caption">
+                Pass rate vs. code complexity and creation time on FeatureBench.
+              </figcaption>
+            </figure>
+          </article>
+
+          <article class="story-panel" data-reveal style="--delay: 310ms">
+            <p class="story-kicker">Failure Analysis</p>
+            <h3>Frequent failure patterns in unresolved runs</h3>
+            <p>
+              Failure cases cluster around implementation-level correctness and interface alignment, showing that agents
+              can produce plausible code but still miss exact feature behavior required by executable tests.
+            </p>
+            <figure class="story-media">
+              <img src="./assets/images/failure_modes.png" alt="FeatureBench failure mode statistics" loading="lazy" />
+              <figcaption class="story-caption">Failure mode breakdown on FeatureBench runs.</figcaption>
+            </figure>
+          </article>
+
+          <article class="story-panel" data-reveal style="--delay: 390ms">
+            <p class="story-kicker">Citation</p>
+            <pre class="citation-pre">@inproceedings{zhou2026featurebench,
+  title={FeatureBench: Benchmarking Agentic Coding in End-to-End Development of Complex Features},
+  author={Qixing Zhou and Jiacheng Zhang and Haiyang Wang and Rui Hao and Jiahe Wang and Minghao Han and Yuxue Yang and Shuzhe Wu and Feiyang Pan and Lue Fan and Dandan Tu and Zhaoxiang Zhang},
+  booktitle={International Conference on Learning Representations},
+  year={2026}
+}</pre>
+          </article>
         </section>
       </main>
     </div>

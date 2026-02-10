@@ -4,37 +4,58 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FeatureBench News</title>
-    <meta name="description" content="FeatureBench updates and release notes." />
+    <meta name="description" content="FeatureBench updates and release announcements." />
+    <script>
+      (() => {
+        let stored = null;
+        try {
+          stored = localStorage.getItem("featurebench.theme");
+        } catch {
+          stored = null;
+        }
+        const prefersDark =
+          window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const theme =
+          stored === "dark" || stored === "light" ? stored : prefersDark ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="../assets/css/topbar.css" />
     <style>
       :root {
         color-scheme: light;
         --bg: #f7f8fb;
         --surface: #ffffff;
+        --surface-soft: #f6f7f9;
         --text: #0f1728;
-        --muted: #586276;
+        --muted: #5a657b;
         --line: #dde4ef;
-        --line-strong: #c4cfde;
+        --line-strong: #c6d1e2;
         --accent-soft: #2f5dff;
+        --accent-warm: #ea7e2d;
         --focus: #2f5dff;
         --font-ui: "Manrope", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
-        --font-head: "Sora", "Manrope", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-head: "Plus Jakarta Sans", "Manrope", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       }
 
       html[data-theme="dark"] {
         color-scheme: dark;
         --bg: #0b1220;
         --surface: #101a2c;
+        --surface-soft: #14233a;
         --text: #e8eefb;
-        --muted: #9aa8c0;
-        --line: #24344f;
-        --line-strong: #345076;
+        --muted: #9eacc5;
+        --line: #253750;
+        --line-strong: #355278;
         --accent-soft: #8db0ff;
+        --accent-warm: #f4a35d;
         --focus: #8db0ff;
       }
 
@@ -42,286 +63,223 @@
         box-sizing: border-box;
       }
 
+      html,
       body {
         margin: 0;
-        min-height: 100vh;
+        min-height: 100%;
+      }
+
+      body {
         font-family: var(--font-ui);
         color: var(--text);
         background:
-          radial-gradient(820px 420px at 10% -20%, rgba(79, 117, 255, 0.12), transparent 70%),
-          radial-gradient(740px 420px at 88% -18%, rgba(57, 103, 255, 0.1), transparent 72%),
+          radial-gradient(920px 520px at 8% -24%, rgba(72, 108, 240, 0.13), transparent 70%),
+          radial-gradient(760px 460px at 92% -22%, rgba(57, 103, 255, 0.1), transparent 72%),
           var(--bg);
       }
 
-      .shell {
-        width: min(1180px, 100% - 28px);
-        margin: 22px auto 74px;
-      }
-
-      .topbar {
-        position: sticky;
-        top: 12px;
-        z-index: 20;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 20px;
-        padding: 10px 12px;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        background: color-mix(in srgb, var(--surface) 88%, transparent 12%);
-        backdrop-filter: blur(10px);
-      }
-
-      .topbar-left {
-        min-width: 0;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-      }
-
-      .brand-home {
-        height: 42px;
-        padding: 0 14px 0 10px;
-        border-radius: 999px;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        border: 1px solid var(--line);
-        background: color-mix(in srgb, var(--surface) 82%, var(--line) 18%);
-        font-weight: 800;
-        font-size: 15px;
-        line-height: 1;
-        letter-spacing: 0.01em;
-        white-space: nowrap;
+      a {
         color: inherit;
-        text-decoration: none;
       }
 
-      .brand-home img {
-        width: 23px;
-        height: 23px;
-        border-radius: 999px;
-        object-fit: cover;
-        border: 1px solid var(--line-strong);
+      .shell {
+        width: 100%;
+        margin: 0 auto 80px;
       }
 
-      .main-nav {
-        min-width: 0;
-        display: flex;
-        align-items: center;
-        gap: 6px;
+      main {
+        width: min(1060px, 100% - 28px);
+        margin: 40px auto 0;
       }
 
-      .main-nav a {
-        height: 40px;
-        padding: 0 16px;
-        border-radius: 999px;
-        border: 1px solid transparent;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 15px;
-        line-height: 1;
-        font-weight: 700;
-        letter-spacing: 0.005em;
-        color: var(--muted);
-        text-decoration: none;
-      }
-
-      .main-nav a:hover,
-      .main-nav a[aria-current="page"] {
-        border-color: var(--line);
-        color: var(--text);
-        background: color-mix(in srgb, var(--surface) 70%, var(--line) 30%);
-      }
-
-      .topbar-right {
-        flex-shrink: 0;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .icon-btn {
-        width: 40px;
-        height: 40px;
-        padding: 0;
-        border-radius: 999px;
-        border: 1px solid var(--line);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--surface);
-        color: var(--text);
-        cursor: pointer;
-      }
-
-      .icon-btn.active {
-        border-color: color-mix(in srgb, var(--accent-soft) 45%, var(--line-strong) 55%);
-        background: color-mix(in srgb, var(--accent-soft) 14%, var(--surface) 86%);
-      }
-
-      .icon-btn svg {
-        width: 18px;
-        height: 18px;
-        display: block;
-      }
-
-      .panel {
-        margin-top: 74px;
-      }
-
-      .panel h1 {
-        margin: 0 0 14px;
-        font-family: var(--font-head);
-        font-size: clamp(2rem, 5vw, 3rem);
-        letter-spacing: -0.02em;
-      }
-
-      .panel p {
+      .news-hero h1 {
         margin: 0;
-        max-width: 70ch;
-        color: var(--muted);
-        font-size: 1.05rem;
-        line-height: 1.6;
+        font-family: var(--font-head);
+        font-size: clamp(1.42rem, 2.6vw, 2rem);
+        line-height: 1.08;
+        letter-spacing: -0.024em;
       }
 
-      .news-list {
-        margin: 28px 0 0;
-        padding: 0;
-        list-style: none;
-        display: grid;
-        gap: 12px;
+      .news-feed {
+        margin-top: 24px;
       }
 
-      .news-item {
+      .news-card {
         border: 1px solid var(--line);
-        background: var(--surface);
-        border-radius: 14px;
-        padding: 18px;
+        background: color-mix(in srgb, var(--surface) 96%, var(--surface-soft) 4%);
+        border-radius: 0;
+        box-shadow: none;
+        padding: 16px 18px;
       }
 
       .news-date {
-        margin: 0;
-        font-size: 13px;
-        font-weight: 700;
+        margin: 0 0 10px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 400;
+        letter-spacing: 0.01em;
         color: var(--muted);
       }
 
-      .news-title {
-        margin: 8px 0 8px;
-        font-size: 1.05rem;
-        line-height: 1.35;
+      .news-card h2 {
+        margin: 0 0 8px;
+        font-family: var(--font-head);
+        font-size: clamp(1rem, 1.55vw, 1.22rem);
+        line-height: 1.26;
+        letter-spacing: -0.008em;
       }
 
-      .news-body {
+      .news-preview {
         margin: 0;
-        font-size: 0.95rem;
+        max-width: 76ch;
+        color: var(--muted);
+        font-size: 0.99rem;
+        line-height: 1.58;
+        font-weight: 400;
+      }
+
+      .news-card a {
+        color: var(--muted);
+        font-weight: 400;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 3px;
+      }
+
+      [data-reveal] {
+        opacity: 0;
+        transform: translateY(14px);
+        animation: rise 620ms ease forwards;
+        animation-delay: var(--delay, 0ms);
+      }
+
+      @keyframes rise {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
       }
 
       @media (max-width: 780px) {
-        .shell {
-          width: min(1180px, 100% - 16px);
+        main {
+          width: min(1060px, 100% - 16px);
+          margin-top: 34px;
         }
 
-        .topbar {
-          border-radius: 18px;
-          flex-wrap: wrap;
-          row-gap: 10px;
+        .news-card {
+          padding: 14px 12px;
         }
+      }
 
-        .topbar-left {
-          width: 100%;
-          display: block;
-        }
-
-        .brand-home {
-          margin-bottom: 8px;
-        }
-
-        .main-nav {
-          overflow-x: auto;
-          padding-bottom: 2px;
-        }
-
-        .panel {
-          margin-top: 42px;
+      @media (prefers-reduced-motion: reduce) {
+        [data-reveal] {
+          opacity: 1;
+          transform: none;
+          animation: none;
         }
       }
     </style>
   </head>
   <body>
     <div class="shell">
-      <header class="topbar">
-        <div class="topbar-left">
-          <a class="brand-home" href="../">
-            <img src="../leaderboard/logos/logo.jpg" alt="FeatureBench fox logo" />
-            <span>Home</span>
-          </a>
+      <header class="topbar" data-reveal style="--delay: 20ms">
+        <div class="topbar-content">
+          <div class="topbar-left">
+            <a class="brand-home" href="../">
+              <img src="../leaderboard/logos/logo.jpg" alt="FeatureBench fox logo" />
+              <span>FeatureBench</span>
+            </a>
 
-          <nav class="main-nav" aria-label="Primary">
-            <a href="../leaderboard/">Leaderboard</a>
-            <a href="../tasks/">Tasks</a>
-            <a href="./" aria-current="page">News</a>
-          </nav>
-        </div>
+            <nav class="main-nav" aria-label="Primary">
+              <a href="../leaderboard/">Leaderboard</a>
+              <a href="../tasks/">Tasks</a>
+              <a href="./" aria-current="page">News</a>
+            </nav>
+          </div>
 
-        <div class="topbar-right" aria-label="Theme and links">
-          <button class="icon-btn" id="themeLight" type="button" aria-label="Use light theme" aria-pressed="false" title="Light">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.9" />
-              <path
-                d="M12 2.5v2.3M12 19.2v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.3M19.2 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"
-                stroke="currentColor"
-                stroke-width="1.9"
-                stroke-linecap="round"
-              />
-            </svg>
-          </button>
-          <button class="icon-btn" id="themeDark" type="button" aria-label="Use dark theme" aria-pressed="false" title="Dark">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path
-                d="M20 14.4a8.7 8.7 0 1 1-10.4-10.4A7 7 0 0 0 20 14.4Z"
-                stroke="currentColor"
-                stroke-width="1.9"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-          <a
-            class="icon-btn"
-            href="https://github.com/LiberCoders/FeatureBench"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Open GitHub"
-            title="GitHub"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <path
-                d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.2c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.09-.73.09-.73 1.2.08 1.83 1.23 1.83 1.23 1.08 1.84 2.82 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.39 1.23-3.23-.12-.31-.53-1.54.12-3.21 0 0 1.01-.32 3.3 1.23A11.4 11.4 0 0 1 12 6.8c1.01 0 2.03.14 2.98.42 2.29-1.55 3.3-1.23 3.3-1.23.65 1.67.24 2.9.12 3.21.77.84 1.23 1.92 1.23 3.23 0 4.62-2.81 5.64-5.49 5.94.43.38.81 1.13.81 2.28v3.38c0 .32.22.7.82.58A12 12 0 0 0 12 .5Z"
-              />
-            </svg>
-          </a>
+          <div class="topbar-right" aria-label="Theme and links">
+            <button
+              class="icon-btn"
+              id="themeLight"
+              type="button"
+              aria-label="Use light theme"
+              aria-pressed="false"
+              title="Light"
+            >
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.9" />
+                <path
+                  d="M12 2.5v2.3M12 19.2v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.3M19.2 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                />
+              </svg>
+              <span class="sr-only">Light theme</span>
+            </button>
+
+            <button
+              class="icon-btn"
+              id="themeDark"
+              type="button"
+              aria-label="Use dark theme"
+              aria-pressed="false"
+              title="Dark"
+            >
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path
+                  d="M20 14.4a8.7 8.7 0 1 1-10.4-10.4A7 7 0 0 0 20 14.4Z"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span class="sr-only">Dark theme</span>
+            </button>
+
+            <a
+              class="icon-btn"
+              href="https://github.com/LiberCoders/FeatureBench"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open GitHub"
+              title="GitHub"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path
+                  d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.2c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.09-.73.09-.73 1.2.08 1.83 1.23 1.83 1.23 1.08 1.84 2.82 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.39 1.23-3.23-.12-.31-.53-1.54.12-3.21 0 0 1.01-.32 3.3 1.23A11.4 11.4 0 0 1 12 6.8c1.01 0 2.03.14 2.98.42 2.29-1.55 3.3-1.23 3.3-1.23.65 1.67.24 2.9.12 3.21.77.84 1.23 1.92 1.23 3.23 0 4.62-2.81 5.64-5.49 5.94.43.38.81 1.13.81 2.28v3.38c0 .32.22.7.82.58A12 12 0 0 0 12 .5Z"
+                />
+              </svg>
+              <span class="sr-only">GitHub</span>
+            </a>
+          </div>
         </div>
       </header>
 
-      <main class="panel">
-        <h1>News</h1>
-        <p>Recent updates for FeatureBench artifacts and leaderboard snapshots.</p>
+      <main>
+        <section class="news-hero" data-reveal style="--delay: 110ms">
+          <h1>News</h1>
+        </section>
 
-        <ul class="news-list" id="newsList" aria-label="Project News">
-          <li class="news-item">
-            <p class="news-date" id="latestDate">Loading...</p>
-            <h2 class="news-title">Leaderboard snapshot refreshed</h2>
-            <p class="news-body" id="latestBody">Reading local benchmark data.</p>
-          </li>
-          <li class="news-item">
-            <p class="news-date">Resource</p>
-            <h2 class="news-title">Project links</h2>
-            <p class="news-body">Code, dataset, and deployment assets are listed on the homepage and leaderboard.</p>
-          </li>
-        </ul>
+        <section class="news-feed" aria-label="News feed" data-reveal style="--delay: 170ms">
+          <article class="news-card">
+            <p class="news-date"><time datetime="2026-02-06">2026.02.06</time></p>
+            <h2>Introducing FeatureBench</h2>
+            <p class="news-preview">
+              FeatureBench is an execution-based benchmark for evaluating agents on end-to-end development of complex real features.
+            </p>
+          </article>
+        </section>
       </main>
     </div>
 
@@ -342,7 +300,7 @@
           try {
             localStorage.setItem(themeStorageKey, safe);
           } catch {
-            // ignore
+            // ignore storage issues
           }
         }
 
@@ -356,49 +314,9 @@
           applyTheme(stored);
         }
 
-        function formatDate(isoDate) {
-          if (!isoDate) return "Unknown";
-          const date = new Date(`${isoDate}T00:00:00Z`);
-          if (Number.isNaN(date.getTime())) return isoDate;
-          return date.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "2-digit",
-            timeZone: "UTC",
-          });
-        }
-
-        async function loadLatestNews() {
-          try {
-            const [liteRes, fullRes] = await Promise.all([
-              fetch("../leaderboard/data/lite.json", { cache: "no-store" }),
-              fetch("../leaderboard/data/full.json", { cache: "no-store" }),
-            ]);
-            if (!liteRes.ok || !fullRes.ok) throw new Error("failed to fetch data");
-
-            const [liteRows, fullRows] = await Promise.all([liteRes.json(), fullRes.json()]);
-            const lite = Array.isArray(liteRows) ? liteRows : [];
-            const full = Array.isArray(fullRows) ? fullRows : [];
-            const latestIso = [...lite, ...full]
-              .map((item) => String(item?.date || ""))
-              .filter(Boolean)
-              .sort()
-              .at(-1);
-
-            const latestDate = document.getElementById("latestDate");
-            const latestBody = document.getElementById("latestBody");
-            latestDate.textContent = formatDate(latestIso);
-            latestBody.textContent = `${lite.length} lite runs and ${full.length} full runs are available in the current snapshot.`;
-          } catch {
-            document.getElementById("latestDate").textContent = "Unavailable";
-            document.getElementById("latestBody").textContent = "Serve this site over HTTP to read the latest local files.";
-          }
-        }
-
         initTheme();
         lightBtn.addEventListener("click", () => applyTheme("light"));
         darkBtn.addEventListener("click", () => applyTheme("dark"));
-        loadLatestNews();
       })();
     </script>
   </body>

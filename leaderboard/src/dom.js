@@ -4,7 +4,8 @@ export const els = {
   topBadges: /** @type {HTMLElement | null} */ (document.getElementById("topBadges")),
   tbody: /** @type {HTMLElement} */ (document.getElementById("tbody")),
   panel: /** @type {HTMLElement} */ (document.getElementById("panel")),
-  themeToggle: /** @type {HTMLButtonElement} */ (document.getElementById("themeToggle")),
+  themeLight: /** @type {HTMLButtonElement | null} */ (document.getElementById("themeLight")),
+  themeDark: /** @type {HTMLButtonElement | null} */ (document.getElementById("themeDark")),
   sortButtons: Array.from(document.querySelectorAll(".sort-btn")),
 
   filtersBtn: /** @type {HTMLButtonElement | null} */ (document.getElementById("filtersBtn")),

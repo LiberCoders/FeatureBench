@@ -1,6 +1,7 @@
 [
   {
-    "model": "Claude Code (routing) + Claude Opus 4.5 (20251101)",
+    "agent": "Claude Code (routing)",
+    "model": "Claude Opus 4.5 (20251101)",
     "passed": 59.12,
     "resolved": 20,
     "org": [
@@ -19,7 +20,8 @@
     ]
   },
   {
-    "model": "OpenHands + Qwen3-Coder-30B-A3B-Instruct",
+    "agent": "OpenHands",
+    "model": "Qwen3-Coder-30B-A3B-Instruct",
     "passed": 23.03,
     "resolved": 3.3,
     "org": [
@@ -40,7 +42,8 @@
     ]
   },
   {
-    "model": "OpenHands (mock) + DeepSeek V3.2",
+    "agent": "OpenHands (mock)",
+    "model": "DeepSeek V3.2",
     "passed": 35.94,
     "resolved": 6.7,
     "org": [
@@ -61,7 +64,8 @@
     ]
   },
   {
-    "model": "OpenHands + Qwen3-Coder-480B-A35B-Instruct",
+    "agent": "OpenHands",
+    "model": "Qwen3-Coder-480B-A35B-Instruct",
     "passed": 38.31,
     "resolved": 6.7,
     "org": [
@@ -82,9 +86,10 @@
     ]
   },
   {
-    "model": "OpenHands + Claude Opus 4.5 (20251101)",
+    "agent": "OpenHands",
+    "model": "Claude Opus 4.5 (20251101)",
     "passed": 67.18,
-    "resolved": 20.0,
+    "resolved": 20,
     "org": [
       "./logos/openhands.png",
       "./logos/anthropic.png"
@@ -103,9 +108,10 @@
     ]
   },
   {
-    "model": "OpenHands + Gemini-3-Pro-Preview (low reasoning)",
+    "agent": "OpenHands",
+    "model": "Gemini-3-Pro-Preview (low reasoning)",
     "passed": 45.14,
-    "resolved": 10.0,
+    "resolved": 10,
     "org": [
       "./logos/openhands.png",
       "./logos/gemini.png"
@@ -124,9 +130,10 @@
     ]
   },
   {
-    "model": "Gemini-CLI + Gemini-3-Pro-Preview (low reasoning)",
+    "agent": "Gemini-CLI",
+    "model": "Gemini-3-Pro-Preview (low reasoning)",
     "passed": 43.38,
-    "resolved": 10.0,
+    "resolved": 10,
     "org": [
       "./logos/gemini.png"
     ],
@@ -143,9 +150,10 @@
     ]
   },
   {
-    "model": "Codex + GPT-5.1-Codex (medium reasoning)",
+    "agent": "Codex",
+    "model": "GPT-5.1-Codex (medium reasoning)",
     "passed": 60.22,
-    "resolved": 20.0,
+    "resolved": 20,
     "org": [
       "./logos/openai.png"
     ],

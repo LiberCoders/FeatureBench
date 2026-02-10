@@ -1,8 +1,9 @@
 [
   {
-    "model": "Claude Code (routing) + Claude Opus 4.5 (20251101)",
+    "agent": "Claude Code (routing)",
+    "model": "Claude Opus 4.5 (20251101)",
     "passed": 43.29,
-    "resolved": 11.0,
+    "resolved": 11,
     "org": [
       "./logos/anthropic.png"
     ],
@@ -19,9 +20,10 @@
     ]
   },
   {
-    "model": "OpenHands + Qwen3-Coder-30B-A3B-Instruct",
+    "agent": "OpenHands",
+    "model": "Qwen3-Coder-30B-A3B-Instruct",
     "passed": 17.52,
-    "resolved": 1.0,
+    "resolved": 1,
     "org": [
       "./logos/openhands.png",
       "./logos/qwen.png"
@@ -40,8 +42,9 @@
     ]
   },
   {
-    "model": "OpenHands (mock) + DeepSeek V3.2",
-    "passed": 26.30,
+    "agent": "OpenHands (mock)",
+    "model": "DeepSeek V3.2",
+    "passed": 26.3,
     "resolved": 5.5,
     "org": [
       "./logos/openhands.png",
@@ -61,7 +64,8 @@
     ]
   },
   {
-    "model": "OpenHands + Qwen3-Coder-480B-A35B-Instruct",
+    "agent": "OpenHands",
+    "model": "Qwen3-Coder-480B-A35B-Instruct",
     "passed": 24.55,
     "resolved": 3.5,
     "org": [
@@ -82,7 +86,8 @@
     ]
   },
   {
-    "model": "OpenHands + Claude Opus 4.5 (20251101)",
+    "agent": "OpenHands",
+    "model": "Claude Opus 4.5 (20251101)",
     "passed": 45.53,
     "resolved": 10.5,
     "org": [
@@ -103,7 +108,8 @@
     ]
   },
   {
-    "model": "OpenHands + Gemini-3-Pro-Preview (low reasoning)",
+    "agent": "OpenHands",
+    "model": "Gemini-3-Pro-Preview (low reasoning)",
     "passed": 30.08,
     "resolved": 4.5,
     "org": [
@@ -124,9 +130,10 @@
     ]
   },
   {
-    "model": "Gemini-CLI + Gemini-3-Pro-Preview (low reasoning)",
+    "agent": "Gemini-CLI",
+    "model": "Gemini-3-Pro-Preview (low reasoning)",
     "passed": 32.43,
-    "resolved": 5.0,
+    "resolved": 5,
     "org": [
       "./logos/gemini.png"
     ],
@@ -143,7 +150,8 @@
     ]
   },
   {
-    "model": "Codex + GPT-5.1-Codex (medium reasoning)",
+    "agent": "Codex",
+    "model": "GPT-5.1-Codex (medium reasoning)",
     "passed": 41.66,
     "resolved": 12.5,
     "org": [

@@ -1,14 +1,38 @@
 import { formatPercent, safeText } from "./utils.js";
 
+function getAgentAndModel(row) {
+  const agent = safeText(row.agent).trim();
+  const model = safeText(row.model).trim();
+  if (agent) return { agent, model };
+
+  // Backward compatibility for older data where `model` is "agent + model".
+  const m = model.match(/^(.*?)\s\+\s(.+)$/);
+  if (m) {
+    return { agent: safeText(m[1]).trim(), model: safeText(m[2]).trim() };
+  }
+  return { agent: "-", model };
+}
+
 export function renderRows(tbody, rows) {
   tbody.textContent = "";
 
-  for (const row of rows) {
+  for (const [index, row] of rows.entries()) {
     const tr = document.createElement("tr");
+
+    const { agent, model } = getAgentAndModel(row);
+    const rowLabel = agent && model ? `${agent} + ${model}` : model || agent || "-";
+
+    const tdRank = document.createElement("td");
+    tdRank.className = "col-rank";
+    tdRank.textContent = String(index + 1);
+
+    const tdAgent = document.createElement("td");
+    tdAgent.className = "col-agent";
+    tdAgent.textContent = safeText(agent);
 
     const tdModel = document.createElement("td");
     tdModel.className = "col-model";
-    tdModel.textContent = safeText(row.model);
+    tdModel.textContent = safeText(model);
 
     const tdPassed = document.createElement("td");
     tdPassed.className = "num pct score";
@@ -63,7 +87,7 @@ export function renderRows(tbody, rows) {
       a.href = siteUrl;
       a.target = "_blank";
       a.rel = "noreferrer";
-      a.setAttribute("aria-label", `Open link for ${safeText(row.model)}`);
+      a.setAttribute("aria-label", `Open link for ${rowLabel}`);
       a.title = "Open";
       a.innerHTML =
         '<svg class="site-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -76,7 +100,7 @@ export function renderRows(tbody, rows) {
       tdSite.textContent = "-";
     }
 
-    tr.append(tdModel, tdResolved, tdPassed, tdOrg, tdDate, tdSite);
+    tr.append(tdRank, tdAgent, tdModel, tdResolved, tdPassed, tdOrg, tdDate, tdSite);
     tbody.appendChild(tr);
   }
 }

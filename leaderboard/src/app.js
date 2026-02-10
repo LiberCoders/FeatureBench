@@ -1,14 +1,13 @@
 import { SPLITS } from "./config.js";
 import { els } from "./dom.js";
 import { state } from "./state.js";
-import { loadData, loadOptions, loadTopBadges } from "./data.js";
+import { loadData, loadOptions } from "./data.js";
 import { initTheme, applyTheme } from "./theme.js";
 import { getSortedRows, updateSortUI, initSort } from "./sort.js";
 import { getFilteredRows, initDropdowns, buildTagsForSplit, renderTagMenu } from "./filters.js";
 import { splitFromHash } from "./utils.js";
 import { initTabs, updateTabsUI } from "./tabs.js";
 import { renderRows } from "./table.js";
-import { renderTopBadges } from "./badges.js";
 
 function setActiveSplit(split, updateTagMenu = true) {
   const active = SPLITS.includes(split) ? split : "lite";
@@ -33,26 +32,21 @@ function apply(updateTagMenu = true) {
   return active;
 }
 
-function wireThemeToggle() {
-  els.themeToggle.addEventListener("click", () => {
-    const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-    applyTheme(current === "dark" ? "light" : "dark", els.themeToggle);
+function wireThemeButtons() {
+  const controls = { lightBtn: els.themeLight, darkBtn: els.themeDark };
+  els.themeLight?.addEventListener("click", () => {
+    applyTheme("light", controls);
+  });
+  els.themeDark?.addEventListener("click", () => {
+    applyTheme("dark", controls);
   });
 }
 
 (async () => {
-  initTheme(els.themeToggle);
-  wireThemeToggle();
+  initTheme({ lightBtn: els.themeLight, darkBtn: els.themeDark });
+  wireThemeButtons();
 
   try {
-    try {
-      const topBadges = await loadTopBadges();
-      renderTopBadges(els.topBadges, topBadges);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn(err);
-    }
-
     state.optionsConfig = await loadOptions();
     state.leaderboardData = await loadData();
 

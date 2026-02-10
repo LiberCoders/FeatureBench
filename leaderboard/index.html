@@ -8,24 +8,120 @@
       name="description"
       content="FeatureBench leaderboard: execution-based benchmark for end-to-end, feature-oriented agentic coding."
     />
+    <script>
+      (() => {
+        let stored = null;
+        try {
+          stored = localStorage.getItem("featurebench.theme");
+        } catch {
+          stored = null;
+        }
+        const prefersDark =
+          window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const theme =
+          stored === "dark" || stored === "light" ? stored : prefersDark ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../assets/css/topbar.css" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <header class="site-topbar">
+      <div class="site-topbar-content">
+        <div class="site-topbar-left">
+          <a class="site-brand" href="../">
+            <img class="site-brand-logo" src="./logos/logo.jpg" alt="FeatureBench logo" />
+            <span>FeatureBench</span>
+          </a>
+
+          <nav class="site-main-nav" aria-label="Primary">
+            <a href="./" aria-current="page">Leaderboard</a>
+            <a href="../tasks/">Tasks</a>
+            <a href="../news/">News</a>
+          </nav>
+        </div>
+
+        <div class="site-topbar-right" aria-label="Theme and links">
+          <button
+            class="site-icon-btn"
+            id="themeLight"
+            type="button"
+            aria-label="Use light theme"
+            aria-pressed="false"
+            title="Light"
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.9" />
+              <path
+                d="M12 2.5v2.3M12 19.2v2.3M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2.5 12h2.3M19.2 12h2.3M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+              />
+            </svg>
+            <span class="sr-only">Light theme</span>
+          </button>
+
+          <button
+            class="site-icon-btn"
+            id="themeDark"
+            type="button"
+            aria-label="Use dark theme"
+            aria-pressed="false"
+            title="Dark"
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path
+                d="M20 14.4a8.7 8.7 0 1 1-10.4-10.4A7 7 0 0 0 20 14.4Z"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span class="sr-only">Dark theme</span>
+          </button>
+
+          <a
+            class="site-icon-btn"
+            href="https://github.com/LiberCoders/FeatureBench"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open GitHub"
+            title="GitHub"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path
+                d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.2c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.09-.73.09-.73 1.2.08 1.83 1.23 1.83 1.23 1.08 1.84 2.82 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.39 1.23-3.23-.12-.31-.53-1.54.12-3.21 0 0 1.01-.32 3.3 1.23A11.4 11.4 0 0 1 12 6.8c1.01 0 2.03.14 2.98.42 2.29-1.55 3.3-1.23 3.3-1.23.65 1.67.24 2.9.12 3.21.77.84 1.23 1.92 1.23 3.23 0 4.62-2.81 5.64-5.49 5.94.43.38.81 1.13.81 2.28v3.38c0 .32.22.7.82.58A12 12 0 0 0 12 .5Z"
+              />
+            </svg>
+            <span class="sr-only">GitHub</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
     <div class="container">
-      <header>
+      <header class="leaderboard-hero">
+        <p class="title-kicker">FEATUREBENCH</p>
         <h1 class="title">
           <img class="title-logo" src="./logos/logo.jpg" alt="FeatureBench logo" />
-          <span>FeatureBench Leaderboard</span>
+          <span class="title-text">
+            <span class="title-primary">FeatureBench</span>
+            <span class="title-secondary">Leaderboard</span>
+          </span>
         </h1>
-        <blockquote class="subtitle">
-          FeatureBench is a benchmark for evaluating agents on <strong>end-to-end development of complex features</strong>. It incorporates an execution-based evaluation protocol and a scalable <strong>test-driven</strong> method that automatically derives tasks from code repositories with minimal human effort.
-        </blockquote>
+        <div class="title-divider" aria-hidden="true"></div>
       </header>
 
       <div class="controls" role="region" aria-label="Leaderboard settings">
         <div class="left-controls">
-          <div class="top-badges" id="topBadges" aria-label="Links"></div>
-
           <div class="tabs" role="tablist" aria-label="Settings">
             <button
               class="tab"
@@ -93,34 +189,6 @@
             </div>
           </div>
 
-          <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle theme" title="Toggle theme">
-            <span class="theme-icon theme-icon-sun" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-                <path
-                  d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-            </span>
-            <span class="theme-icon theme-icon-moon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M21 14.5A8.5 8.5 0 0 1 9.5 3a6.8 6.8 0 1 0 11.5 11.5Z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linejoin="round"
-                />
-              </svg>
-            </span>
-            <span class="sr-only">Toggle theme</span>
-          </button>
         </div>
       </div>
 
@@ -129,7 +197,9 @@
           <table aria-label="FeatureBench leaderboard table">
             <thead>
               <tr>
-                <th style="text-align: left">Model</th>
+                <th class="col-rank">Rank</th>
+                <th class="col-agent" style="text-align: left">Agent</th>
+                <th class="col-model" style="text-align: left">Model</th>
                 <th class="num pct">
                   <span class="th-inner">
                     %Resolved
@@ -186,20 +256,6 @@
           </table>
         </div>
       </section>
-
-      <div class="bottom-tags" aria-label="Links">
-        <a class="tag" href="./contact.html" aria-label="Open contact page" title="Contact">
-          <span class="tag-icon" aria-hidden="true">
-            ✉
-          </span>
-          <span class="tag-text">Contact</span>
-        </a>
-
-        <a class="tag" href="./citation.html" aria-label="Open citation page" title="Citation">
-          <span class="tag-icon" aria-hidden="true">#</span>
-          <span class="tag-text">Citation</span>
-        </a>
-      </div>
     </div>
 
     <script type="module" src="./src/app.js"></script>

@@ -8,6 +8,21 @@
       name="description"
       content="FeatureBench leaderboard: execution-based benchmark for end-to-end, feature-oriented agentic coding."
     />
+    <script>
+      (() => {
+        let stored = null;
+        try {
+          stored = localStorage.getItem("featurebench.theme");
+        } catch {
+          stored = null;
+        }
+        const prefersDark =
+          window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const theme =
+          stored === "dark" || stored === "light" ? stored : prefersDark ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body class="page-citation">
