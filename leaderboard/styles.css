@@ -96,6 +96,15 @@ a {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.container::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .bottom-tags {
@@ -727,12 +736,30 @@ html:not([data-theme="dark"]) .theme-icon-moon {
   overflow: hidden;
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-shell {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.table-shell > .card {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
 }
 
 .table-wrap {
   overflow-x: auto;
   overflow-y: auto;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  height: auto;
   overscroll-behavior: contain;
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -844,12 +871,78 @@ tbody td.col-rank {
   min-width: 210px;
   white-space: nowrap;
   text-align: left;
-  font-weight: 650;
+  font-weight: 500;
+}
+
+.agent-note-sup {
+  margin-left: 2px;
+  font-size: 0.74em;
+  line-height: 1;
+  vertical-align: super;
+  color: var(--muted);
+  font-weight: 700;
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.agent-note-sup[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 10px);
+  left: -8px;
+  width: clamp(250px, 34vw, 540px);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--fg);
+  font-family:
+    "IBM Plex Mono",
+    "SFMono-Regular",
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: normal;
+  text-align: left;
+  box-shadow: 0 10px 26px rgba(12, 18, 32, 0.2);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transform-origin: top left;
+  transition: opacity 130ms ease, transform 130ms ease, visibility 130ms ease;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.agent-note-sup[data-tooltip]:hover::after,
+.agent-note-sup[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.agent-note-sup:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 thead th.col-agent,
 tbody td.col-agent {
   text-align: left;
+}
+
+thead th.col-model,
+thead th.col-agent {
+  font-weight: 800;
 }
 
 .col-org {
@@ -966,6 +1059,77 @@ tbody td.col-org {
   width: 18px;
   height: 18px;
   display: block;
+}
+
+.table-footnotes {
+  border: 1px solid var(--border);
+  border-top: 0;
+  background: color-mix(in srgb, var(--surface) 88%, var(--surface-soft) 12%);
+}
+
+.table-footnotes-handle {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 10px;
+  height: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.table-footnotes-handle:hover {
+  background: color-mix(in srgb, var(--surface-soft) 24%, transparent 76%);
+}
+
+.table-footnotes-handle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.table-footnotes-caret {
+  font-size: 11px;
+  line-height: 1;
+  transition: transform 180ms ease;
+}
+
+.table-footnotes-handle[aria-expanded="true"] .table-footnotes-caret {
+  transform: rotate(180deg);
+}
+
+.table-footnotes-content {
+  border-top: 0;
+  padding: 0 14px 0 16px;
+  display: grid;
+  gap: 6px;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 180ms ease, padding 180ms ease, opacity 180ms ease, border-color 180ms ease;
+}
+
+.table-footnotes-handle[aria-expanded="true"] + .table-footnotes-content {
+  border-top: 1px solid var(--grid);
+  padding: 10px 14px 12px 16px;
+  max-height: 180px;
+  opacity: 1;
+}
+
+.table-footnote-item {
+  margin: 0;
+  text-align: left;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.42;
+}
+
+.table-footnote-item sup {
+  font-size: 0.76em;
+  color: var(--fg);
 }
 
 @media (max-width: 780px) {

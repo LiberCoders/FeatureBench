@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FeatureBench Leaderboard</title>
+    <link rel="icon" type="image/jpeg" href="./logos/logo.jpg" />
     <meta
       name="description"
       content="FeatureBench leaderboard: execution-based benchmark for end-to-end, feature-oriented agentic coding."
@@ -192,70 +193,95 @@
         </div>
       </div>
 
-      <section class="card" id="panel" role="tabpanel" aria-labelledby="tab-lite">
-        <div class="table-wrap">
-          <table aria-label="FeatureBench leaderboard table">
-            <thead>
-              <tr>
-                <th class="col-rank">Rank</th>
-                <th class="col-agent" style="text-align: left">Agent</th>
-                <th class="col-model" style="text-align: left">Model</th>
-                <th class="num pct">
-                  <span class="th-inner">
-                    %Resolved
-                    <button
-                      class="sort-btn"
-                      type="button"
-                      aria-label="Sort by %Resolved"
-                      aria-pressed="false"
-                      data-sort="resolved"
-                      data-dir="desc"
-                      title="Sort"
-                    >
-                      ▾
-                    </button>
-                  </span>
-                </th>
-                <th class="num pct">
-                  <span class="th-inner">
-                    %Passed
-                    <button
-                      class="sort-btn"
-                      type="button"
-                      aria-label="Sort by %Passed"
-                      aria-pressed="false"
-                      data-sort="passed"
-                      data-dir="desc"
-                      title="Sort"
-                    >
-                      ▾
-                    </button>
-                  </span>
-                </th>
-                <th class="col-org">Org</th>
-                <th class="col-date">
-                  <span class="th-inner">
-                    Date
-                    <button
-                      class="sort-btn"
-                      type="button"
-                      aria-label="Sort by Date"
-                      aria-pressed="false"
-                      data-sort="date"
-                      data-dir="desc"
-                      title="Sort"
-                    >
-                      ▾
-                    </button>
-                  </span>
-                </th>
-                <th class="col-site">Site</th>
-              </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-          </table>
+      <div class="table-shell" id="tableShell">
+        <section class="card" id="panel" role="tabpanel" aria-labelledby="tab-lite">
+          <div class="table-wrap">
+            <table aria-label="FeatureBench leaderboard table">
+              <thead>
+                <tr>
+                  <th class="col-rank">Rank</th>
+                  <th class="col-model" style="text-align: left">Model</th>
+                  <th class="col-agent" style="text-align: left">Scaffold</th>
+                  <th class="num pct">
+                    <span class="th-inner">
+                      %Resolved
+                      <button
+                        class="sort-btn"
+                        type="button"
+                        aria-label="Sort by %Resolved"
+                        aria-pressed="false"
+                        data-sort="resolved"
+                        data-dir="desc"
+                        title="Sort"
+                      >
+                        ▾
+                      </button>
+                    </span>
+                  </th>
+                  <th class="num pct">
+                    <span class="th-inner">
+                      %Passed
+                      <button
+                        class="sort-btn"
+                        type="button"
+                        aria-label="Sort by %Passed"
+                        aria-pressed="false"
+                        data-sort="passed"
+                        data-dir="desc"
+                        title="Sort"
+                      >
+                        ▾
+                      </button>
+                    </span>
+                  </th>
+                  <th class="col-org">Org</th>
+                  <th class="col-date">
+                    <span class="th-inner">
+                      Date
+                      <button
+                        class="sort-btn"
+                        type="button"
+                        aria-label="Sort by Date"
+                        aria-pressed="false"
+                        data-sort="date"
+                        data-dir="desc"
+                        title="Sort"
+                      >
+                        ▾
+                      </button>
+                    </span>
+                  </th>
+                  <th class="col-site">Site</th>
+                </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+        </section>
+        <div class="table-footnotes" id="tableFootnotes" hidden>
+          <button
+            class="table-footnotes-handle"
+            id="tableFootnotesToggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="tableFootnotesContent"
+            title="Toggle notes"
+          >
+            <span class="table-footnotes-caret" aria-hidden="true">▾</span>
+            <span class="sr-only">Toggle notes</span>
+          </button>
+          <div class="table-footnotes-content" id="tableFootnotesContent">
+            <p class="table-footnote-item" data-note="routing">
+              <sup>1</sup>
+              Routing: Routing mode may route operations to different models, even if a specific model is selected.
+            </p>
+            <p class="table-footnote-item" data-note="mock">
+              <sup>2</sup>
+              Mock: Tool calls are string-encoded and simulated.
+            </p>
+          </div>
         </div>
-      </section>
+      </div>
     </div>
 
     <script type="module" src="./src/app.js"></script>

@@ -1,5 +1,20 @@
 import { formatPercent, safeText } from "./utils.js";
 
+const AGENT_MARKERS = [
+  {
+    key: "routing",
+    token: "(routing)",
+    sup: "1",
+    note: "Routing: Routing mode may route operations to different models, even if a specific model is selected.",
+  },
+  {
+    key: "mock",
+    token: "(mock)",
+    sup: "2",
+    note: "Mock: Tool calls are string-encoded and simulated.",
+  },
+];
+
 function getAgentAndModel(row) {
   const agent = safeText(row.agent).trim();
   const model = safeText(row.model).trim();
@@ -13,14 +28,36 @@ function getAgentAndModel(row) {
   return { agent: "-", model };
 }
 
+function parseAgentLabel(rawAgent) {
+  let text = safeText(rawAgent).trim();
+  const used = [];
+  const lower = text.toLowerCase();
+
+  for (const marker of AGENT_MARKERS) {
+    if (lower.includes(marker.token)) {
+      used.push(marker);
+      const pattern = new RegExp(`\\s*\\(${marker.key}\\)\\s*`, "gi");
+      text = text.replace(pattern, " ");
+    }
+  }
+
+  text = text.replace(/\s+/g, " ").trim();
+  if (!text) {
+    text = "-";
+  }
+  return { text, used };
+}
+
 export function renderRows(tbody, rows) {
   tbody.textContent = "";
+  const notesUsed = new Set();
 
   for (const [index, row] of rows.entries()) {
     const tr = document.createElement("tr");
 
     const { agent, model } = getAgentAndModel(row);
-    const rowLabel = agent && model ? `${agent} + ${model}` : model || agent || "-";
+    const agentLabel = parseAgentLabel(agent);
+    const rowLabel = agentLabel.text && model ? `${agentLabel.text} + ${model}` : model || agentLabel.text || "-";
 
     const tdRank = document.createElement("td");
     tdRank.className = "col-rank";
@@ -28,7 +65,20 @@ export function renderRows(tbody, rows) {
 
     const tdAgent = document.createElement("td");
     tdAgent.className = "col-agent";
-    tdAgent.textContent = safeText(agent);
+    tdAgent.textContent = agentLabel.text;
+    for (const marker of agentLabel.used) {
+      notesUsed.add(marker.key);
+      const sup = document.createElement("sup");
+      sup.className = "agent-note-sup";
+      sup.textContent = marker.sup;
+      if (marker.note) {
+        // Styled tooltip content rendered via CSS pseudo element.
+        sup.dataset.tooltip = marker.note;
+        sup.setAttribute("aria-label", marker.note);
+        sup.tabIndex = 0;
+      }
+      tdAgent.appendChild(sup);
+    }
 
     const tdModel = document.createElement("td");
     tdModel.className = "col-model";
@@ -100,7 +150,9 @@ export function renderRows(tbody, rows) {
       tdSite.textContent = "-";
     }
 
-    tr.append(tdRank, tdAgent, tdModel, tdResolved, tdPassed, tdOrg, tdDate, tdSite);
+    tr.append(tdRank, tdModel, tdAgent, tdResolved, tdPassed, tdOrg, tdDate, tdSite);
     tbody.appendChild(tr);
   }
+
+  return notesUsed;
 }

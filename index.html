@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FeatureBench</title>
+    <link rel="icon" type="image/jpeg" href="./leaderboard/logos/logo.jpg" />
     <meta
       name="description"
       content="FeatureBench is an execution-based benchmark for end-to-end, feature-oriented agentic coding."
@@ -61,7 +62,7 @@
         --accent: #e8eefb;
         --accent-soft: #8db0ff;
         --focus: #8db0ff;
-        --hero-title-soft: #a8b6cf;
+        --hero-title-soft: #386aa6;
         --card-shadow: 0 22px 54px rgba(1, 4, 12, 0.45);
         --hero-wave-fill: rgba(58, 83, 123, 0.34);
         --hero-wave-shadow: rgba(109, 144, 206, 0.32);
@@ -69,12 +70,31 @@
 
       * {
         box-sizing: border-box;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      *::-webkit-scrollbar {
+        width: 0 !important;
+        height: 0 !important;
+        display: none;
       }
 
       html,
       body {
+        height: 100%;
         margin: 0;
         min-height: 100%;
+      }
+
+      html {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      html::-webkit-scrollbar {
+        width: 0;
+        height: 0;
       }
 
       body {
@@ -84,6 +104,13 @@
           radial-gradient(820px 420px at 10% -20%, rgba(79, 117, 255, 0.12), transparent 70%),
           radial-gradient(740px 420px at 88% -18%, rgba(57, 103, 255, 0.1), transparent 72%),
           var(--bg);
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      body::-webkit-scrollbar {
+        width: 0;
+        height: 0;
       }
 
       a {
@@ -93,19 +120,44 @@
 
       .shell {
         width: 100%;
-        margin: 0 auto 74px;
+        margin: 0 auto;
+        height: 100vh;
+        min-height: 100dvh;
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
       }
 
-      main {
-        width: min(1180px, 100% - 28px);
-        margin: 0 auto;
+      .slides {
+        width: 100%;
+        margin: 0;
+        flex: 1;
+        height: 100%;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scroll-snap-type: y mandatory;
+        scroll-behavior: smooth;
+        overscroll-behavior: contain;
+        padding-bottom: 0;
+      }
+
+      .screen {
+        min-height: 100%;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+        padding: clamp(10px, 2vh, 24px) clamp(20px, 4.8vw, 92px) clamp(14px, 2.6vh, 34px);
       }
 
       .intro-fold {
-        min-height: calc(100vh - 56px);
-        min-height: calc(100dvh - 56px);
         display: flex;
         flex-direction: column;
+        min-height: 100%;
+      }
+
+      .screen > .story-panel {
+        margin-inline: auto;
       }
 
       .resource-pill:focus-visible {
@@ -114,15 +166,24 @@
       }
 
       .hero {
-        margin-top: 24px;
+        margin-top: 0;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
         position: relative;
         isolation: isolate;
-        padding-bottom: 18px;
+        padding-top: clamp(14px, 2.2vh, 28px);
+        padding-bottom: clamp(22px, 4.6vh, 48px);
         overflow: hidden;
       }
 
       .hero::after {
         content: none;
+      }
+
+      .hero-copy {
+        margin-top: clamp(48px, 10vh, 150px);
       }
 
       .kicker {
@@ -165,6 +226,10 @@
         font-style: normal;
       }
 
+      html[data-theme="dark"] .hero-soft {
+        text-shadow: 0 0 18px rgba(212, 176, 114, 0.16);
+      }
+
       .hero p {
         margin: 0;
         max-width: 64ch;
@@ -173,12 +238,16 @@
         color: var(--muted);
       }
 
+      .hero p + p {
+        margin-top: 2px;
+      }
+
       .hero-wave {
         position: absolute;
         left: -2%;
         right: -2%;
-        bottom: -2px;
-        height: 60%;
+        bottom: clamp(92px, 13vh, 220px);
+        height: clamp(54%, 60%, 68%);
         pointer-events: none;
         z-index: -1;
       }
@@ -213,7 +282,7 @@
       }
 
       .stats {
-        margin-top: 30px;
+        margin-top: clamp(-118px, -11.5vh, -46px);
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 12px;
@@ -251,22 +320,22 @@
       }
 
       .resource-row {
-        margin-top: 14px;
+        margin-top: clamp(6px, 1.2vh, 12px);
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
       }
 
       .resource-pill {
-        height: 34px;
-        padding: 0 12px;
+        height: 42px;
+        padding: 0 14px;
         border-radius: 999px;
         border: 1px solid var(--line);
         background: var(--surface);
         display: inline-flex;
         align-items: center;
-        gap: 7px;
-        font-size: 13px;
+        gap: 8px;
+        font-size: 14px;
         line-height: 1;
         font-weight: 700;
       }
@@ -279,8 +348,8 @@
       }
 
       .resource-icon {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -288,14 +357,14 @@
       }
 
       .resource-icon svg {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         display: block;
       }
 
       .resource-icon img {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         display: block;
         object-fit: contain;
       }
@@ -314,48 +383,17 @@
         color: var(--text);
       }
 
-      .scroll-cue {
-        margin-top: auto;
-        padding-top: 14px;
-        display: flex;
-        justify-content: center;
-      }
-
-      .scroll-cue-btn {
-        width: 42px;
-        height: 42px;
-        border-radius: 999px;
-        border: 1px solid var(--line);
-        background: color-mix(in srgb, var(--surface) 88%, transparent 12%);
-        color: var(--muted);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        animation: bob 1.8s ease-in-out infinite;
-      }
-
-      .scroll-cue-btn:hover {
-        border-color: var(--line-strong);
-        color: var(--text);
-      }
-
-      .scroll-cue-btn svg {
-        width: 18px;
-        height: 18px;
-        display: block;
-      }
-
       .more-content {
-        margin-top: 64px;
-        padding-top: 8px;
-        padding-bottom: 78px;
+        margin-top: 0;
+        padding-top: 0;
+        padding-bottom: 0;
         display: grid;
         gap: 26px;
         justify-items: center;
       }
 
       .more-intro {
-        width: min(960px, 100%);
+        width: min(1320px, 100%);
         max-width: none;
       }
 
@@ -387,7 +425,7 @@
       .story-panel {
         border-top: 1px solid var(--line);
         padding-top: 20px;
-        width: min(960px, 100%);
+        width: min(1320px, 100%);
         display: grid;
         gap: 10px;
       }
@@ -516,7 +554,7 @@
       }
 
       .paper-table-wrap {
-        width: min(960px, 100%);
+        width: min(1320px, 100%);
         margin: 8px auto 0;
         overflow-x: auto;
       }
@@ -543,8 +581,70 @@
         font-weight: 700;
       }
 
+      .paper-table thead tr:first-child th {
+        background: color-mix(in srgb, var(--surface) 88%, var(--line) 12%);
+        font-size: 1rem;
+        letter-spacing: 0.01em;
+        text-align: center;
+        border-bottom: 0;
+        padding-top: 10px;
+        padding-bottom: 6px;
+      }
+
+      .paper-table thead tr:first-child th.paper-col-stub {
+        text-align: left;
+        vertical-align: middle;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+
+      .paper-table thead tr:nth-child(2) th {
+        background: color-mix(in srgb, var(--surface) 80%, var(--line) 20%);
+        border-top: 0;
+      }
+
+      .paper-table thead tr:first-child th.paper-group-head {
+        position: relative;
+      }
+
+      .paper-table thead tr:first-child th.paper-group-head::after {
+        content: "";
+        position: absolute;
+        left: 20px;
+        right: 20px;
+        bottom: 5px;
+        height: 1px;
+        background: color-mix(in srgb, var(--line) 72%, transparent 28%);
+        opacity: 0.62;
+      }
+
+      .paper-table .paper-group-start {
+        border-left: 1px solid var(--line);
+      }
+
+      .paper-table td:nth-child(n + 3),
+      .paper-table th.paper-metric {
+        text-align: center;
+      }
+
+      .paper-table td:nth-child(3),
+      .paper-table td:nth-child(6) {
+        border-left: 1px solid var(--line);
+      }
+
       .paper-table tbody tr:nth-child(even) {
         background: color-mix(in srgb, var(--surface) 86%, transparent 14%);
+      }
+
+      .paper-footnote {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 0.8rem;
+        line-height: 1.35;
+      }
+
+      .paper-footnote sup {
+        font-size: 0.72em;
       }
 
       .citation-pre {
@@ -571,16 +671,6 @@
         to {
           opacity: 1;
           transform: translateY(0);
-        }
-      }
-
-      @keyframes bob {
-        0%,
-        100% {
-          transform: translateY(0);
-        }
-        50% {
-          transform: translateY(4px);
         }
       }
 
@@ -631,9 +721,61 @@
         border: 0;
       }
 
+      .screen-dots {
+        position: fixed;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 38;
+        display: grid;
+        gap: 9px;
+        padding: 8px 6px;
+        border: 1px solid color-mix(in srgb, var(--line) 84%, transparent 16%);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--surface) 84%, transparent 16%);
+        backdrop-filter: blur(8px);
+      }
+
+      .screen-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        border: 1px solid color-mix(in srgb, var(--line-strong) 70%, transparent 30%);
+        background: transparent;
+        padding: 0;
+        cursor: pointer;
+        transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease;
+      }
+
+      .screen-dot.active {
+        background: var(--accent-soft);
+        border-color: var(--accent-soft);
+        transform: scale(1.2);
+      }
+
+      .screen-dot:focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+
       @media (max-width: 980px) {
+        .screen-dots {
+          right: 10px;
+          gap: 8px;
+        }
+
+        .intro-fold {
+          min-height: auto;
+        }
+
         .stats {
+          margin-top: clamp(10px, 1.8vh, 18px);
           grid-template-columns: 1fr;
+        }
+
+        .hero-wave {
+          bottom: clamp(34px, 7vh, 110px);
+          height: clamp(52%, 58%, 66%);
         }
 
         .story-facts {
@@ -651,22 +793,38 @@
       }
 
       @media (max-width: 780px) {
-        main {
-          width: min(1180px, 100% - 16px);
-        }
-
-        .intro-fold {
-          min-height: calc(100vh - 50px);
-          min-height: calc(100dvh - 50px);
+        .slides {
+          width: 100%;
         }
 
         .hero {
-          margin-top: 18px;
-          padding-bottom: 12px;
+          padding-bottom: 14px;
         }
 
-        .more-content {
-          margin-top: 56px;
+        .hero-copy {
+          margin-top: clamp(12px, 3vh, 32px);
+        }
+
+        .kicker {
+          margin-top: 0;
+        }
+
+        .resource-pill {
+          height: 34px;
+          padding: 0 11px;
+          font-size: 13px;
+          gap: 7px;
+        }
+
+        .resource-icon,
+        .resource-icon svg,
+        .resource-icon img {
+          width: 16px;
+          height: 16px;
+        }
+
+        .screen-dots {
+          display: none;
         }
 
         .story-panel {
@@ -773,19 +931,23 @@
         </div>
       </header>
 
-      <main>
-        <section class="intro-fold" aria-label="Hero Fold">
+      <main id="slides" class="slides">
+        <section class="screen intro-fold" aria-label="Hero Fold">
           <section class="hero" data-reveal style="--delay: 120ms">
-            <p class="kicker">Feature-Oriented Agentic Coding Benchmark</p>
-            <h1>
-              <span class="hero-brand">FeatureBench:</span>
-              <span>Beyond <em class="hero-soft">bug</em> fixing.</span>
-              <span>Ship real <em class="hero-soft">features</em>.</span>
-            </h1>
-            <p>
-              FeatureBench measures end-to-end development of complex features through execution-based evaluation and
-              scalable test-driven task generation from real repositories.
-            </p>
+            <div class="hero-copy">
+              <p class="kicker">Feature-Oriented Agentic Coding Benchmark</p>
+              <h1>
+                <span class="hero-brand">FeatureBench:</span>
+                <span>Beyond <em class="hero-soft">bug</em> fixing.</span>
+                <span>Ship real <em class="hero-soft">features</em>.</span>
+              </h1>
+              <p>
+                End-to-end benchmarking of real-world feature development.
+              </p>
+              <p>
+                Tasks from real repositories, evaluated by executable tests.
+              </p>
+            </div>
             <div class="hero-wave" aria-hidden="true">
               <svg viewBox="0 0 1200 340" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
                 <path
@@ -821,18 +983,9 @@
           </section>
 
           <section class="resource-row" id="resourceRow" data-reveal style="--delay: 260ms" aria-label="Project Links"></section>
-
-          <div class="scroll-cue" data-reveal style="--delay: 310ms">
-            <a class="scroll-cue-btn" href="#more-content" aria-label="Scroll down for more">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M12 5.6v12.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
-                <path d="m7.8 14.8 4.2 4.2 4.2-4.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </a>
-          </div>
         </section>
 
-        <section class="more-content" id="more-content" aria-label="FeatureBench Overview">
+        <section class="screen more-content" id="more-content" aria-label="FeatureBench Overview">
           <div class="more-intro" data-reveal style="--delay: 80ms">
             <p class="more-kicker">Inside FeatureBench</p>
             <h2>A benchmark for end-to-end development of complex features</h2>
@@ -852,7 +1005,7 @@
               continually updatable benchmark instances with minimal manual intervention.
             </p>
             <ul class="story-list">
-              <li>Dependency graph is built from dynamic tracing, not static heuristics only.</li>
+              <li>Dependency graphs are built via dynamic tracing rather than static heuristics.</li>
               <li>Post verification enforces F2P fail and P2P pass conditions before patch replay.</li>
               <li>Problem statements are synthesized with explicit interfaces and import paths.</li>
             </ul>
@@ -867,7 +1020,9 @@
               </figure>
             </div>
           </article>
+        </section>
 
+        <section class="screen" aria-label="Empirical Results">
           <article class="story-panel" data-reveal style="--delay: 230ms">
             <p class="story-kicker">Empirical Results</p>
             <h3>Frontier agents still face a large feature-development gap</h3>
@@ -898,26 +1053,70 @@
               <table class="paper-table">
                 <thead>
                   <tr>
-                    <th>Scaffold</th>
-                    <th>Model</th>
-                    <th>Lite %Passed</th>
-                    <th>Lite %Resolved</th>
-                    <th>Lite Token I/O</th>
-                    <th>Full %Passed</th>
-                    <th>Full %Resolved</th>
-                    <th>Full Token I/O</th>
+                    <th class="paper-col-stub" rowspan="2">Scaffold</th>
+                    <th class="paper-col-stub" rowspan="2">Model</th>
+                    <th class="paper-group-start paper-group-head" colspan="3">Lite</th>
+                    <th class="paper-group-start paper-group-head" colspan="3">Full</th>
+                  </tr>
+                  <tr>
+                    <th class="paper-metric paper-group-start">%Passed</th>
+                    <th class="paper-metric">%Resolved</th>
+                    <th class="paper-metric">Token I/O</th>
+                    <th class="paper-metric paper-group-start">%Passed</th>
+                    <th class="paper-metric">%Resolved</th>
+                    <th class="paper-metric">Token I/O</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td>OpenHands</td>
-                    <td>Qwen3-Coder-480B-A35B-Instruct</td>
-                    <td>38.31</td>
-                    <td>6.7</td>
-                    <td>2.6M / 16k</td>
-                    <td>24.55</td>
-                    <td>3.5</td>
-                    <td>2.0M / 14k</td>
+                    <td>Claude Opus 4.5</td>
+                    <td>67.18</td>
+                    <td>20.0</td>
+                    <td>8.8M / 29k</td>
+                    <td>45.53</td>
+                    <td>10.5</td>
+                    <td>8.1M / 29k</td>
+                  </tr>
+                  <tr>
+                    <td>Codex</td>
+                    <td>GPT-5.1-Codex (medium reasoning)</td>
+                    <td>60.22</td>
+                    <td>20.0</td>
+                    <td>6.6M / 39k</td>
+                    <td>41.66</td>
+                    <td>12.5</td>
+                    <td>6.3M / 39k</td>
+                  </tr>
+                  <tr>
+                    <td>Claude Code<sup>1</sup></td>
+                    <td>Claude Opus 4.5</td>
+                    <td>59.12</td>
+                    <td>20.0</td>
+                    <td>9.0M / 35k</td>
+                    <td>43.29</td>
+                    <td>11.0</td>
+                    <td>7.5M / 34k</td>
+                  </tr>
+                  <tr>
+                    <td>Gemini-CLI</td>
+                    <td>Gemini-3-Pro-Preview (low reasoning)</td>
+                    <td>43.38</td>
+                    <td>10.0</td>
+                    <td>2.6M / 13k</td>
+                    <td>32.43</td>
+                    <td>5.0</td>
+                    <td>2.5M / 12k</td>
+                  </tr>
+                  <tr>
+                    <td>OpenHands</td>
+                    <td>Gemini-3-Pro-Preview (low reasoning)</td>
+                    <td>45.14</td>
+                    <td>10.0</td>
+                    <td>6.0M / 41k</td>
+                    <td>30.08</td>
+                    <td>4.5</td>
+                    <td>6.2M / 40k</td>
                   </tr>
                   <tr>
                     <td>OpenHands</td>
@@ -931,59 +1130,22 @@
                   </tr>
                   <tr>
                     <td>OpenHands</td>
-                    <td>Gemini-3-Pro-Preview (low reasoning)</td>
-                    <td>45.14</td>
-                    <td>10.0</td>
-                    <td>6.0M / 41k</td>
-                    <td>30.08</td>
-                    <td>4.5</td>
-                    <td>6.2M / 40k</td>
-                  </tr>
-                  <tr>
-                    <td>Gemini-CLI</td>
-                    <td>Gemini-3-Pro-Preview (low reasoning)</td>
-                    <td>43.38</td>
-                    <td>10.0</td>
-                    <td>2.6M / 13k</td>
-                    <td>32.43</td>
-                    <td>5.0</td>
-                    <td>2.5M / 12k</td>
-                  </tr>
-                  <tr>
-                    <td>Claude Code (routing)</td>
-                    <td>Claude Opus 4.5</td>
-                    <td>59.12</td>
-                    <td>20.0</td>
-                    <td>9.0M / 35k</td>
-                    <td>43.29</td>
-                    <td>11.0</td>
-                    <td>7.5M / 34k</td>
-                  </tr>
-                  <tr>
-                    <td>Codex</td>
-                    <td>GPT-5.1-Codex (medium reasoning)</td>
-                    <td>60.22</td>
-                    <td>20.0</td>
-                    <td>6.6M / 39k</td>
-                    <td>41.66</td>
-                    <td>12.5</td>
-                    <td>6.3M / 39k</td>
-                  </tr>
-                  <tr>
-                    <td>OpenHands</td>
-                    <td>Claude Opus 4.5</td>
-                    <td>67.18</td>
-                    <td>20.0</td>
-                    <td>8.8M / 29k</td>
-                    <td>45.53</td>
-                    <td>10.5</td>
-                    <td>8.1M / 29k</td>
+                    <td>Qwen3-Coder-480B-A35B-Instruct</td>
+                    <td>38.31</td>
+                    <td>6.7</td>
+                    <td>2.6M / 16k</td>
+                    <td>24.55</td>
+                    <td>3.5</td>
+                    <td>2.0M / 14k</td>
                   </tr>
                 </tbody>
               </table>
             </div>
+            <p class="paper-footnote"><sup>1</sup> Routing mode may route operations to different models (e.g., Claude Haiku), even if a specific model is selected.</p>
           </article>
+        </section>
 
+        <section class="screen" aria-label="Complexity and Time Analysis">
           <article class="story-panel" data-reveal style="--delay: 270ms">
             <p class="story-kicker">Complexity & Time Analysis</p>
             <h3>Pass rate varies with code complexity and task creation time</h3>
@@ -998,7 +1160,9 @@
               </figcaption>
             </figure>
           </article>
+        </section>
 
+        <section class="screen" aria-label="Failure Analysis">
           <article class="story-panel" data-reveal style="--delay: 310ms">
             <p class="story-kicker">Failure Analysis</p>
             <h3>Frequent failure patterns in unresolved runs</h3>
@@ -1011,7 +1175,9 @@
               <figcaption class="story-caption">Failure mode breakdown on FeatureBench runs.</figcaption>
             </figure>
           </article>
+        </section>
 
+        <section class="screen" aria-label="Citation">
           <article class="story-panel" data-reveal style="--delay: 390ms">
             <p class="story-kicker">Citation</p>
             <pre class="citation-pre">@inproceedings{zhou2026featurebench,
@@ -1023,6 +1189,7 @@
           </article>
         </section>
       </main>
+      <nav class="screen-dots" id="screenDots" aria-label="Screen navigation"></nav>
     </div>
 
     <script>
@@ -1192,10 +1359,140 @@
           }
         }
 
+        function initScreenDots() {
+          const scroller = document.getElementById("slides");
+          const dotsRoot = document.getElementById("screenDots");
+          if (!scroller || !dotsRoot) return;
+
+          const screens = Array.from(scroller.querySelectorAll(":scope > .screen"));
+          if (!screens.length) {
+            dotsRoot.hidden = true;
+            return;
+          }
+
+          const reduceMotion =
+            window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          const supportsWheelSnap =
+            window.matchMedia && window.matchMedia("(pointer: fine)").matches;
+
+          let activeIndex = 0;
+          let wheelLocked = false;
+          let scrollTicking = false;
+
+          function clampIndex(index) {
+            return Math.max(0, Math.min(index, screens.length - 1));
+          }
+
+          function nearestIndex() {
+            const top = scroller.scrollTop;
+            let bestIndex = 0;
+            let bestDistance = Infinity;
+            for (let i = 0; i < screens.length; i += 1) {
+              const distance = Math.abs(screens[i].offsetTop - top);
+              if (distance < bestDistance) {
+                bestDistance = distance;
+                bestIndex = i;
+              }
+            }
+            return bestIndex;
+          }
+
+          dotsRoot.innerHTML = "";
+          const buttons = screens.map((screen, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "screen-dot";
+            button.setAttribute("aria-label", `Go to screen ${index + 1}`);
+            button.addEventListener("click", () => {
+              goToIndex(index);
+            });
+            dotsRoot.appendChild(button);
+            return button;
+          });
+
+          function setActive(index) {
+            buttons.forEach((button, i) => {
+              const active = i === index;
+              button.classList.toggle("active", active);
+              button.setAttribute("aria-current", active ? "true" : "false");
+            });
+          }
+
+          function goToIndex(index, options = {}) {
+            const targetIndex = clampIndex(index);
+            activeIndex = targetIndex;
+            setActive(activeIndex);
+            const targetTop = screens[targetIndex].offsetTop;
+            if (options.instant || reduceMotion) {
+              scroller.scrollTop = targetTop;
+              return Promise.resolve();
+            }
+            scroller.scrollTo({ top: targetTop, behavior: "smooth" });
+            return Promise.resolve();
+          }
+
+          function syncActiveOnScroll() {
+            if (scrollTicking) return;
+            scrollTicking = true;
+            requestAnimationFrame(() => {
+              activeIndex = nearestIndex();
+              setActive(activeIndex);
+              scrollTicking = false;
+            });
+          }
+
+          scroller.addEventListener("scroll", syncActiveOnScroll, { passive: true });
+
+          if (supportsWheelSnap) {
+            scroller.addEventListener(
+              "wheel",
+              (event) => {
+                if (Math.abs(event.deltaY) < 4) return;
+                event.preventDefault();
+                if (wheelLocked) return;
+
+                const direction = event.deltaY > 0 ? 1 : -1;
+                const fromIndex = nearestIndex();
+                const toIndex = clampIndex(fromIndex + direction);
+                if (toIndex === fromIndex) return;
+
+                wheelLocked = true;
+                goToIndex(toIndex)
+                  .catch(() => {})
+                  .finally(() => {
+                    setTimeout(() => {
+                      wheelLocked = false;
+                    }, 700);
+                  });
+              },
+              { passive: false }
+            );
+          }
+
+          window.addEventListener("resize", () => {
+            activeIndex = nearestIndex();
+            goToIndex(activeIndex, { instant: true });
+          });
+
+          const hash = window.location.hash;
+          if (hash) {
+            const target = document.querySelector(hash);
+            if (target && scroller.contains(target)) {
+              const targetScreen = target.closest(".screen") || target;
+              const targetIndex = screens.indexOf(targetScreen);
+              goToIndex(targetIndex >= 0 ? targetIndex : 0, { instant: true });
+              return;
+            }
+          }
+
+          goToIndex(0, { instant: true });
+        }
+
         initTheme();
         lightBtn.addEventListener("click", () => applyTheme("light"));
         darkBtn.addEventListener("click", () => applyTheme("dark"));
 
+        initScreenDots();
         loadSnapshot();
         loadResources();
       })();
