@@ -1,0 +1,2092 @@
+
+\documentclass{article} % For LaTeX2e
+\usepackage{iclr2026_conference,times}
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+
+\usepackage[utf8]{inputenc}
+\usepackage[most]{tcolorbox}
+% \usepackage{lmodern}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{wrapfig}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{colortbl}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{amssymb}
+\usepackage{pifont}
+\newcommand{\xmark}{\ding{55}}
+\definecolor{mygray}{gray}{.95}
+% % % % % % % % % 
+
+% \title{ProgrammerBench: Can large models serve users without programmers?}
+% \title{FEO-bench: Can Llm-agents Handle More Complex Feature-oriented Agentic Coding?}
+% \title{\namenospace: A Benchmark for \underline{A}gentic \underline{C}oding in \underline{E}nd-to-end Development}
+\title{\namenospace: Benchmarking Agentic Coding in End-to-End Development of Complex Features}
+
+% Authors must not appear in the submitted version. They should be hidden
+% as long as the \iclrfinalcopy macro remains commented out below.
+% Non-anonymous submissions will be rejected without review.
+
+\author{
+\parbox{\textwidth}{\centering
+\textbf{
+Qixing Zhou$^{1,2}$\thanks{Equal contribution.}\;
+Jiacheng Zhang$^{1,2}$\footnotemark[1]\;
+Haiyang Wang$^{2}$\footnotemark[1]\;
+Rui Hao$^{1}$\;
+Jiahe Wang$^{1}$\;
+Minghao Han$^{1}$\;
+Yuxue Yang$^{1}$\;
+Shuzhe Wu$^{2}$\;
+Feiyang Pan$^{2}$\;
+Lue Fan$^{1}$\thanks{Corresponding Author.}\;
+Dandan Tu$^{2}$\;
+Zhaoxiang Zhang$^{1}$\footnotemark[2]
+}\\[0.4em]
+$^{1}$Institute of Automation, Chinese Academy of Sciences\\
+$^{2}$Huawei Technologies Ltd.\\[0.3em]
+\texttt{wanghaiyang70@huawei.com}, \texttt{lue.fan@ia.ac.cn}
+}
+}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to \LaTeX{} to determine where to break
+% the lines. Using \AND forces a linebreak at that point. So, if \LaTeX{}
+% puts 3 of 4 authors names on the first line, and the last on the second
+% line, try using \AND instead of \And before the third author name.
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+\newcommand{\why}[1]{{\color{blue}\bf[HY: #1]}}
+\newcommand{\jh}[1]{{\color{green}\bf[JH: #1]}}
+\newcommand{\myparagraph}[1]{\noindent{\bf #1}}
+
+% \def\name{ACE-Bench }
+% \def\namenospace{ACE-Bench}
+
+\def\name{FeatureBench }
+\def\namenospace{FeatureBench}
+
+\iclrfinalcopy % Uncomment for camera-ready version, but NOT for submission.
+\begin{document}
+
+
+\maketitle
+\begin{abstract}
+Agents powered by large language models (LLMs) are increasingly adopted in the software industry, contributing code as collaborators or even autonomous developers. As their presence grows, it becomes important to assess the current boundaries of their coding abilities. Existing agentic coding benchmarks, however, cover a limited task scope, \textit{e.g.}, bug fixing within a single pull request (PR), and often rely on non-executable evaluations or lack an automated approach for continually updating the evaluation coverage.  To address such issues, we propose \namenospace, a benchmark designed to evaluate agentic coding performance in end-to-end, feature-oriented software development. \name incorporates an execution-based evaluation protocol and a scalable test-driven method that automatically derives tasks from code repositories with minimal human effort. By tracing from unit tests along a dependency graph, our approach can identify feature-level coding tasks spanning multiple commits and PRs scattered across the development timeline, while ensuring the proper functioning of other features after the separation.  Using this framework, we curated 200 challenging evaluation tasks and 3825 executable environments from 24 open-source repositories in the first version of our benchmark. Empirical evaluation reveals that the state-of-the-art agentic model, such as Claude 4.5 Opus, which achieves a 74.4\% resolved rate on SWE-bench, succeeds on only 11.0\% of tasks, opening new opportunities for advancing agentic coding. Moreover, benefiting from our automated task collection toolkit, \name can be easily scaled and updated over time to mitigate data leakage. The inherent verifiability of constructed environments also makes our method potentially valuable for agent training.  Our data and code will be publicly released.
+\end{abstract}
+
+\section{Introduction}
+\begin{figure}[b]
+\vspace{-6pt}
+\begin{center}
+\includegraphics[width=1\linewidth]{./iclr2026/figures/Figure2_v3.pdf}
+\end{center}
+\vspace{-6pt}
+\caption{a) The agent must implement a directly callable feature based on the task description and interface definitions, either by developing from scratch or extending an existing repository. b) Our benchmark shows that even Claude Opus 4.5 achieves only a 11.0\% solution rate. (Routing refers to auxiliary-model usage for certain subtasks in some closed-source agent frameworks.)}
+\label{fig:task_workflow}
+\vspace{-6pt}
+\end{figure}
+Software development is rapidly evolving with the advent of large language models (LLMs)~\citep{sapkota2025vibe}, marking a shift toward end-to-end agentic coding systems~\citep{wang2025ai}. Recent advances, such as Claude Code~\citep{anthropic_claude_code} and Qwen Code~\citep{qwen_code_cli} exemplify this evolution by introducing requirement-driven agents that autonomously plan, execute, and interact with external tools (\textit{e.g.}, compilers) to iteratively tackle complex software development tasks~\citep{gong2025language}, thereby relegating human intervention to a supervisory role.
+
+Recently, various benchmarks have been introduced to assess this paradigm shift, including SWE-bench~\citep{jimenez2024swebench}, PaperBench~\citep{starace2025paperbench}, and GitTaskBench~\citep{ni2025gittaskbench}. While these benchmarks have made significant contributions to task-oriented agentic coding, they are limited either by the narrow focus on bug-level scenarios or by reliance on handcrafted generation pipelines. As agentic coding expands toward more complex settings, such as feature-level development, these constraints hinder their ability to fully capture the capabilities of frontier code agents. Therefore, there is a need to build a challenging benchmark that broadens evaluation scope to feature-level scenarios, supported by automated collection toolkits to facilitate its future usage.
+
+\begin{table}[t]
+  \centering
+  \resizebox{\textwidth}{!}{
+  \begin{tabular}{l|cccccc}
+    \toprule
+    & Feature-oriented & Execution-based  & Scalable Instance  & Continually & Instance \\
+    \multirow{-2}{*}{Benchmark} & Agentic Coding & 
+    Evaluation  & Collection & Updatable & Number \\
+    \midrule
+    BigCodeBench~\citep{zhuo2025bigcodebench}    &            & \checkmark & & & 1140 \\
+    LiveCodeBench~\citep{jain2025livecodebench}   &            & \checkmark & & & 454\\
+    FullStackBench~\citep{cheng2024fullstack}  &            & \checkmark & & & 3374 \\
+    \midrule
+    SWE-bench~\citep{jimenez2024swebench}       &            & \checkmark & \checkmark & \checkmark & 500 \\
+    % SWE-bench Live~\citep{zhang2025swelive}       &            & \checkmark & \checkmark & \checkmark &  \checkmark & 300 \\
+    PaperBench~\citep{starace2025paperbench}      & \checkmark &            & &  & 20 \\
+    Paper2Coder~\citep{seo2025paper2code}     & \checkmark &            & & & 90 \\
+    MLEBench~\citep{chan2025mlebench} & \checkmark & \checkmark & & & 72 \\
+    DevEval~\citep{li2024prompting}        & \checkmark & \checkmark & & & 20 \\
+    GitTaskBench~\citep{ni2025gittaskbench}    & \checkmark & \checkmark & & & 54 \\
+    \midrule
+    \name (ours) & \checkmark & \checkmark & \checkmark & \checkmark & 200\\
+    \bottomrule
+  \end{tabular}
+  } 
+  \caption{A comparison of \name with current coding benchmarks reveals that our bench emphasizes feature-level realistic software development. It leverages an execution-based evaluation pipeline and integrates a test-driven toolkit for the automatic generation of task instances.}
+  \label{tab:benchmark_comparison}
+  \vspace{-12pt}
+\end{table}
+
+Constructing such a benchmark poses nontrivial challenges. Effective and execution-based evaluation of feature-level agentic coding generally depends on clearly defined functional interfaces to resolve ambiguities between the implementation and test criteria. However, these specifications are often absent in previous benchmarks. Furthermore, creating an automated data collection toolkit to support the scaling of benchmarks introduces additional complexities. Conventional pull request (PR)-based methods~\citep{jimenez2024swebench,swegym2025icml,r2egym2025colm} are ineffective in capturing complete feature patches, as these often span multiple PRs scattered across the timeline, making them difficult to associate. Moreover, many PRs lack tagging, hindering the reliable identification of feature contributions. Notably, PR-driven methods are inherently tied to the historical trajectory of commit submissions, limiting the tasks to fixed development combinations.
+
+Motivated by these shortcomings, we introduce \name, a challenging benchmark that targets feature-oriented agentic coding scenarios. It integrates an execution-based evaluation pipeline and a test-driven toolkit for automatically collecting instances from Python repositories. As shown in Table \ref{tab:benchmark_comparison}, our bench provides the following characteristics: 
+\begin{enumerate}[label=\textbf{\arabic*.},leftmargin=10pt,itemindent=0pt]
+    \setlength{\itemsep}{0pt}
+    \setlength{\parsep}{0pt}
+    \setlength{\parskip}{0pt}
+    \item \textbf{Feature-oriented real-world software development.} Unlike SWE-bench, which is dominated by bug-fixing issues with only about 18–22\% of its instances corresponding to feature requests, our benchmark is explicitly designed to target systematic feature-level agentic coding. As shown in Figure \ref{fig:task_workflow}, given human-like clear requirements (\textit{e.g.}, interface signatures and high-level functional descriptions), our task entails the implementation of new capabilities either within an existing codebase or as standalone modules. For example, adapting the Transformers library~\citep{transformerslib} for compatibility with Qwen3~\citep{yang2025qwen3} or engineering FlashAttention~\citep{dao2022flashattention} from scratch.
+    \item \textbf{Reliable execution-based evaluation.}  Highly ambiguous requirements without explicit function signatures often introduce multiple valid implementations that are incompatible with the interface expected by unit tests. This misalignment complicates execution-based evaluation and typically necessitates additional manual inspection or LLM-based judgement~\citep{starace2025paperbench,seo2025paper2code}. To mitigate this issue, we adopt a test-driven formulation strategy when constructing requirements.  Each prompt explicitly specifies the clear interface definitions, import paths, and the descriptions of expected behaviors, and enforces that the solution must be directly callable, as illustrated in Figure \ref{fig:task_workflow}. This method guarantees that a correct implementation will pass all associated tests, thereby enabling automated execution-based evaluation. 
+    \item \textbf{Scalable instance collection toolkit.} To support the extensible creation of feature-oriented, realistic evaluation environments with fail-to-pass~(F2P) and pass-to-pass~(P2P) tests, as introduced in SWE-bench, we develop an automated generation pipeline driven by unit tests. The pipeline begins by selecting and executing F2P and P2P tests, followed by the construction of a dependency graph through dynamic tracing. Based on the traced dependencies, the system automatically extracts the implementation of the targeted features while ensuring the integrity of other features. The final problem statements are then synthesized. This approach enables us to generate naturally verifiable environments from any Python repository in a scalable and flexible manner, free from the constraints of the availability and predefined trajectory of human-written PRs or commits. 
+    \item \textbf{Continually updatable.} Building on our collection toolkit, \name supports a continual supply of new task instances, enabling evaluation on tasks created after their training date, thus mitigating the risk of contamination. Using this pipeline, we have curated a benchmark with 200 evaluation instances and 3825 verifiable environments, created from May 2022 to September 2025, sourced from 24 real-world GitHub repositories in the first version of our benchmark. 
+\end{enumerate}
+
+We evaluate multiple state-of-the-art LMs on \name and find that they fail to solve all except the simplest tasks. Using the Codex agent framewor, GPT-5.1-Codex (medium reasoning) successfully completes 12.5\% of the task cases. Furthermore, we carried out comprehensive experiments, offering insights into potential improvement directions on our benchmark.
+
+In a nutshell, our contributions are three-fold: 1) We introduce \namenospace, a benchmark for agentic coding that evaluates LLMs on solving feature-level, real-world complex tasks through an automated, execution-based evaluation pipeline. 2) We release a scalable, test-driven toolkit for instance collection that integrates seamlessly with our benchmark and automatically generates verifiable environments from Python repositories. Using this toolkit, we construct a benchmark comprising 200 evaluation tasks and 3825 executable environments from 24 open source GitHub repositories.  3) We benchmark state-of-the-art LLMs, including both open- and closed-source variants, and perform in-depth analysis to identify and highlight remaining challenges. 
+
+\section{Related Work}
+\label{related_work}
+\myparagraph{Agentic Coding Benchmarks.} The most widely adopted benchmark for agentic coding is SWE-bench~\citep{jimenez2024swebench}, whose verified subset has emerged as a standard for assessing LLMs. Although originally highly challenging, its success rate has increased from below 10\% to over 70\% within a year, reflecting rapid advances in LLM-based agents~\citep{anthropic_claude_code,yang2025qwen3}. Despite its importance, SWE-bench has notable drawbacks. It mainly focuses on bug fixing, with comparatively limited coverage of feature development tasks, which often span multiple PRs. Other benchmarks address narrower domains or predefined workflows. PaperBench \citep{starace2025paperbench} and MLE-Bench~\citep{chan2025mlebench} focus on machine learning problems but rely on expert curation or high-quality cases from Kaggle. GitTaskBench \citep{ni2025gittaskbench} broadens task coverage but offers only 54 expert-designed tasks, while DevEval \citep{li2024prompting} spans the development lifecycle but enforces fixed workflows with 22 handcrafted tasks. To tackle the above problems, we propose a challenging benchmark specifically designed for feature-oriented agentic coding scenarios. This benchmark integrates an execution-based evaluation pipeline and an automated toolkit that collects instances from Python repositories in a scalable manner.
+
+\myparagraph{Scalable Collection Pipeline.} A verifiable environment is crucial for achieving better agentic coding. SWE-Gym~\citep{swegym2025icml} follows the pull-request based approach of SWE-bench, whereas R2E-Gym~\citep{r2egym2025colm} derives tasks from commits by synthesizing tests and back-translating code changes into problem statements with LLMs. These approaches mitigate scalability concerns but provide limited guarantees of evaluation quality. SWE-Smith \citep{swesmith2025} synthesizes tasks from repositories using heuristics such as LLM generation, procedural modifications, or pull-request inversion. SWE-Flow~\citep{zhang2025sweflow} synthesizes data based on fail-to-pass tests but neglects pass-to-pass tests and does not ensure the proper functioning of other features in undeveloped codebases, resulting in discrepancies compared to actual development settings.  Although successful, none of them can generate tasks that are both feature-oriented and reflective of real-world development scenarios. Our benchmark addresses these gaps by providing a test-driven, scalable tool for generating feature-level agentic coding tasks, complemented by a rigorous post-verification that ensures the integrity of undeveloped codebases, consistent with real-world scenarios.
+
+
+\section{\name}
+\label{programmerbench}
+\name establishes a benchmark for evaluating the capabilities of code agents in end-to-end software development tasks. The benchmark requires agents to interpret high-level goals and their associated code interfaces, autonomously manage execution environments, and synthesize correct and callable implementations either within existing codebases or as standalone solutions. Constructed with minimal human intervention, the benchmark leverages an automated pipeline that derives feature-oriented coding tasks from open-source repositories, thereby extending the scope of agentic coding beyond bug fixing to encompass feature development. 
+
+\begin{figure}[t]
+\begin{center}
+\vspace{-4pt}
+\includegraphics[width=\linewidth]{./iclr2026/figures/Figure1.pdf}
+\end{center}
+\caption{Given a GitHub repository, our automated toolkit initializes the development environment via Docker. For each benchmark instance, it validates and selects \textit{fail-to-pass} and \textit{pass-to-pass} tests. Then, the system performs dynamic tracing to capture runtime behavior and construct an object dependency graph. Leveraging this graph, the toolkit synthesizes code patches, derives corresponding pre-solved codebases, and formulates final problem statements. This pipeline has yielded 200 benchmark tasks and 3825 executable environments from 24 GitHub repositories.}
+\label{fig:pipeline_workflow}
+\vspace{-8pt}
+\end{figure}
+
+\subsection{Feature-oriented Agentic Coding}
+\label{subsec:task_formulation}
+\myparagraph{Task Formulation.} As illustrated in Figure \ref{fig:task_workflow}, each instance in \name provides the agent with a comprehensive problem statement. This includes a high-level task description, a specified functional interface, a blacklist of prohibited URLs to mitigate potential cheating of agents, and a dockerfile defining the execution environment. The agent is then tasked with generating a solution that addresses the problem, whether by editing existing code or implementing from scratch. Notably, to facilitate automated and unambiguous evaluation, the agent’s output is required to be a directly callable module. Its invocation path, function signature, including input and output variables as well as comprehensive annotations, are all explicitly provided within the problem statements.
+
+\myparagraph{Difficulty.} In realistic settings, software development may proceed either by extending an existing codebase or by implementing a feature entirely from scratch. \name reflects these two scenarios with two difficulty levels. Level~1 ($L_1$) consists of incremental development within an existing repository based on task requirements, while Level~2 ($L_2$) requires constructing the same functionality from scratch.
+
+\myparagraph{Metric Design.} Our evaluation protocol follows the established setup of SWE-bench~\citep{jimenez2024swebench}, where each agent-generated solution is validated by executing its associated \textit{fail-to-pass}~(F2P) and \textit{pass-to-pass}~(P2P) tests. A task is considered resolved when the proposed solution successfully passes all these tests. We report three primary metrics: (1) \textit{Resolved Rate}, the proportion of tasks fully solved, like SWE-bench; (2) \textit{Passed Rate}, the average fraction of fail-to-pass tests passed per task, serving as a soft indicator of partial correctness; (3) \textit{Token IO}, the average number of input and output tokens consumed, reflecting the computational efficiency of the agent.
+
+\subsection{Benchmark Collection}
+\label{benchmark-collection}
+
+\myparagraph{Execution Environment Configuration.}
+To rapidly set up an environment for a given repository, we manually specify installation commands (taking approximately three minutes), rather than relying on the more error-prone and uncontrollable approach of having the agent search for installation methods itself. Automated scripts are then used to configure the environment and package the repository into a Docker image. The benchmark includes 24 widely downloaded PyPI packages across various domains, such as visualization libraries and LLM infrastructure. Notably, human intervention is required only for this step of the pipeline, and the total human labor required to complete this for all 24 repositories amounts to less than one hour.
+
+\myparagraph{Constructing \textit{Fail-to-pass} and \textit{Pass-to-pass} Tests.}  
+We construct benchmark instances by identifying candidate test files in the repository using pytest’s collection function~\citep{pytest}, followed by validation through execution. For each instance, $n$ validated test files are designated as \textit{fail-to-pass} (F2P) tests, as introduced in SWE-bench. These tests fail in the undeveloped repository but succeed once the agent correctly implements the target functionality. To additionally assess incremental development capability, we include $m$ randomly sampled validated files as \textit{pass-to-pass} (P2P) tests, which are expected to pass both before and after the agent’s solution. Since a single test file typically corresponds to one functional implementation, $n$ is usually set to one in our setting.
+
+\myparagraph{Test-Driven Code Patch Extraction.} Obtaining the pre-solved codebase together with the corresponding code patch requires isolating the functionality linked to the F2P tests. However, the inherent ambiguity of functional boundaries in real-world codebases poses a significant challenge. Naively extracting relevant code fragments risks inadvertently disrupting other well-established features. As depicted in Figure \ref{fig:pipeline_workflow}, our approach mitigates this issue by incorporating P2P tests to accurately identify code modules required by other functions or those serving as foundational components of the repository. The detailed implementation is as follows:
+\begin{itemize}[leftmargin=12pt,itemindent=0pt]
+    \setlength{\itemsep}{3pt}
+    \setlength{\parsep}{0pt}
+    \setlength{\parskip}{0pt}
+    \item \textit{Construct the object dependency graph.} We initiate the process by executing the available F2P and P2P test cases for a given benchmark instance. During runtime, we employ Python’s built-in tracing facility to capture function call events and their dependencies.  From this trace, we construct an object dependency graph in which each node represents a function and is enriched with metadata, including a unique identifier, source location, a list of dependent functions, and a binary flag indicating if the function was triggered during P2P tests.
+    \item \textit{Graph traversal and node classification.} To distinguish functional components, a large language model analyzes the F2P test files and separates the imported functions related to the target feature from those that serve supporting roles in the testing process. The nodes identified as central to the undeveloped feature serve as the initial entry points for a breadth-first traversal of the graph. During this traversal, nodes are systematically classified: those encountered in P2P executions are designated as \textit{remained}, while nodes not observed in P2P runs are classified as \textit{extracted}.
+    \item \textit{Extracting the code.} The traversal process yields a subset of graph nodes identified as relevant to the intended functionality. In the final stage, the corresponding segments of source code are extracted from the original codebase. This operation produces a modified codebase devoid of the target functionality and a complementary code snippet that realizes the previously absent feature.
+\end{itemize}
+
+\myparagraph{Post Verification.} To ensure the successful extraction of the target functionality from the codebase without affecting other components, we implement a rigorous verification process. The first step involves validating the pre-modified codebase by ensuring that it passes all P2P tests, thereby confirming its integrity. Simultaneously, it must fail all F2P tests, demonstrating that the target functionality has been effectively removed. Following this, we assess the accessibility of all utility functions required for the F2P tests in the modified codebase. This step ensures that the changes made are confined to the target functionality and do not inadvertently impact other core dependencies.  Finally, reapplying the patch to the undeveloped codebase should allow all tests to pass, confirming the patch's correctness.
+
+\myparagraph{Problem Statement Generation.} By leveraging the extracted code snippet, the pre-modified codebase, and the corresponding unit tests, we automatically generate the problem statement for each instance. This procedure includes the derivation of the feature signatures, which encompass the types of input and output variables, alongside the functional description as inferred from the code docstrings. In the absence of such docstrings, we employ a large language model to generate them directly from the code snippet. Further details can be found in the appendix.
+
+To this end, our pipeline automatically generates the core components of each instance: a natural language problem statement, an undeveloped codebase, a verified code patch, and a suite of unit tests corresponding to required features. The sole manual intervention required is the specification of the repository's installation procedure, a process that takes approximately three minutes per repository. 
+
+
+\subsection{Benchmark Configuration}
+\myparagraph{Full Set.} Leveraging our pipelines, we configured the number of P2P test files to five and curated 3825 coding environments derived from 24 Python repositories. To ensure the benchmark meaningfully challenges best-performing agents, we restricted inclusion to tasks exceeding 100 lines of pending implementation, encompassing at least 10 F2P test points, with test files initially committed after May 2022. This filtering yielded 200 high-quality instances comprising the full set.
+
+\myparagraph{Lite Set.} Evaluating LMs on our bench can be time-consuming and, depending on the model, require a costly amount of compute or API credits, as illustrated in Table \ref{tab:agent_benchmark_full}, where the average number of input tokens approaches the million-token mark. To facilitate wider adoption of \name, we randomly selected 30 instances from the full set to create a streamlined lite set.
+\begin{table}[t]
+  \centering
+  \resizebox{\textwidth}{!}{
+  % \begin{tabular}{l|>{\columncolor{mygray}}ccc|>{\columncolor{mygray}}ccc}
+  %   \toprule
+  %   & \multicolumn{3}{c|}{Lite} & \multicolumn{3}{c}{Full} \\
+  %   \cmidrule(lr){2-4} 
+  %   \cmidrule(lr){5-7} 
+  %   \multirow{-2}{*}{Model} & \% Passed & \% Resolved  &  \# Token I/O  & \% Passed & \% Resolved & \# Token I/O \\
+  %   \midrule
+  %   Gemini 2.5 Pro & 17.0 & 3.3 & 0.7M~/~16k & 13.2 & 2.4 & 0.8M~/~17k \\
+  %   OpenAI o3 & 23.2  & 3.3 & 2.0M~/~36k & 22.4 & 1.9  & 2.0M~/~34k \\
+  %   Qwen3-Coder-480B-A35B-Instruct & 25.6 & 0.0 & 1.9M~/~18k & 25.4 & 2.4 & 2.4M~/~24k \\
+  %   GPT-5 & 29.5 & 6.7 & 1.5M~/~31k & 36.4 & 7.1 & 2.1M~/~34k \\
+  %   Claude Sonnet 4 & 37.0 & 6.7 & 1.8M~/~31k & 38.2 & 7.5 & 1.4M~/~33k \\
+  %   \bottomrule
+  % \end{tabular}
+  \begin{tabular}{ll|>{\columncolor{mygray}}ccc|>{\columncolor{mygray}}ccc}
+    \toprule
+    & & \multicolumn{3}{c|}{Lite} & \multicolumn{3}{c}{Full} \\
+    \cmidrule(lr){3-5} 
+    \cmidrule(lr){6-8} 
+    \multirow{-2}{*}{Scaffold} & \multirow{-2}{*}{Model} & \% Passed & \% Resolved & \# Token I/O & \% Passed & \% Resolved & \# Token I/O \\
+    \midrule
+    OpenHands & Qwen3-Coder-480B-A35B-Instruct & 38.31 & 6.7 & 2.6M~/~16k & 24.55 & 3.5 & 2.0M~/~14k \\
+    OpenHands & DeepSeek-V3.2 & 35.94 & 6.7 & 3.1M~/~24k & 26.30 & 5.5 & 3.1M~/~23k \\
+    OpenHands & Gemini-3-Pro-Preview (low reasoning) & 45.14 & 10.0 & 6.0M~/~41k & 30.08 & 4.5 & 6.2M~/~40k \\
+    Gemini-CLI & Gemini-3-Pro-Preview (low reasoning) & 43.38 & 10.0 & 2.6M~/~13k & 32.43 & 5.0 & 2.5M~/~12k \\
+    Claude Code (routing) & Claude Opus 4.5 & 59.12 & 20.0 & 9.0M~/~35k & 43.29 & 11.0 & 7.5M~/~34k \\
+    Codex & GPT-5.1-Codex (medium reasoning) & 60.22 & 20.0 & 6.6M~/~39k & 41.66 & 12.5 & 6.3M~/~39k \\
+    OpenHands & Claude Opus 4.5 & 67.18 & 20.0 & 8.8M~/~29k & 45.53 & 10.5 & 8.1M~/~29k \\
+    \bottomrule
+  \end{tabular}
+  } 
+  \caption{The performance of various frontier large models combined with advanced agentic frameworks on the Lite and Full evaluation sets of our benchmark.}
+  \label{tab:agent_benchmark_full}
+\end{table}
+
+\section{Experiments}
+\label{experiments}
+
+\subsection{Performance on \name}
+
+\subsubsection{Baseline}
+
+To establish strong baselines, we adopt the OpenHands~\citep{Wang_OpenHands} framework for software development agents, which tops the SWE-bench. In the experiments, the maximum of steps per task is set as 500 by default. Internet access is freely available, while no specific browser-use tools are provided. To ensure the integrity of our evaluation, robust anti-cheating mechanisms are incorporated to prevent agents from assessing the ground-truth repositories (see the appendix for details).
+
+We evaluate seven \emph{scaffold+model} configurations with frontier LLMs, including DeepSeek-V3.2~\citep{deepseek2025v32}, Qwen3-Coder-480B-A35B-Instruct~\citep{qwen2025qwen3coder480b}, Gemini-3-Pro-Preview (low reasoning)~\citep{google2025gemini3docs}, Claude Opus 4.5~\citep{anthropic2025opus45}, and GPT-5.1-Codex (medium reasoning)~\citep{openai2025gpt51codex} under representative agentic scaffolds (OpenHands~\citep{wang2025openhands}, Gemini-CLI~\citep{google_gemini_cli}, Claude Code~\citep{anthropic_claude_code}, and Codex~\citep{openai2025codex}). The results are presented in Table~\ref{tab:agent_benchmark_full}. As can be seen, even the most capable settings, \textit{i.e.}, Claude Code (routing) + Claude Opus 4.5 and Codex + GPT-5.1-Codex (medium reasoning), resolve only 11.0\% and 12.5\% of the tasks on the \textit{Full} set, respectively. This underscores the highly challenging nature of the feature-oriented development tasks in our \namenospace, which require agents to write substantial amounts of code and pass comprehensive test suites. 
+
+For a more nuanced evaluation, we further analyze passed rates and token consumption by different LLMs. The passed rates, while remaining at a low level of below 50\%, are much higher than the resolved rates. This discrepancy indicates that current agents often produce seemingly plausible solutions with a large underlying gap from truly solving the problem, which accounts for the common need of tedious debugging for AI-generated code. Regarding token consumption, all LLMs consume over one million input tokens. Given the low resolved rates, this reflects the extremely low efficiency of existing agents in tackling real-world development tasks, which is thus an important topic for future research. In addition, a high consistency is observed in the rankings of different LLMs across the \textit{Lite} and \textit{Full} sets in terms of both pass and resolved rates, demonstrating the representativeness of the Lite set.
+
+\begin{figure}[t]
+    \centering
+    \begin{minipage}{0.57\textwidth}  
+        \centering
+        \resizebox{\textwidth}{!}{
+        \begin{tabular}{llrr}
+            \toprule
+            & & SWE-bench & Ours  \\
+            \midrule
+            Problem Texts & Length (Words) & 195.1 & 4818.0\\
+            \midrule
+            \multirow{3}{*}{Gold Solution} & \# Lines & 32.8 & 790.2 \\
+             & \# Files & 1.7 & 15.7 \\
+             & \# Functions & 3 & 29.2 \\
+             \midrule
+            \multirow{2}{*}{Tests} & \# Fail to pass (test points) & 9.1 & 62.7\\
+             & \# Total (test points) & 120.8 & 302.0\\
+            \bottomrule
+        \end{tabular}
+        }
+        \captionof{table}{Average numbers characterizing different attributes of a SWE-bench task instance, as well as our \name ($L_1$ set).}
+        \label{tab:static_compare_with_swe}
+        \vspace{-6pt}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.38\textwidth}  
+        \centering
+        \includegraphics[width=\linewidth]{iclr2026/figures/bench_statics_v4.pdf}  
+        % \fbox{\rule[-.5cm]{0cm}{2.6cm} \rule[-.5cm]{6cm}{0cm}}
+        \caption{Distribution of our benchmark across 24 GitHub repositories.}
+        \label{fig:statics_of_bench}
+        \vspace{-6pt}
+    \end{minipage}%
+\end{figure}
+
+% \begin{table}[t]
+%   \centering
+%   \resizebox{\textwidth}{!}{
+%   \begin{tabular}{l|cc|ccc}
+%     \toprule
+%     & \multicolumn{2}{c|}{SWE-bench Verified } & \multicolumn{3}{c}{\name subset} \\
+%     \cmidrule(lr){2-3} 
+%     \cmidrule(lr){4-6} 
+%      & \multicolumn{2}{c|}{\% Resolved} &  \% Passed & \% Resolved & \# Token I/O \\
+%     \multirow{-3}{*}{Model} & mini-SWE-agent & OpenHands & \multicolumn{3}{c}{OpenHands} \\
+%     \midrule
+%     % Kimi K2 Instruct & 43.80 & 65.40 & & & \\
+%     % Qwen3-Coder-30B-A3B-Instruct & 51.60 & - & & & \\
+%     Gemini 2.5 Pro & 53.60 & - & 22.8 & 0.0 & 0.8M~/~12k \\
+%     Qwen3-Coder-480B-A35B-Instruct & 55.40 & 69.60 & 27.2 & 0.0 & 1.5M~/~14k \\
+%     OpenAI o3 & 58.40 & - & 27.0 & 0.0 & 1.7M~/~30k \\
+%     GPT-5 & 65.00 & - & 40.1 & 2.1 & 1.8M~/~33k \\
+%     Claude Sonnet 4& 64.93 & 70.40 & 42.6 & 4.1 & 1.1M~/~24k \\
+%     \bottomrule
+%   \end{tabular}
+%   }
+%   \vspace{-4pt}
+%   \caption{Compare the performance of the frontier agents on SWE-bench and our \namenospace, using a subset of our benchmark with repositories shared with SWE-bench for a fair comparison.}
+%   \label{tab:compare_with_swe}
+%   \vspace{-10pt}
+% \end{table}
+\begin{table}[t]
+  \centering
+  \resizebox{\textwidth}{!}{
+  \begin{tabular}{l|cc|ccc}
+    \toprule
+    & \multicolumn{2}{c|}{SWE-Bench Verified } & \multicolumn{3}{c}{\name subset} \\
+    \cmidrule(lr){2-3} 
+    \cmidrule(lr){4-6} 
+     & \multicolumn{2}{c|}{\% Resolved} &  \% Passed & \% Resolved & \# Token I/O \\
+    \multirow{-3}{*}{Model} & mini-SWE-agent & OpenHands & \multicolumn{3}{c}{OpenHands} \\
+    \midrule
+    DeepSeek-V3.2 & 60.00 & - & 22.98 & 0.0 & 3.8M~/~25k \\
+    Qwen3-Coder-480B-A35B-Instruct & 55.40 & 69.60 & 23.46 & 0.0 & 2.3M~/~16k \\
+    Gemini-3-Pro-Preview & 74.20 & - & 30.05 & 0.0 & 6.7M~/~45k \\
+    Claude Opus 4.5 & 74.40 & - & 41.08 & 5.2 & 9.7M~/~34k \\
+    \bottomrule
+  \end{tabular}
+  }
+  \vspace{-4pt}
+  \caption{Compare the performance of the frontier agents on SWE-bench and our \namenospace, using a subset of our benchmark with repositories shared with SWE-bench for a fair comparison.}
+  \label{tab:compare_with_swe}
+  \vspace{-10pt}
+\end{table}
+
+\subsubsection{Comparison with SWE-bench}
+
+Compared with the SWE-bench \citep{jimenez2024swebench}, our \name introduces a more challenging suite of development tasks. It encompasses 16 additional popular repositories apart from 8 repositories originally covered by the SWE-bench, the full list of which is shown in Figure \ref{fig:statics_of_bench}. Table \ref{tab:static_compare_with_swe} presents comparative statistics illustrating the task difficulties across the two benchmarks. Specifically, the tasks in our benchmark exhibit a substantial increase of complexity in terms of the length of problem texts, number of lines, files and functions to be edited as well as the number of tests to pass. These enhancements necessiate agents with strong long-context understanding and management capabilities alongside comprehensive problem analysis to handle diverse test cases.
+
+For a more grounded analysis, we further compare the performance of agents on the SWE-bench and our \name. To draw a more aligned comparison, we construct a subset of our benchmark including only repositories shared with SWE-bench. The results in Table \ref{tab:compare_with_swe} reveals a stark performance gap between the two benchmarks in terms of resolved rate. Specifically, the most capable Claude Opus 4.5 only resolves 5.2\% of the tasks in our \name subset in contrast to the 74.40\% on the SWE-bench. This indicates the highly challenging nature of our benchmark, which provides considerable room for future improvement and establishes a rigorous testbed to measure the upper bound of existing agents.
+
+\subsubsection{Failure Cases Analysis}
+We conduct a failure case analysis based on the results in our full set from the Claude Opus 4.5 model, leading to the following findings.
+
+% \myparagraph{Limitations in Code Reasoning.} A considerable number of \texttt{TypeError} instances can be observed in Figure \ref{fig:failure_case}, indicating that current LLMs struggle to accurately infer variable types and function interfaces within dynamically typed high-level programming languages (such as Python). It essentially reveals the current limitation of LLMs in performing complex reasoning. 
+
+% \myparagraph{The ``Idle Habits'' of LLMs.} We also find that current LLMs exhibit a tendency toward ``laziness''. For example, they often resort to guessing (even hallucinating) the interface of a function defined across files, rather than performing the actual file reading required to retrieve the precise function prototype. This behavior also leads to a considerable number of \texttt{TypeError} occurrences.
+
+% \myparagraph{Appropriate Information in \namenospace.} Figure~\ref{fig:failure_case} presents the distribution of prevalent error categories, with \texttt{AssertionError} emerging as the most frequent. This predominance indicates that many LLM-generated solutions are able to execute up to the assertion checkpoints without encountering prior runtime failures. This result underscores that \name can effectively provide the LLMs with appropriate information to generate complete programs.
+
+\myparagraph{Limitations in Code Reasoning.} As shown in Figure~\ref{fig:failure_case}, the dominance of \texttt{NameError} suggests that current LLMs still struggle with cross-file dependency resolution. When a feature spans multiple files, models often focus on local edits without consistently re-establishing all necessary references, leading to unresolved symbols and frequent name-related failures. This highlights a key limitation in maintaining coherent program context beyond a single file.
+
+\myparagraph{The ``Idle Habits'' of LLMs.} We also find that current LLMs exhibit a tendency toward ``laziness''. For example, they often resort to guessing (even hallucinating) the interface or attributes of components defined across files, rather than performing the actual file reading required to retrieve precise prototypes and members. This behavior leads to a considerable number of both \texttt{TypeError} and \texttt{AttributeError} occurrences.
+
+\myparagraph{Appropriate Information in \namenospace.} Among the remaining failures, \texttt{AssertionError} becomes the most frequent category. This suggests that a substantial portion of LLM-generated solutions can run to the assertion checkpoints without earlier runtime crashes. This result underscores that \name can effectively provide the LLMs with appropriate information to generate complete programs.
+
+\begin{figure}[t]
+    \centering
+    \begin{minipage}{0.48\textwidth}  
+        \centering
+        \resizebox{\textwidth}{!}{
+        % \begin{tabular}{llc>{\columncolor{mygray}}c}
+        %     \toprule
+        %     & Models& \% Resolved & \% Passed  \\
+        %     \midrule
+        %     \multirow{3}{*}{Original} & Gemini 2.5 Pro & 3.3  & 17.0 \\
+        %        & GPT-5 & 6.7 & 29.5 \\
+        %        & Claude 4 Sonnet&  6.7 & 37.0 \\
+        %     \midrule
+        %     \multirow{3}{*}{Verified} & Gemini 2.5 Pro & 3.3 & 15.4 \\
+        %        & GPT-5 & 6.7 & 27.4 \\
+        %        & Claude 4 Sonnet& 3.3 & 32.5 \\
+        %     \bottomrule
+        % \end{tabular}
+        \begin{tabular}{llc>{\columncolor{mygray}}c}
+            \toprule
+            & Models & \% Resolved & \% Passed \\
+            \midrule
+            \multirow{2}{*}{Original} 
+                & Gemini-3-Pro-Preview (low)     & 10.0 & 42.4 \\
+                & GPT-5.1-Codex (medium) & 16.7 & 53.9 \\
+            \midrule
+            \multirow{2}{*}{Verified} 
+                & Gemini-3-Pro-Preview (low)     & 10.0 & 43.4 \\
+                & GPT-5.1-Codex (medium) & 20.0 & 60.2 \\
+            \bottomrule
+        \end{tabular}
+        }
+        \captionof{table}{An ablation study to evaluate the necessity of manual verification for the examples generated by our system.}
+        \label{tab:human_verifaction}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.46\textwidth}  
+        \centering
+        \resizebox{\textwidth}{!}{
+        \begin{tabular}{llc>{\columncolor{mygray}}c}
+            \toprule
+            Models & Steps & \% Resolved & \% Passed  \\
+            \midrule
+            % \multirow{3}{*}{Gemini 2.5 Pro} & 50 &  3.3 & 13.2 \\
+            %    & 100 & 3.3 & 16.0 \\
+            %    & 150 & 0.0  & 15.3 \\
+            \multirow{3}{*}{Gemini-3-Pro-Preview (low)} & 50 &  6.7 & 22.9 \\
+               & 100 & 6.7 & 43.8 \\
+               & 500 & 10.0  & 45.1 \\
+            \midrule
+            \multirow{3}{*}{Qwen3-Coder-480B-A35B-Instruct} & 50 & 3.3 & 28.9 \\
+               & 100 &  3.3  &  30.4 \\
+               & 500 &  6.7 & 38.3 \\
+            \bottomrule
+        \end{tabular}
+        }
+        \captionof{table}{An ablation study on the max execution steps of OpenHands with Gemini-3-Pro-Preview and Qwen3-Coder-480B-A35B-Instruct in Lite Set.}
+        \label{tab:max_iter}
+    \end{minipage}
+\end{figure}
+\begin{table}[t]
+  \centering
+  \resizebox{\textwidth}{!}{
+  % \begin{tabular}{l|llc|llc}
+  %   \toprule
+  %   & \multicolumn{3}{c|}{Without Interface} & \multicolumn{3}{c}{Visible Unit Tests} \\
+  %   \cmidrule(lr){2-4} 
+  %   \cmidrule(lr){5-7} 
+  %   \multirow{-2}{*}{Model} & \% Resolved & \% Passed & \# Token I/O &  \% Resolved & \% Passed & \# Token I/O \\
+  %   \midrule
+  %   Gemini 2.5 Pro & 0.0 (-3.3) & 12.0~(-5.0) & 0.6M~/~21k & 3.3 ~~(+0.0) & 18.4 (+1.4) & 1.2M~/~19k \\
+  %   OpenAI o3 & 3.3 (-0.0)& 17.7~(-5.5) & 1.3M~/~26k & 10.0 (+6.7) & 37.7 (+14.5) & 2.8M~/~101k \\
+  %   GPT-5 & 3.3 (-3.4) & 16.6~(-12.9) & 2.3M~/~31k & 26.7 (+20.0) & 56.1 (+26.6) & 2.5M~/~66k \\
+  %   Claude Sonnet 4 & 3.3 (-3.4) & 16.9 (-20.1) & 1.2M~/~30k & 26.7 (+20.0) & 60.5 (+23.5) & 2.2M~/~32k \\
+  %   \bottomrule
+  % \end{tabular}
+  \begin{tabular}{l|llc|llc}
+    \toprule
+    & \multicolumn{3}{c|}{Without Interface} & \multicolumn{3}{c}{Visible Unit Tests} \\
+    \cmidrule(lr){2-4} 
+    \cmidrule(lr){5-7} 
+    \multirow{-2}{*}{Model} & \% Resolved & \% Passed & \# Token I/O & \% Resolved & \% Passed & \# Token I/O \\
+    \midrule
+    Gemini-3-Pro-Preview (low) & 3.3~(-6.7) & 25.3~(-18.1) & 7.0M~/~10K & 60.0~(+50.0) & 80.6~(+37.2) & 6.9M~/~18K \\
+    GPT-5.1-Codex (medium) & 16.7~(-3.3) & 42.0~(-18.2) & 7.6M~/~38K & 63.3~(+43.3) & 80.9~(+20.7) & 8.2M~/~46K \\
+    \bottomrule
+  \end{tabular}
+  }
+  \caption{Performance comparison of lite set with visible unit tests and without interface.}
+  \label{tab:ablate_blackbox}
+  \vspace{-12pt}
+\end{table}
+
+\begin{figure}[t]
+    \centering
+    \begin{minipage}{0.5\textwidth}  
+        \centering
+        \resizebox{\textwidth}{!}{
+        % \begin{tabular}{ll|c>{\columncolor{mygray}}c}
+        %     \toprule
+        %     Difficulty & Models & \% Resolved & \% Passed  \\
+        %     \midrule
+        %     \multirow{5}{*}{$L_1$} & Gemini 2.5 Pro & 3.8 & 12.3 \\
+        %        & OpenAI o3 &  2.8 & 24.5 \\
+        %     & Qwen3-Coder-480B & 3.8 & 29.6 \\
+        %        & GPT-5 &  13.2 & 48.8  \\
+        %        & Claude 4 Sonnet &  14.0 & 57.6  \\
+        %     \midrule
+        %     \multirow{5}{*}{$L_2$} & Gemini 2.5 Pro & 0.9 & 14.0 \\
+        %        & OpenAI o3 & 0.9 & 20.4  \\
+        %        & Qwen3-Coder-480B & 0.9 & 21.3 \\
+        %        & GPT-5 &  0.9 & 24.1  \\
+        %        & Claude 4 Sonnet &  0.9 & 18.7  \\
+        %     \bottomrule
+        % \end{tabular}
+        \begin{tabular}{l|ll|c>{\columncolor{mygray}}c}
+            \toprule
+            Difficulty & Scaffold & Models & \% Resolved & \% Passed \\
+            \midrule
+            \multirow{9}{*}{$L_1$}
+                & OpenHands & Qwen3-Coder-480B-A35B-Instruct & 3.6 & 22.4 \\
+                & OpenHands & DeepSeek-V3.2 & 4.8 & 20.8 \\
+                & OpenHands & Claude Opus 4.5 & 11.4 & 46.2 \\
+                & OpenHands & Gemini 3 Pro (low) & 4.2 & 29.0 \\
+                & Gemini-CLI & Gemini 3 Pro (low) & 4.8 & 32.1 \\
+                & Codex & GPT-5.1-Codex (medium) & 13.9 & 43.0 \\
+                & Claude Code (routing) & Claude Opus 4.5 & 11.4 & 43.6 \\
+            \midrule
+            \multirow{9}{*}{$L_2$}
+                & OpenHands & Qwen3-Coder-480B-A35B-Instruct & 2.9 & 35.2 \\
+                & OpenHands & DeepSeek-V3.2 & 5.9 & 32.6 \\
+                & OpenHands & Claude Opus 4.5 & 5.9 & 42.2 \\
+                & OpenHands & Gemini 3 Pro (low) & 5.9 & 35.6 \\
+                & Gemini-CLI & Gemini 3 Pro (low) & 5.9 & 34.0 \\
+                & Codex & GPT-5.1-Codex (medium) & 5.9 & 35.2 \\
+                & Claude Code (routing) & Claude Opus 4.5 & 8.8 & 41.9 \\
+            \bottomrule
+        \end{tabular}
+        }
+        \captionof{table}{Performance comparison of tasks with different difficulty levels in \namenospace.}
+        \label{tab:L1_L2}
+        \vspace{-12pt}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.46\textwidth}  
+        \centering
+        \includegraphics[width=\linewidth]{iclr2026/figures/failure_modes_v2.pdf}
+        % \fbox{\rule[-.5cm]{0cm}{2.6cm} \rule[-.5cm]{6cm}{0cm}}
+        \caption{Failure modes of the Claude Opus 4.5.}
+        \label{fig:failure_case}
+        \vspace{-12pt}
+    \end{minipage}%
+\end{figure}
+
+\subsection{Ablation Study}
+
+\subsubsection{Analyzing the quality and necessity of our benchmark design.}
+
+\myparagraph{Without Interface.}  We performed an ablation study to assess the role of explicit interface specification in agent performance. For controlled comparison, we employed the lite set, systematically removing function signatures and call path annotations from the prompts. As shown in Table~\ref{tab:ablate_blackbox}, this removal leads to a marked decline in task success rates. The results confirm that clearly defined interfaces are critical for enabling effective reasoning and program synthesis by LLM-based agents.
+
+\myparagraph{Sample Quality.} Our automated data generation pipeline yields high-quality, evaluation-ready samples with minimal human intervention, supported by a rigorous post-verification process. To assess the fidelity of these samples, we conducted an ablation study in which a senior engineer with five years of industry experience in AI infrastructure and system architecture independently revised the prompts in the lite set. The verification details are provided in Appendix Figures~\ref{fig:feature_verification_guideline_part1} and \ref{fig:feature_verification_guideline_part2}. As shown in Table~\ref{tab:human_verifaction}, model performance on the manually revised subset is highly consistent with the original dataset. These results affirm the reliability and robustness of our automated data pipeline.
+
+\myparagraph{Lines of Code and Task Initial Commit Date.} Figure~\ref{fig:filer_rules} explores the relationship between task pass rates, initial commit timestamps, and the number of lines of code required for task completion. We observe a clear negative correlation between pass rate and code length, indicating that tasks involving more lines of code are inherently more challenging for current large models. In contrast, task performance shows minimal dependence on commit time, likely because the task set remains largely unexplored by existing models. To further understand why commit time has little influence, we analyze how feature complexity evolves over time. Specifically, the lower panel of Figure~\ref{fig:filer_rules} plots the normalized trends of code length and pass rate across commit periods. The two normalized curves exhibit highly similar fluctuations, reinforcing that variation in task performance is driven far more by feature complexity than by commit time. However, as agentic systems increasingly participate in feature development workflows, the risk of data leakage may become more pronounced and should be monitored in future benchmark design.
+
+\begin{wrapfigure}{r}{0.5\linewidth}
+\centering
+\vspace{-12pt}
+\includegraphics[width=\linewidth]{iclr2026/figures/pass_rate_v2.pdf}
+\caption{The pass rate of Claude Opus 4.5 in our benchmark varies with the number of code lines and task creation time.}
+\label{fig:filer_rules}
+\vspace{-12pt}
+\end{wrapfigure}
+
+\myparagraph{Comparison between $L_1$ and $L_2$ Subset.} Comparison between $L_1$ and $L_2$ Subsets. Our benchmark defines two evaluation settings: $L_1$, where new functionalities are incrementally added to an existing codebase, and $L_2$, where functionalities are implemented entirely from scratch. All conditions are held constant across both settings, except for the presence or absence of initial code context.
+
+This distinction leads to notably different levels of reasoning complexity. 
+In the $L_1$ setting, the agent still has access to most of the original 
+codebase except for the functions and classes removed along the traced 
+execution path. This partial repository shows how the feature fits into the 
+surrounding code and gives the agent contextual clues about expected behavior. 
+As a result, $L_1$ tasks are more guided, since only the missing 
+implementations need to be completed. In contrast, $L_2$ tasks remove all surrounding code. The agent does not see any part of the original repository and must rely only on the interface to implement the required functionality. Without the structure provided by the existing codebase, the agent has to reconstruct the full logic and organization of the feature entirely from scratch, which makes $L_2$ substantially more difficult. As shown in Table~\ref{tab:L1_L2}, the from-scratch ($L_2$) setting is more challenging, with lower resolved rates: performance on $L_2$ varies little across settings, suggesting that removing the codebase structure creates a common bottleneck that hampers coherent multi-step reasoning and end-to-end implementation.
+
+\myparagraph{Accuracy of LLM-based Top Import Classification.}
+
+To validate the reliability of our LLM-based classifier for identifying top-level tested objects in test file, we conducted a quantitative evaluation against expert annotations. Domain experts evaluated all 605 import statements in the Lite Set and identified 158 of them as top-level tested objects. The details of the procedure are provided in Appendix Figure~\ref{fig:top_guideline}. Table~\ref{tab:llm_top_performance} reports the performance of the LLM classifier. These results indicate that LLMs can accurately identify tested objects at scale, supporting the use of LLM-based classification in our data construction pipeline.
+
+\begin{table}[t]
+  \centering
+  \resizebox{0.6\textwidth}{!}{
+  \begin{tabular}{lcccc}
+    \toprule
+      Metric & Precision & Recall & F1 Score & Accuracy \\
+    \midrule
+      Value  & 81.03\% & 89.24\% & 84.94\% & 91.74\% \\
+    \bottomrule
+  \end{tabular}
+  }
+  \caption{Performance of the LLM classifier for identifying top-level tested objects.}
+  \label{tab:llm_top_performance}
+\end{table}
+
+\subsubsection{Analyzing the key factors in building end-to-end CodeAgents}
+
+\myparagraph{Visible Unit Tests.} We conducted an ablation study to assess the impact of providing accurate unit tests on agent performance in complex coding tasks. In this setting, the agent was given access to ground-truth unit tests alongside the Lite set. As shown in Table~\ref{tab:ablate_blackbox}, both task success rates and pass rates increased significantly. These findings underscore the importance of high-quality unit test generation as a key factor in enabling robust agentic coding.
+
+\myparagraph{Longer Execution Steps.} Table \ref{tab:max_iter} reports the effect of increasing the maximum number of execution steps on model performance. Increasing the maximum step size from 50 to 100 results in notable performance gains for both Gemini-3-Pro-Preview and Qwen3-Coder-480B-A35B-Instruct. However, beyond this threshold, the improvements become marginal.
+
+% \myparagraph{Evaluation Across Agent Frameworks.} We evaluated three scaffolds on the Lite subset using Claude 4 Sonnet. As shown in Table~\ref{tab:scaffold_comparison}, Claude Code and OpenHands achieved identical resolution rates (6.7\%), while Mini-SWE-Agent failed to resolve any instance (0.0\%). For pass rates, Claude Code reached 40.5\%, followed by OpenHands at 37.0\% and Mini-SWE-Agent at 28.2\%. These differences show that scaffold design strongly influences agent effectiveness. However, all three scaffolds exhibit similar failure modes, suggesting that the core difficulty of ACE-Bench comes from the tasks themselves rather than any specific framework.
+
+% \begin{table}[t]
+%     \centering
+%     \begin{tabular}{l c >{\columncolor{mygray}}c}
+%       \toprule
+%         Scaffold & \% Resolved & \% Passed \\
+%       \midrule
+%         Claude Code + Claude 4 Sonnet      & 6.7 & 40.5 \\
+%         OpenHands + Claude 4 Sonnet        & 6.7 & 37.0 \\
+%         Mini-SWE-Agent + Claude 4 Sonnet   & 0.0 & 28.2 \\
+%       \bottomrule
+%     \end{tabular}
+%     \caption{Performance comparison of different agent scaffolds using Claude 4 Sonnet on the Lite subset.}
+%     \label{tab:scaffold_comparison}
+%     \vspace{-12pt}
+% \end{table}
+
+\section{Conclusion}
+\label{conclusion}
+
+In this work, we introduce \name, a novel benchmark designed to evaluate the capabilities of LLM-powered agents in realistic, feature-oriented software development scenarios. Leveraging test-driven task extraction and execution-based evaluation, \name overcomes key limitations of existing benchmarks by enabling greater task diversity, scalability, and verifiability. Empirical results reveal that current agentic systems face persistent challenges in planning, reasoning, and managing long-horizon tasks. With its extensible and automated design, \name offers not only a rigorous evaluation framework but also a foundation for the development of next-generation agentic coding models.
+
+\bibliography{iclr2026_conference}
+\bibliographystyle{iclr2026_conference}
+
+\appendix
+\newpage
+
+\section*{Appendix} 
+% In the appendix, we provide more thorough details regarding the dataset construction process, evaluation pipeline, and characterization of the \name benchmark.  
+
+\section{Detailed Benchmark Collection}  
+This section complements the details of benchmark construction (Sec.~\ref{benchmark-collection}), which contains detailed recipes of the data collection, patch extraction, and prompt design, along with a fuller characterization of the task instances. 
+
+\subsection{Data Collection Pipeline}
+
+\myparagraph{Environment Setup.}
+
+For each selected repository, we manually prepare an environment configuration file (see Figure~\ref{fig:configuration_file} for an example). Empirical observations indicate this procedure can be accomplished within three minutes. Upon completion of environment configuration, our pipeline constructs a Docker image, with all subsequent operations executed within this sandboxed environment. This is the sole stage requiring human intervention. All succeeding stages operate under full automation.
+
+\begin{figure}[p]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=Environment Configuration File part 1 of 2,    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1.\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\includegraphics[width=\textwidth]{./figures/configuration_file_1.pdf}
+\end{tcolorbox}
+\caption{Environment Configuration File part 1 of 2}
+\label{fig:configuration_file}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=Environment Configuration File part 2 of 2,    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1.\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\includegraphics[width=\textwidth]{./figures/configuration_file_2.pdf}
+\end{tcolorbox}
+\caption{Environment Configuration File part 2 of 2}
+\label{fig:configuration_file_2}
+\end{figure}
+
+\myparagraph{Patch Extraction.}
+The patch extraction process consists of four main steps.
+
+\emph{Patch Extraction Step 1: Dependency Graph Construction.}
+This procedure generates function-level dependency graphs for all test files within the code repository, establishing the foundation for subsequent patch extraction operations. 
+%
+We leverage pytest's intrinsic test case collection mechanism to aggregate all viable test cases at the file granularity, where each file contains a potential test case. 
+%
+For each test case, we execute the test within the sandbox environment, selecting test cases that achieve complete success as \textit{fail-to-pass} (F2P) instances. 
+%
+Concurrent with test execution, we construct function-level dependency graphs for each F2P instance utilizing a dynamic tracing library.
+
+\emph{Patch Extraction Step 2: LLM Classification.}
+For each F2P test file, we employ an LLM to differentiate between imported objects serving as test targets versus those functioning as test dependencies and general utilities. 
+%
+We provide the LLM with the test file's name and content as classification references. 
+%
+Our prompt template for the LLM to classify is illustrated in Figure~\ref{fig:llm-classification}. 
+%
+Objects classified through this methodology are designated as top-level objects, representing directly imported interfaces by the test file.
+
+\emph{Patch Extraction Step 3: Pass-to-pass (P2P) Selection.}
+For each F2P instance, we select multiple \textit{pass-to-pass} cases. These P2P cases are executed after coding agents finishing implementations to ensure existing functionalities remain normal. 
+%
+Since the aforementioned top-level objects of F2P cases will be removed from codebases, here the pass-to-pass cases should not share top-level objects with the F2P cases. For this reason, if we find only a few P2P cases have different top-level objects from F2P cases, it may indicate erroneous classification of general utilities as top-level objects by the LLM. In this circumstance, we will reconsider the top-level objects according to their invocation frequency.
+%
+
+\emph{Patch Extraction Step 4: Final Extraction.}
+For each F2P case, we utilize top-level objects as entry points and execute BFS according to the constructed dependency graph. 
+%
+Node objects belonging to P2P are designated as \textit{remained}, while others are marked as \textit{extracted}. 
+%
+Nodes marked as \textit{extracted} are added to the BFS queue for continued traversal. 
+%
+BFS termination occurs upon queue finish or when extracted code lines reach our predetermined maximum value, randomly selected between 3000 and 5000 lines per case. 
+%
+Finally, we remove objects marked as \textit{extracted} from the codebase, yielding a complete codebase with F2P functionality eliminated.
+
+\myparagraph{Post-verification.}
+For each codebase after code patch extraction, we conduct post-verification to ensure the modified codebase has normal functionality. 
+%
+Specifically, we execute F2P within the modified codebase, expecting pass rates below a predetermined parameter. Then we further execute all selected P2P cases, ensuring complete test passage.
+
+% \paragraph{Problem Statement Generation.}
+% Following patch extraction, we obtain a complete codebase with F2P functionality removed. 
+% %
+% We then provide conding agents with explicit problem statements as a \texttt{prompt.md} file for task completion. 
+% %
+% For a specific F2P, we furnish interface descriptions of all corresponding top-level objects. 
+% %
+% For functions possessing existing docstrings in the original codebase, no modifications are applied. 
+% %
+% For objects lacking docstrings, we employ an LLM to generate appropriate documentation. 
+% %
+% During generation, we provide the LLM with complete original file content containing the object for reference. The prompt template is as demonstrated in Figure~\ref{fig:llm-docstring}. 
+% %
+% Upon docstring completion, we require the LLM to generate comprehensive problem statements. 
+% %
+% We provide the LLM with actual implementations of all top-level objects as references for generating comprehensive problem statements. The prompt template is as demonstrated in Figure~\ref{fig:llm-task}. 
+
+
+\subsection{Data format and Prompt Design} 
+
+In this section, we present the essential components included in a qualified example (covering both $L_1$ and $L_2$ tasks), illustrating the test case format of our benchmark, organization of our prompts, and the effectiveness of using an LLM to supplement missing docstring entries.
+
+\myparagraph{Directory Structure of Generated Instances.} 
+Each successfully generated instance includes a directory structure containing four main files: \texttt{problem\_statement.md},  \texttt{patch.diff}, \texttt{test\_patch.diff} and \texttt{instance.json}.
+%
+Specifically, \texttt{problem\_statement.md} serves as the generated task prompt; \texttt{patch.diff} and \texttt{test\_patch.diff} represent the gold patch and test patch, respectively; while \texttt{instance.json} records metadata such as the task ID, source repository, and commit ID.
+
+\myparagraph{Prompt Structure and Organization.}
+For each successfully generated instance, we construct a tailored and detailed \texttt{problem\_statement.md} file as input to the agent. 
+%
+The content of \texttt{problem\_statement.md} consists of two components: \textit{Task} and \textit{Interface Descriptions}.
+%
+All prompts are generated automatically without manual labor, following a unified prompt template combined with an instance-specific configuration file via scripting.
+As shown in Figure~\ref{fig:systemprompt1}, the \textbf{\textit{Task}} section provides the agent with an overview of the task under the heading ``Core Functionality.'' 
+%
+``Main Features and Requirements'' describes the essential code features and requirements. 
+%
+The mandatory components that must be implemented are outlined under ``Key Challenges.''
+%
+Finally, the ``NOTE'' subsection provides specific requirements.
+%
+In the \textbf{\textit{Interface Descriptions}} section (as shown in Figure~\ref{fig:systemprompt2}), we offer detailed instructions on how to construct the code. 
+%
+This includes requirements for file locations and structure, suggestions for implementing interfaces, and specific objectives related to the current task.
+
+\myparagraph{Prompt Design: $L_1$ vs. $L_2$.}
+It is noteworthy that there are subtle differences between the $L_1$ and $L_2$ prompts. 
+%
+In the \textit{Task} section of the prompt, for $L_2$ examples, we require the agent to independently implement the solution from scratch, without access to the repository's codebase. 
+%
+To enforce this constraint, the agent is instructed not to download the repository, and even in the event of its doing so, it is instructed not to install it.
+%
+This is closely monitored during the testing phase, where we have set up mechanisms to check whether the agent engages in any unauthorized actions, such as cheating.
+%
+Figure~\ref{fig:Level1TaskStructure} and Figure~\ref{fig:Level2TaskStructure} show a specific $L_1$ and $L_2$ prompt, respectively, and they both come from the test-layer-norm test in liger-kernel library.
+
+\myparagraph{Supplementation for Missing Docstrings.}
+In cases where the source code lacks adequate documentation regarding function interfaces or behavior, we leverage a LLM to infer and complete the missing information. 
+Figure~\ref{fig:llm-docstring} illustrates the prompt for docstring generation. 
+%
+The LLM-generated docstring is exemplified in Figure~\ref{fig:docstring}, where the LLM is used to supplement the missing docstring in the functional description.
+
+\section{Detailed Benchmarking Process} 
+
+Our benchmarking pipeline is organized into two sequential stages: (1) agent inferring and (2) automated evaluation.  The following subsections provide a detailed explanation of two phases.
+
+\subsection{Inferring}
+
+During the inference phase, after initializing the task environment image, we proceed as follows based on the setting:
+
+For \textbf{$L_1$:} We use \texttt{patch.diff} to remove the target feature from the origin repository within the image and remove the corresponding F2P test file.
+
+For \textbf{$L_2$:} We completely remove the entire code repository from the image.
+
+Subsequently, the agent is deployed within the environment and provided with \texttt{problem\_statement.md} as the prompt of the task. Upon completion, we extract the modifications made by the agent as a new \texttt{patch.diff} file for later evaluation.
+
+\subsection{Evaluation}
+
+During the evaluation phase, we utilize the same base image and reset the repository to its pre-inferring state (replicating the setup procedures for L1 and L2 described above). And then:
+
+For \textbf{$L_1$:} We apply the agent-generated patch.diff to the repository and reintroduce the F2P test file.
+
+For \textbf{$L_2$:} We apply the agent-generated patch.diff to the image and install it as the \texttt{agent\_code} library. We then restore the original repository and apply the \texttt{test\_patch.diff}.
+
+Finally, we employ the pytest framework to perform automated testing and get the pytest report.
+
+\subsection{Metrics}
+
+The evaluation process produces raw output from the \texttt{pytest} framework, which is subsequently processed to extract key statistics, including \textit{total}, \textit{passed}, \textit{failed}, \textit{skipped}, \textit{error}, \textit{xfail}, and \textit{xpass}.
+
+From these statistics, we derive two primary evaluation metrics: \textit{pass\_rate} and \textit{is\_solved}. The \textit{pass\_rate} is defined as the ratio of successfully passed tests to the total number of executed F2P tests. The binary metric \textit{is\_solved} indicates whether the task is fully solved. It is assigned a value of 1 if pytest command exit with 0 (both F2P and P2P), and assigned a value of 0 otherwise.
+
+\subsection{Cheating Prevention and Detection}
+
+To protect against potential cheating attempts by agents, such as using \texttt{pip install <package>} followed by inspecting the source code of the installed package, we implement a twofold defense mechanism. First, defensive prompting is incorporated into the task descriptions to discourage such behavior. Second, the evaluation framework conducts an automated inspection of the agent's execution logs after task completion to identify suspicious activities.
+
+The log inspection process searches for regular expression patterns that indicate unauthorized attempts to access the source code of installed packages. If any pattern matches, the agent is flagged for potentially dishonest behavior in the evaluation report.
+
+\begin{verbatim}
+    r'"message".*cat /usr/local/lib/python\d+\.\d+'
+    r'"command".*cat /usr/local/lib/python\d+\.\d+'
+    r'"message".*reading file: /usr/local/lib/python\d+\.\d+'
+    r'"message".*reading /usr/local/lib/python\d+\.\d+'
+\end{verbatim}
+
+These patterns capture attempts to directly access files within the Python library directory, which is classified as a form of cheating under the evaluation criteria.
+
+\section{Analysis of Falures of Gemini 3 Pro model}
+In our baseline experiments, we found that the Gemini 3 Pro model performed poorly. Through analysis of the model output logs, we discovered that this may be caused by a lack of strict adherence to JSON schemas during tool invocation.
+Specifically, we observed a recurrent pattern of parameter key hallucination, where the model substituted valid schema definitions with semantically similar but syntactically incorrect keys.
+
+For example, in case \texttt{astropy\_\_astropy.b0db0daa.test\_basic\_rgb.067e927c.lv1}, the model produced the output shown in Figure~\ref{fig:gemini-destructive}, the model attempted to invoke \texttt{read\_file} using the argument \texttt{path} instead of the strictly defined \texttt{file\_path}. This suggests that while the model understands the intent of the tool, it struggles to suppress its internal priors in favor of the provided API constraints.
+
+This situation accounts for the majority of cases in our evaluation, 
+This indicates that Gemini 3 Pro seems to have certain deficiencies in completing large-scale code editing tasks.
+
+\section{Comparison with Existing Benchmarks}
+\label{appendix:benchmark_comparison}
+
+This section provides additional comparisons between \name and two representative benchmarks, SWE-Dev~\citep{du2025swe} and commit0~\citep{zhao2024commit0}. These comparisons complement the high-level discussion in Section~\ref{related_work} and clarify the distinctions in task sources, construction pipelines, evaluation settings, and scalability.
+
+\myparagraph{Comparison with SWE-Dev} SWE-Dev derives tasks from unit tests and LLM-generated problem requirement descriptions (PRDs). Its task formulation and construction pipeline differ substantially from \namenospace, particularly in how tasks are specified, validated, and filtered. Table~\ref{tab:benchmark_comparison_1} provides a concise comparison, followed by brief clarifications of the key distinctions.
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\linewidth}{!}{
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Benchmark} & \textbf{Task Source} & \textbf{F2P/P2P} & \textbf{Real-world software development} & \textbf{Agent Eval.} & \textbf{Avg. LoC} \\
+\midrule
+SWE-Bench & PR & \checkmark & \checkmark & \xmark & 32.8 \\
+SWE-Dev   & Unit Tests & \xmark & \xmark & \xmark & 190 \\
+\namenospace & Unit Tests & \checkmark & \checkmark & \checkmark & \textbf{790.2} \\
+\bottomrule
+\end{tabular}
+}
+\caption{Comparison of \name with SWE-Bench and SWE-Dev.}
+\label{tab:benchmark_comparison_1}
+\end{table}
+
+\begin{itemize}[leftmargin=12pt,itemindent=0pt]
+    \setlength{\itemsep}{3pt}
+    \setlength{\parsep}{0pt}
+    \setlength{\parskip}{0pt}
+    \item \textit{Realistic development workflow and stricter construction.}
+    \name preserves the original, well-developed features of each repository and leaves only the target feature unimplemented, closely matching incremental development. This is enforced through precise patch extraction, F2P/P2P filtering, and strict post-verification. SWE-Dev omits P2P verification and does not perform post-verification, allowing patches that unintentionally break existing behavior.
+
+    \item \textit{Interface-driven task specification with minimal ambiguity.}
+    SWE-Dev uses LLM-generated PRDs, which naturally introduce ambiguity. \name instead exposes native top-level interfaces—function signatures and invocation paths extracted directly from the codebase—ensuring clear, deterministic, and implementable task specifications.
+
+    \item \textit{Agent-based evaluation in this work.}
+    SWE-Dev reports results for LLM and multi-LLM settings but does not evaluate coding agents. \name conducts end-to-end agent experiments using a unified OpenHands scaffold with multiple LLM backends (Claude, GPT, Gemini, Qwen), providing a realistic assessment of agent performance.
+
+    \item \textit{More realistic and complex feature-level tasks.}
+    SWE-Dev tasks involve roughly 190 LoC across three files. \name tasks require around 790.2 LoC across more files and substantially more test points, reflecting the multi-file, cross-module modifications typical in real feature development.
+\end{itemize}
+
+\myparagraph{Comparison with commit0}
+commit0 studies whether LLMs can reconstruct entire libraries from documentation and high-coverage test suites. 
+This setup differs markedly from \namenospace, whose focus is real-world feature development with full, from-scratch implementations and scalable construction. 
+Table~\ref{tab:benchmark_comparison_2} summarizes the key distinctions, with brief explanations provided below.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Benchmark} &
+\textbf{Full Implementation} &
+\textbf{Realistic Software Development} &
+\textbf{Scalability} \\
+\midrule
+commit0 & \xmark & \xmark & \xmark \\
+\namenospace & \checkmark & \checkmark & \checkmark \\
+\bottomrule
+\end{tabular}
+\caption{Comparison of \name with SWE-Bench and commit0.}
+\label{tab:benchmark_comparison_2}
+\end{table}
+
+\begin{itemize}[leftmargin=12pt,itemindent=0pt]
+    \setlength{\itemsep}{3pt}
+    \setlength{\parsep}{0pt}
+    \setlength{\parskip}{0pt}
+    \item \textit{Real-world development and full implementation.}
+    In commit0, only the bodies of functions and classes are removed while definitions and architectural scaffolding remain, making tasks closer to fill-in-the-blank partial completions. \name removes definitions, imports, and associated logic, ensuring that the target feature is fully absent and must be implemented from scratch, better aligning with real development workflows.
+
+    \item \textit{Low-cost scalability to new repositories.}
+    commit0 requires repositories with well-organized documentation and very high test coverage ($>$90\%), severely limiting applicability. \name requires only a runnable unit-test suite; after a short configuration step, the rest of the pipeline is fully automated, enabling efficient scaling across a wide range of real-world codebases.
+\end{itemize}
+
+\section{Dataset Overview and Experimental Results}
+The construction of the dataset resulted in 200 evaluation tasks derived from 3825 candidate coding environments across 24 Python repositories. These repositories encompass a wide range of domains,  including machine learning, scientific computing, visualization, web frameworks and fundamental software engineering utilities. This diversity ensures the dataset captures a broad spectrum of real-world coding scenarios. 
+
+To promote transparency and reproducibility, the appendix contains two tables that describe the dataset composition. The Table \ref{tab:repo_summary} provides an overview of each repository, including summary information and licensing details. The Table \ref{tab:codebase_stats} presents quantitative statistics such as the average number of extracted code lines and the number of test points in the test suite.
+
+To illustrate the dataset structure, we include an example of an individual data entry. Each entry includes the following fields: \texttt{instance\_id}, \texttt{patch}, \texttt{test\_patch}, \texttt{FAIL\_TO\_PASS}, \texttt{PASS\_TO\_PASS}, \texttt{image\_name}, \texttt{repo}, \texttt{base\_commit}, \texttt{problem\_statement}, and \texttt{repo\_settings}. The specific meaning of each field is detailed in Table \ref{tab:instance_info}.
+
+Additionally, the experimental results, summarized in five comprehensive tables (Table \ref{Codex_GPT-5.1-Codex} to Table \ref{OpenHands_Qwen3}), evaluate the performance of multiple large language models across the dataset. Each table reports three repository-level average metrics: \texttt{Passed}, \texttt{Resolved}, and \texttt{Token IO}. These results provide insights into model capabilities, including task pass rates, resolution rates, and token input-output statistics. The results demonstrate the strengths and limitations of current coding agents in diverse scenarios, forming a foundation for future advancements in agentic coding research.
+
+\begin{table}[h]
+    \centering
+    \resizebox{0.7\textwidth}{!}{
+    \begin{tabular}{>{\centering}p{3cm}|>{\centering}p{1.2cm}>{\centering}p{1.2cm}>{\centering}p{1.2cm}c}
+    \toprule
+    Repo & \# Lines & \# Files & \# Functions & \# Test points\\
+    \midrule
+    pytorch-lightning & 765.4 & 24.0 & 35.7 & 42.0 \\
+    metaflow & 520.0 & 1.0 & 5.0 & 31.0 \\
+    astropy & 800.0 & 15.9 & 34.6 & 132.7 \\
+    fastapi & 110.0 & 9.0 & 8.0 & 10.0 \\
+    accelerate & 1057.0 & 12.0 & 17.0 & 33.0 \\
+    transformers & 494.8 & 13.4 & 13.7 & 90.9 \\
+    trl & 879.0 & 5.0 & 20.0 & 352.0 \\
+    Liger-Kernel & 539.5 & 15.5 & 10.3 & 29.8 \\
+    matplotlib & 232.0 & 1.0 & 11.0 & 31.0 \\
+    meson & 220.0 & 7.0 & 14.0 & 16.0 \\
+    mlflow & 732.9 & 16.9 & 29.4 & 25.8 \\
+    seaborn & 518.8 & 6.4 & 25.6 & 97.1 \\
+    optuna & 104.0 & 12.0 & 8.0 & 28.0 \\
+    pandas & 1522.9 & 19.2 & 39.2 & 69.2 \\
+    pydantic & 436.4 & 6.8 & 24.8 & 45.6 \\
+    xarray & 847.8 & 15.8 & 37.3 & 21.5 \\
+    hatch & 847.0 & 17.0 & 55.5 & 16.0 \\
+    packaging & 785.0 & 3.0 & 36.0 & 294.0 \\
+    setuptools & 3283.0 & 50.0 & 185.0 & 30.0 \\
+    pytest & 528.0 & 3.0 & 34.5 & 105.5 \\
+    mypy & 392.0 & 11.0 & 5.0 & 10.0 \\
+    scikit-learn & 900.7 & 12.0 & 12.3 & 89.0 \\
+    sphinx & 1025.9 & 18.3 & 47.4 & 31.2 \\
+    sympy & 979.6 & 25.2 & 35.2 & 33.8 \\
+    \bottomrule
+    \end{tabular}
+    }
+    \caption{Repository statistics.}
+    \label{tab:codebase_stats}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \resizebox{\textwidth}{!}{
+    \begin{tabular}{l|>{\raggedright\arraybackslash}p{8cm}|l}
+    \toprule
+    Repo & Summary & License \\
+    \midrule
+    pytorch-lightning & Lightweight PyTorch wrapper for high-performance AI research & Apache-2.0 \\
+    metaflow & Framework for building and managing real-life data science projects & Apache-2.0 \\
+    astropy & Astronomy and astrophysics core library & BSD 3-Clause \\
+    fastapi & Modern, fast (high-performance) web framework for building APIs & MIT License \\
+    accelerate & Library for running PyTorch training on any distributed configuration & Apache-2.0 \\
+    transformers & State-of-the-art pretrained models for natural language processing and beyond & Apache-2.0 \\
+    trl & Library for training large language models with reinforcement learning from human feedback & Apache-2.0 \\
+    Liger-Kernel & High-performance deep learning kernels developed for large-scale distributed training & BSD 2-Clause \\
+    matplotlib & Plotting library for creating scientific and publication-quality visuals & Custom \\
+    meson & Open source build system meant to be both extremely fast and user friendly & Apache-2.0 \\
+    mlflow & Open source platform for the machine learning lifecycle & Apache-2.0 \\
+    seaborn & Statistical data visualization library built on top of matplotlib & BSD 3-Clause \\
+    optuna & Automatic hyperparameter optimization software framework & MIT License \\
+    pandas & Data analysis and manipulation library providing high-performance data structures & BSD 3-Clause \\
+    pydantic & Data validation using Python type hints & MIT License \\
+    xarray & Library for N-dimensional labeled arrays and datasets & Apache-2.0 \\
+    hatch & Modern, extensible Python project management & MIT License \\
+    packaging & Core utilities for Python packaging & Apache-2.0 \\
+    setuptools & Fully-featured library for packaging Python projects & MIT License \\
+    pytest & Testing framework for Python & MIT License \\
+    mypy & Optional static typing for Python & MIT License \\
+    scikit-learn & Machine learning algorithms and tools in Python & BSD 3-Clause \\
+    sphinx & Documentation generation system for Python projects & BSD 2-Clause \\
+    sympy & Computer algebra system for symbolic mathematics in Python & BSD 3-Clause \\
+    \bottomrule
+    \end{tabular}
+    }
+    \caption{Summary and licenses for all GitHub repositories that task instances were extracted from.}
+    \label{tab:repo_summary}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \resizebox{\textwidth}{!}{
+    \begin{tabular}{l|l}
+    \toprule
+    Field & Description \\
+    \midrule
+    instance\_id & (str) Unique identifier for the task. \\
+    patch & (str) Git diff showing the implementation. \\
+    test\_patch & (str) Git diff showing test file modifications. \\
+    FAIL\_TO\_PASS & (list[str]) List of test files that must pass after implementation. \\
+    PASS\_TO\_PASS & (list[str])  List of test files that must continue passing. \\
+    image\_name & (str) Docker image containing the development environment. \\
+    repo & (str) Source repository (e.g., "owner/repo-name"). \\
+    base\_commit & (str) Git commit hash of the base version. \\
+    problem\_statement & (str) Detailed task description and requirements. \\
+    repo\_settings & (str) Repository configuration settings as JSON string. \\
+    \bottomrule
+    \end{tabular}
+    }
+    \caption{Description of each field of a \name task instance object.}
+    \label{tab:instance_info}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \resizebox{0.7\textwidth}{!}{
+  \begin{tabular}{>{\centering\arraybackslash}p{3cm}|c|>{\columncolor{mygray}}c|c|c}
+\toprule
+Model & Repo  & \% Passed & \% Resolved & \# Token IO \\
+\midrule
+\multirow{16}{*}{\makecell{Codex + \\ GPT-5.1-Codex \\ (medium reasoning)}}
+& Liger-Kernel & 30.7 & 14.3 & 4.6M / 35k \\
+& accelerate & 0.0 & 0.0 & 16.1M / 73k \\
+& astropy & 34.9 & 11.8 & 12.5M / 60k \\
+& fastapi & 65.0 & 0.0 & 1.0M / 14k \\
+& hatch & 3.8 & 0.0 & 4.4M / 23k \\
+& matplotlib & 54.0 & 0.0 & 2.0M / 40k \\
+& meson & 24.4 & 0.0 & 7.0M / 57k \\
+& metaflow & 100.0 & 100.0 & 4.8M / 37k \\
+& mlflow & 51.4 & 28.6 & 3.0M / 20k \\
+& mypy & 15.0 & 0.0 & 59k / 2k \\
+& optuna & 14.3 & 0.0 & 5.1M / 36k \\
+& packaging & 93.5 & 0.0 & 6.0M / 45k \\
+& pandas & 41.4 & 10.0 & 8.3M / 46k \\
+& pydantic & 50.3 & 0.0 & 9.9M / 40k \\
+& pytest & 61.8 & 0.0 & 3.2M / 38k \\
+& pytorch-lightning & 51.7 & 8.3 & 8.9M / 45k \\
+& scikit-learn & 84.0 & 0.0 & 7.4M / 35k \\
+& seaborn & 43.7 & 8.3 & 3.3M / 41k \\
+& setuptools & 23.3 & 0.0 & 4.7M / 23k \\
+& sphinx & 48.4 & 20.0 & 8.1M / 49k \\
+& sympy & 29.5 & 16.7 & 9.6M / 65k \\
+& transformers & 24.6 & 0.0 & 4.4M / 34k \\
+& trl & 38.9 & 0.0 & 1.6M / 37k \\
+& xarray & 46.0 & 0.0 & 18.6M / 85k \\
+\bottomrule
+\end{tabular}
+}
+\caption{Performance of Codex + GPT-5.1-Codex on each repository.}
+\label{Codex_GPT-5.1-Codex}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \resizebox{0.7\textwidth}{!}{
+  \begin{tabular}{>{\centering\arraybackslash}p{3cm}|c|>{\columncolor{mygray}}c|c|c}
+\toprule
+Model & Repo  & \% Passed & \% Resolved & \# Token I/O \\
+\midrule
+\multirow{16}{*}{\makecell{Claude Code \\ (routing) + \\ Claude-Opus-4.5}}
+& Liger-Kernel & 77.3 & 57.1 & 3.7M / 34k \\
+& accelerate & 92.3 & 0.0 & 12.2M / 53k \\
+& astropy & 25.7 & 0.0 & 10.1M / 40k \\
+& fastapi & 35.0 & 0.0 & 2.0M / 14k \\
+& hatch & 3.8 & 0.0 & 14.7M / 54k \\
+& matplotlib & 54.0 & 0.0 & 2.3M / 20k \\
+& meson & 28.4 & 0.0 & 5.4M / 33k \\
+& metaflow & 100.0 & 100.0 & 7.7M / 37k \\
+& mlflow & 50.7 & 24.5 & 5.0M / 27k \\
+& mypy & 25.0 & 0.0 & 569k / 5k \\
+& optuna & 92.9 & 0.0 & 5.8M / 37k \\
+& packaging & 88.1 & 0.0 & 9.8M / 37k \\
+& pandas & 39.6 & 5.0 & 13.6M / 50k \\
+& pydantic & 31.6 & 20.0 & 13.6M / 41k \\
+& pytest & 67.4 & 0.0 & 8.0M / 42k \\
+& pytorch-lightning & 36.2 & 0.0 & 8.8M / 35k \\
+& scikit-learn & 95.2 & 33.3 & 6.6M / 35k \\
+& seaborn & 42.6 & 0.0 & 5.7M / 31k \\
+& setuptools & 20.0 & 0.0 & 20.1M / 73k \\
+& sphinx & 39.0 & 10.0 & 10.1M / 36k \\
+& sympy & 41.8 & 0.0 & 9.5M / 43k \\
+& transformers & 35.6 & 2.9 & 4.4M / 26k \\
+& trl & 49.9 & 0.0 & 959k / 13k \\
+& xarray & 40.8 & 0.0 & 14.9M / 55k \\
+\bottomrule
+\end{tabular}
+}
+\caption{Performance of Claude Code + Claude-Opus-4.5 on each repository.}
+\label{Claude-Code_Claude-Opus-4.5}
+\end{table}
+
+\begin{table}[h]
+  \centering
+  \resizebox{0.7\textwidth}{!}{
+  \begin{tabular}{>{\centering\arraybackslash}p{3cm}|c|>{\columncolor{mygray}}c|c|c}
+    \toprule
+    Model & Repo  & \% Passed & \% Resolved & \# Token I/O \\
+    \midrule
+    \multirow{16}{*}{\makecell{OpenHands + \\ Claude-Opus-4.5}}
+    & Liger-Kernel & 77.3 & 57.1 & 4.8M / 24k \\
+    & accelerate & 0.0 & 0.0 & 19.1M / 51k \\
+    & astropy & 20.2 & 0.0 & 11.1M / 35k \\
+    & fastapi & 80.0 & 0.0 & 3.1M / 14k \\
+    & hatch & 18.0 & 0.0 & 15.1M / 36k \\
+    & matplotlib & 65.1 & 0.0 & 2.3M / 27k \\
+    & meson & 29.3 & 0.0 & 4.8M / 34k \\
+    & metaflow & 100.0 & 100.0 & 5.7M / 24k \\
+    & mlflow & 54.1 & 20.4 & 6.9M / 26k \\
+    & mypy & 25.0 & 0.0 & 418k / 8k \\
+    & optuna & 14.3 & 0.0 & 6.2M / 23k \\
+    & packaging & 91.2 & 0.0 & 16.9M / 48k \\
+    & pandas & 50.0 & 10.0 & 10.4M / 35k \\
+    & pydantic & 41.9 & 0.0 & 12.2M / 30k \\
+    & pytest & 59.7 & 0.0 & 2.1M / 14k \\
+    & pytorch-lightning & 40.2 & 0.0 & 10.2M / 34k \\
+    & scikit-learn & 98.5 & 66.7 & 10.3M / 45k \\
+    & seaborn & 43.7 & 8.3 & 6.0M / 30k \\
+    & setuptools & 20.0 & 0.0 & 16.2M / 42k \\
+    & sphinx & 36.9 & 0.0 & 8.9M / 28k \\
+    & sympy & 50.5 & 0.0 & 11.4M / 40k \\
+    & transformers & 32.8 & 2.9 & 5.3M / 22k \\
+    & trl & 97.9 & 0.0 & 5.9M / 35k \\
+    & xarray & 49.7 & 0.0 & 17.1M / 47k \\
+    \bottomrule
+  \end{tabular}
+  }
+  \caption{Performance of OpenHands + Claude-Opus-4.5 on each repository.}
+  \label{OpenHands_Claude-Opuse-4.5}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \resizebox{0.7\textwidth}{!}{
+  \begin{tabular}{>{\centering\arraybackslash}p{3cm}|c|>{\columncolor{mygray}}c|c|c}
+    \toprule
+    Model & Repo  & \% Passed & \% Resolved & \# Token I/O \\
+    \midrule
+    \multirow{16}{*}{\makecell{OpenHands + \\ DeepSeek-V3.2}}
+    & Liger-Kernel & 63.1 & 42.9 & 2.9M / 21k \\
+    & accelerate & 0.0 & 0.0 & 3.4M / 23k \\
+    & astropy & 10.3 & 0.0 & 4.1M / 25k \\
+    & fastapi & 35.0 & 0.0 & 1.9M / 18k \\
+    & hatch & 3.8 & 0.0 & 3.4M / 23k \\
+    & matplotlib & 52.2 & 0.0 & 1.9M / 24k \\
+    & meson & 27.2 & 0.0 & 2.8M / 30k \\
+    & metaflow & 100.0 & 100.0 & 2.4M / 24k \\
+    & mlflow & 33.3 & 12.2 & 2.7M / 23k \\
+    & mypy & 25.0 & 0.0 & 532k / 7k \\
+    & optuna & 7.1 & 0.0 & 3.1M / 21k \\
+    & packaging & 32.6 & 0.0 & 4.1M / 42k \\
+    & pandas & 17.8 & 0.0 & 3.5M / 24k \\
+    & pydantic & 13.2 & 0.0 & 4.3M / 19k \\
+    & pytest & 12.1 & 0.0 & 4.2M / 36k \\
+    & pytorch-lightning & 26.2 & 0.0 & 2.9M / 24k \\
+    & scikit-learn & 49.8 & 0.0 & 4.8M / 26k \\
+    & seaborn & 27.5 & 0.0 & 2.8M / 22k \\
+    & setuptools & 23.3 & 0.0 & 11.4M / 51k \\
+    & sphinx & 29.9 & 0.0 & 2.6M / 19k \\
+    & sympy & 11.8 & 0.0 & 7.0M / 39k \\
+    & transformers & 17.9 & 2.9 & 2.3M / 19k \\
+    & trl & 81.4 & 0.0 & 3.0M / 54k \\
+    & xarray & 29.9 & 0.0 & 3.6M / 29k \\
+    \bottomrule
+  \end{tabular}
+  }
+  \caption{Performance of OpenHands + DeepSeek-V3.2 on each repository.}
+  \label{OpenHands_DeepSeek-V3.2}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \resizebox{0.7\textwidth}{!}{
+  \begin{tabular}{>{\centering\arraybackslash}p{3cm}|c|>{\columncolor{mygray}}c|c|c}
+\toprule
+Model & Repo  & \% Passed & \% Resolved & \# Token I/O \\
+\midrule
+\multirow{16}{*}{\makecell{Gemini CLI + \\ Gemini-3-Pro-Preview \\ (low reasoning)}}
+& Liger-Kernel & 65.9 & 42.9 & 1.0M / 15k \\
+& accelerate & 0.0 & 0.0 & 2.3M / 12k \\
+& astropy & 12.6 & 0.0 & 7.6M / 24k \\
+& fastapi & 85.0 & 50.0 & 1.0M / 6k \\
+& hatch & 3.8 & 0.0 & 1.0M / 5k \\
+& matplotlib & 65.1 & 0.0 & 474k / 8k \\
+& meson & 29.1 & 0.0 & 730k / 16k \\
+& metaflow & 100.0 & 100.0 & 422k / 9k \\
+& mlflow & 36.5 & 8.2 & 1.2M / 9k \\
+& mypy & 25.0 & 0.0 & 1.0M / 3k \\
+& optuna & 7.1 & 0.0 & 828k / 6k \\
+& packaging & 46.6 & 0.0 & 1.2M / 11k \\
+& pandas & 29.2 & 5.0 & 4.5M / 10k \\
+& pydantic & 21.1 & 0.0 & 9.4M / 16k \\
+& pytest & 60.0 & 0.0 & 887k / 14k \\
+& pytorch-lightning & 26.4 & 0.0 & 646k / 8k \\
+& scikit-learn & 81.5 & 0.0 & 1.6M / 13k \\
+& seaborn & 32.9 & 0.0 & 582k / 8k \\
+& setuptools & 0.0 & 0.0 & 1.4M / 8k \\
+& sphinx & 35.0 & 0.0 & 2.5M / 21k \\
+& sympy & 37.8 & 0.0 & 6.4M / 14k \\
+& transformers & 22.3 & 0.0 & 1.4M / 9k \\
+& trl & 91.2 & 0.0 & 442k / 17k \\
+& xarray & 28.0 & 0.0 & 4.6M / 17k \\
+\bottomrule
+\end{tabular}
+}
+\caption{Performance of Gemini CLI + Gemini-3-Pro-Preview on each repository.}
+\label{Gemini-CLI_Gemini-3-Pro}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \resizebox{0.7\textwidth}{!}{
+  \begin{tabular}{>{\centering\arraybackslash}p{3cm}|c|>{\columncolor{mygray}}c|c|c}
+\toprule
+Model & Repo  & \% Passed & \% Resolved & \# Token I/O \\
+\midrule
+\multirow{16}{*}{\makecell{OpenHands + \\ Gemini-3-Pro-Preview \\ (low reasoning)}}
+& Liger-Kernel & 72.6 & 42.9 & 4.5M / 41k \\
+& accelerate & 0.0 & 0.0 & 4.9M / 40k \\
+& astropy & 10.5 & 0.0 & 9.2M / 49k \\
+& fastapi & 35.0 & 0.0 & 1.1M / 16k \\
+& hatch & 3.8 & 0.0 & 7.7M / 58k \\
+& matplotlib & 50.4 & 0.0 & 1.2M / 45k \\
+& meson & 28.6 & 0.0 & 1.6M / 27k \\
+& metaflow & 100.0 & 100.0 & 8.6M / 52k \\
+& mlflow & 32.2 & 8.2 & 4.6M / 38k \\
+& mypy & 25.0 & 0.0 & 479k / 10k \\
+& optuna & 14.3 & 0.0 & 4.3M / 28k \\
+& packaging & 0.0 & 0.0 & 12.6M / 56k \\
+& pandas & 34.8 & 5.0 & 10.4M / 46k \\
+& pydantic & 15.3 & 0.0 & 11.8M / 45k \\
+& pytest & 67.7 & 0.0 & 16.9M / 81k \\
+& pytorch-lightning & 26.5 & 0.0 & 11.1M / 36k \\
+& scikit-learn & 85.9 & 0.0 & 8.3M / 48k \\
+& seaborn & 30.7 & 0.0 & 2.8M / 31k \\
+& setuptools & 23.3 & 0.0 & 24.3M / 71k \\
+& sphinx & 30.4 & 0.0 & 5.0M / 43k \\
+& sympy & 36.9 & 0.0 & 8.7M / 52k \\
+& transformers & 17.0 & 0.0 & 3.5M / 31k \\
+& trl & 97.3 & 0.0 & 2.1M / 58k \\
+& xarray & 29.5 & 0.0 & 6.1M / 43k \\
+\bottomrule
+\end{tabular}
+}
+\caption{Performance of OpenHands + Gemini-3-Pro-Preview on each repository.}
+\label{OpenHands_Gemini-3-Pro}
+\end{table}
+
+\begin{table}[t]
+  \centering
+  \resizebox{0.7\textwidth}{!}{
+  \begin{tabular}{>{\centering\arraybackslash}p{3cm}|c|>{\columncolor{mygray}}c|c|c}
+\toprule
+Model & Repo  & \% Passed & \% Resolved & \# Token I/O \\
+\midrule
+\multirow{16}{*}{\makecell{OpenHands + \\ Qwen3-Coder-480B- \\ A35B-Instruct}}
+& Liger-Kernel & 33.3 & 14.3 & 2.1M / 15k \\
+& accelerate & 0.0 & 0.0 & 2.5M / 16k \\
+& astropy & 5.7 & 0.0 & 2.4M / 13k \\
+& fastapi & 35.0 & 0.0 & 499k / 5k \\
+& hatch & 3.8 & 0.0 & 1.3M / 12k \\
+& matplotlib & 43.1 & 0.0 & 888k / 12k \\
+& meson & 28.6 & 0.0 & 1.5M / 15k \\
+& metaflow & 100.0 & 100.0 & 1.2M / 8k \\
+& mlflow & 36.2 & 10.2 & 1.9M / 14k \\
+& mypy & 25.0 & 0.0 & 284k / 3k \\
+& optuna & 7.1 & 0.0 & 951k / 8k \\
+& packaging & 16.7 & 0.0 & 5.3M / 39k \\
+& pandas & 20.2 & 0.0 & 2.2M / 13k \\
+& pydantic & 13.1 & 0.0 & 2.7M / 16k \\
+& pytest & 52.9 & 0.0 & 3.2M / 19k \\
+& pytorch-lightning & 26.1 & 0.0 & 1.4M / 13k \\
+& scikit-learn & 83.1 & 0.0 & 2.9M / 24k \\
+& seaborn & 27.6 & 0.0 & 2.0M / 15k \\
+& setuptools & 10.0 & 0.0 & 1.4M / 8k \\
+& sphinx & 28.9 & 0.0 & 1.7M / 11k \\
+& sympy & 12.6 & 0.0 & 4.5M / 27k \\
+& transformers & 8.8 & 0.0 & 1.7M / 12k \\
+& trl & 70.3 & 0.0 & 1.6M / 40k \\
+& xarray & 21.0 & 0.0 & 1.8M / 21k \\
+\bottomrule
+\end{tabular}
+}
+\caption{Performance of OpenHands + Qwen3-Coder-480B-A35B-Instruct on each repository.}
+\label{OpenHands_Qwen3}
+\end{table}
+
+
+\begin{figure}[h]
+\centering
+\begin{tcolorbox}[
+    colback=white,
+    colframe=black!60,
+    coltitle=white,
+    colbacktitle=black!60,
+    title=Output Analysis of Gemini 3 Pro,
+    fonttitle=\bfseries,
+    boxrule=0.7pt,
+    arc=1mm,
+    width=1.\linewidth,
+    enhanced,
+    overlay={
+        \node[red, fill=yellow!20, draw=red!50, thick, rounded corners=2pt, 
+              inner sep=2pt, anchor=base west, font=\ttfamily\footnotesize] 
+              at ([xshift=3.7cm, yshift=-13.28cm]frame.north west) 
+              {"path"};
+    }
+]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+{
+  "timestamp": ...,
+  "model": "gemini-3-pro-preview",
+  "tools": [
+    {
+      "functionDeclarations": [
+        {
+          "name": "read_file",
+          "description": "Reads and returns the content of a specified file...",
+          "parametersJsonSchema": {
+            "type": "object",
+            "required": [
+              "file_path" 
+            ],
+            "properties": {
+              "file_path": {
+                "description": "The path to the file to read.",
+                "type": "string"
+              },
+              "limit": ...
+              "offset": ...
+            ...],
+  "request": {
+    "contents": [
+       ...,
+      {
+        "role": "model",
+        "parts": [
+          {
+            "thoughtSignature": "...",
+            "functionCall": {
+              "name": "read_file",
+              "args": {
+                       :"/testbed/astropy/visualization/basic_rgb.py",
+              ...},
+      {
+        "role": "user",
+        "parts": [
+          {
+            "functionResponse": {
+              "name": "read_file",
+              "response": {
+                "error": "params must have required property 'file_path'"
+              ...},
+  "response": {
+    "status": 200,
+    "content": "**Clarifying File Requirement**\n\nI've realized my initial approach was incomplete. Specifically, I understand now that the `read_file` tool explicitly needs a `file_path` input. I'm focusing on ensuring that parameter is accurately and appropriately utilized moving forward."
+  }
+}
+\end{lstlisting}
+\end{tcolorbox}
+\caption{Partial output of Gemini 3 Pro model using Gemini CLI framework while completing task \texttt{astropy\_\_astropy.b0db0daa.test\_basic\_rgb.067e927c.lv1}}
+\label{fig:gemini-destructive}
+\end{figure}
+
+
+\begin{figure}[p]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=Prompt for classifying top-level objects part 1 of 2,    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1.\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+Task: From a list of candidate objects, identify which ones are "tested objects" in the context of a Python test file.
+
+**Definition of "Tested Object":**
+A "tested object" is an object that the test file is specifically designed to test. It represents the core functionality or feature being validated, NOT utility functions, test helpers, or infrastructure code.
+
+**Test File Information:**
+- Test file path: `{test_file}`
+- Test file name: `{test_file_name}`
+
+**Test File Content:**
+```python
+{test_file_content}
+```
+
+**Candidate Objects to Classify:**
+
+{candidates_section}
+
+**Classification Guidelines:**
+
+**Tested Objects (should be selected):**
+- Core algorithms, classes, or functions that the test file is designed to validate
+- Main interfaces or APIs being tested
+- Key components whose behavior is the primary focus of the test
+
+**Non-Tested Objects (should NOT be selected):**
+- Utility functions from test utilities (e.g., `test.utils.*`, `pytest.*`)
+- Common tools defined in the codebase (e.g., `infer_device()`, `assert_verbose_allclose()`)
+\end{lstlisting}
+\end{tcolorbox}
+\caption{Prompt template for classifying top-level objects part 1 of 2}
+\label{fig:llm-classification}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=Prompt for classifying top-level objects part 2 of 2,    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1.\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+**Examples for Reference:**
+
+**Example Scenario:**
+- Test file: `/testbed/test/transformers/test_jsd.py` (testing JSD algorithm)
+
+**Should Select (Tested Objects):**
+- `/testbed/src/liger_kernel/transformers/jsd.py::LigerJSD.forward::64` - Core JSD implementation
+- `/testbed/src/liger_kernel/transformers/jsd.py::LigerJSD.__init__::59` - JSD class initialization
+
+**Should NOT Select (Non-Tested Objects):**
+- `/testbed/test/transformers/test_jsd.py::_test_correctness_once::91` - Helper function in test file
+- `/testbed/src/liger_kernel/ops/utils.py::ensure_contiguous.wrapper::34` - General utility
+
+**Your Task:**
+Please analyze each candidate object and determine which ones are tested objects for the given test file.
+Provide your response in the following structured format:
+
+## Analysis
+For each candidate object, briefly explain whether it should be selected as a tested object and why.
+
+## Final Answer
+Provide your final selection in the following JSON format:
+```json
+{{
+    "tested_object_ids": [
+        "object_id_1",
+        "object_id_2"
+    ],
+    "reasoning": "Brief summary of the selection criteria applied"
+}}
+```
+**Important Notes:**
+- The `tested_object_ids` list should contain ONLY the object IDs that are tested objects
+- If none of the candidates are tested objects, return an empty list: `"tested_object_ids": []`
+- Include the full object ID exactly as provided in the candidate list
+- Unless it's obvious or you're pretty sure that a candidate object is a general purpose tool, you need to categorize it as tested object
+
+Now, please begin your analysis for the candidate objects listed above.
+\end{lstlisting}
+\end{tcolorbox}
+\caption{Prompt template for classifying top-level objects part 2 of 2}
+\label{fig:llm-classification_2}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=Prompt for completing docstring,    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1.\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+Generate a detailed docstring for the following Python function. The docstring should include:
+1. The main function description
+2. Parameter description (if any)
+3. Return value description (if any)
+4. Important notes or exceptions (if applicable)
+
+Function qualified name:
+```python
+{function_qualified_name}
+```
+
+The full file content for reference:
+```python
+{file_content}
+```
+
+You only need to generate the docstring of the {function_qualified_name} function, the complete content of the file is for your reference only, and there is no need to generate the docstring of other functions or classes.
+
+In docstring, in order for us to parse it correctly, you are forbidden to use syntax like ```python ```, which may cause the end result to be confusing. Please only return the docstring content!!! DO NOT include triple quotes or other format tags:
+\end{lstlisting}
+\end{tcolorbox}
+\caption{Prompt template for completing docstring given to LLM}
+\label{fig:llm-docstring}
+\end{figure}
+
+
+% \begin{figure}[htbp]
+% \centering
+% \begin{tcolorbox}[
+%     colback=white,           % 背景色（浅灰）
+%     colframe=black!60,          % 边框颜色
+%     coltitle=white,            % 标题文字颜色
+%     colbacktitle=black!60,% 标题背景颜色
+%     title=Prompt for generating task statement,    % 标题文字
+%     fonttitle=\bfseries,       % 标题加粗
+%     boxrule=0.7pt,             % 边框粗细
+%     arc=1mm,                   % 圆角弧度
+%     width=1.\linewidth,      % 宽度为正文宽度的 100%
+%     %sharp corners=south        % 只有下边框是直角
+% ]
+% \begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+% I want to give questions to code agent based on the following code interface, please generate a **generalized** and **short** task statement that briefly summarizes:
+% 1. The core functionalities these interfaces aim to provide
+% 2. The main features and requirements of the task
+% 3. The key challenges or considerations to keep in mind
+
+% The description should focus on the essential goals and characteristics of the task, without going into too much technical detail.
+
+% Interface Information:
+% {all_objects_summary}
+
+% Now use generalized language to describe the objectives and requirements of this programming task. Note that your answer should be as short as possible and not too long:
+% \end{lstlisting}
+% \end{tcolorbox}
+% \caption{Prompt template for generating task statement}
+% \label{fig:llm-task}
+% \end{figure}
+
+
+\begin{figure}[h]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=User prompt part 1 of 3 (Level 1),    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1.\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+## Task
+**Task Statement:**
+
+Implement ...
+
+1. **Core functionalities**: ...
+
+2. **Main features and requirements**: 
+   - ...
+   - ...
+
+3. **Key challenges**: 
+   - ...
+   - ...
+
+\end{lstlisting}
+\end{tcolorbox}
+\caption{Unified prompt template for $L_1$ part 1, Task.}
+\label{fig:systemprompt1}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=User prompt part 2 of 3 (Level 1),    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+
+**NOTE**: 
+- This test comes from the `{{ library_name }}` library, and we have given you the content of this code repository under `/testbed/`, and you need to complete based on this code repository and supplement the files we specify. Remember, all your changes must be in this codebase, and changes that are not in this codebase will not be discovered and tested by us.
+- We've already installed all the environments and dependencies you need, you don't need to install any dependencies, just focus on writing the code!
+- **CRITICAL REQUIREMENT**: After completing the task, pytest will be used to test your implementation. **YOU MUST** match the exact interface shown in the **Interface Description** (I will give you this later)
+
+You are forbidden to access the following URLs:
+{{ black_links }}
+
+Your final deliverable should be code under the `/testbed/` directory, and after completing the codebase, we will evaluate your completion and it is important that you complete our tasks with integrity and precision.
+
+The final structure is like below.
+\end{lstlisting}
+
+\centering
+\includegraphics[width=1\textwidth]{./figures/directory3.pdf}
+%\caption{Directory structure diagram.}
+
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+
+## Interface Descriptions
+
+### Clarification
+The **Interface Description**  describes what the functions we are testing do and the input and output formats.
+
+for example, you will get things like this:
+
+Path: `{{ interface_code_example_path }}`
+```python
+{{ interface_code_example }}
+```
+
+The value of Path declares the path under which the following interface should be implemented and you must generate the interface class/function given to you under the specified path. 
+\end{lstlisting}
+
+\end{tcolorbox}
+\caption{Unified prompt template for $L_1$ part 2, Precautions.}
+\label{fig:systemprompt2}
+\end{figure}
+
+
+\begin{figure}[htbp]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=User prompt part 3 of 3,    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+In addition to the above path requirement, you may try to modify any file in codebase that you feel will help you accomplish our task. However, please note that you may cause our test to fail if you arbitrarily modify or delete some generic functions in existing files, so please be careful in completing your work.
+
+What's more, in order to implement this functionality, some additional libraries etc. are often required, I don't restrict you to any libraries, you need to think about what dependencies you might need and fetch and install and call them yourself. The only thing is that you **MUST** fulfill the input/output format described by this interface, otherwise the test will not pass and you will get zero points for this feature.
+
+And note that there may be not only one **Interface Description**, you should match all **Interface Description {n}**
+
+### Interface Description 1
+Below is **Interface Description 1**
+
+Path: `/path/to/xxx.py`
+```python
+def my_function:
+    """
+    Implement a ...
+    
+    Parameters:
+    arg1: str, ...
+
+    Returens:
+    arg2: int, ...
+    ...
+    """
+    # <your code>
+```
+
+### Interface Description 2
+class MyClass:
+    """
+    ...
+    """
+    # <your code>
+...
+
+Remember, **the interface template above is extremely important**. You must generate callable interfaces strictly according to the specified requirements, as this will directly determine whether you can pass our tests. If your implementation has incorrect naming or improper input/output formats, it may directly result in a 0% pass rate for this case.
+
+\end{lstlisting}
+\end{tcolorbox}
+\caption{Unified prompt template for $L_1$ part 3, Test and Interface Description.}
+\label{fig:systemprompt3}
+\end{figure}
+
+
+\begin{figure}[htbp]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=User prompt for test-layer-norm (Level 1) ,    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+## Task
+**Task Statement: Implement Optimized Layer Normalization Function**
+
+Develop a high-performance layer normalization function that:
+
+1. **Core Functionality**: Applies layer normalization to input tensors using weight, bias, and epsilon parameters for numerical stability
+
+2. **Key Requirements**: 
+   - Integrate with existing Liger kernel optimization framework
+   - Support standard layer normalization mathematical operations (mean centering, variance scaling, affine transformation)
+   - Handle multi-dimensional tensor inputs efficiently
+
+3. **Main Challenges**:
+   - Optimize memory usage and computational performance
+   - Ensure numerical stability with configurable epsilon values
+   - Maintain compatibility with transformer model architectures
+   - Provide seamless integration with the broader Liger functional interface ecosystem
+
+**NOTE**: 
+- This test comes from the `liger-kernel` library, and we have given you the content of this code repository under `/testbed/`, and you need to complete based on this code repository and supplement the files we specify. Remember, all your changes must be in this codebase, and changes that are not in this codebase will not be discovered and tested by us.
+- We've already installed all the environments and dependencies you need, you don't need to install any dependencies, just focus on writing the code!
+- **CRITICAL REQUIREMENT**: After completing the task, pytest will be used to test your implementation. **YOU MUST** match the exact interface shown in the **Interface Description** (I will give you this later)
+
+You are forbidden to access the following URLs:
+black_links:
+- https://github.com/linkedin/Liger-Kernel/
+
+Your final deliverable should be code under the `/testbed/` directory, and after completing the codebase, we will evaluate your completion and it is important that you complete our tasks with integrity and precision.
+
+The final structure is like below.
+\end{lstlisting}
+
+\centering
+\includegraphics[width=1\textwidth]{./figures/directory3.pdf}
+%\caption{Directory structure diagram.}
+
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+
+## Interface Descriptions
+...
+\end{lstlisting}
+\end{tcolorbox}
+\caption{User prompt for test-layer-norm ($L_1$).}
+\label{fig:Level1TaskStructure}
+\end{figure}
+
+
+\begin{figure}[htbp]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=User prompt for test-layer-norm (Level 2)  part 1 of 2,    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+## Task
+**Task Statement: Implement Optimized Layer Normalization Function**
+
+Develop a high-performance layer normalization function that:
+
+1. **Core Functionality**: Applies layer normalization to input tensors using weight, bias, and epsilon parameters for numerical stability
+
+2. **Key Requirements**: 
+   - Integrate with existing Liger kernel optimization framework
+   - Support standard layer normalization mathematical operations (mean centering, variance scaling, affine transformation)
+   - Handle multi-dimensional tensor inputs efficiently
+
+3. **Main Challenges**:
+   - Optimize memory usage and computational performance
+   - Ensure numerical stability with configurable epsilon values
+   - Maintain compatibility with transformer model architectures
+   - Provide seamless integration with the broader Liger functional interface ecosystem
+
+**NOTE**: 
+- This test is derived from the `liger-kernel` library, but you are NOT allowed to view this codebase or call any of its interfaces. It is **VERY IMPORTANT** to note that if we detect any viewing or calling of this codebase, you will receive a ZERO for this review.
+- **CRITICAL**: This task is derived from `liger-kernel`, but you **MUST** implement the task description independently. It is **ABSOLUTELY FORBIDDEN** to use `pip install liger-kernel` or some similar commands to access the original implementation, and doing so will be considered cheating and will result in an immediate score of ZERO! You must keep this firmly in mind throughout your implementation.
+- You are now in `/testbed/`, and originally there was a specific implementation of `liger-kernel` under `/testbed/` that had been installed via `pip install -e .`. However, to prevent you from cheating, we've removed the code under `/testbed/`. While you can see traces of the installation via the pip show, it's an artifact, and `liger-kernel` doesn't exist. So you can't and don't need to use `pip install liger-kernel`, just focus on writing your `agent_code` and accomplishing our task.
+- Also, don't try to `pip uninstall liger-kernel` even if the actual `liger-kernel` has already been deleted by us, as this will affect our evaluation of you, and uninstalling the residual `liger-kernel` will result in you getting a ZERO because our tests won't run.
+- We've already installed all the environments and dependencies you need, you don't need to install any dependencies, just focus on writing the code!
+- **CRITICAL REQUIREMENT**: After completing the task, pytest will be used to test your implementation. **YOU MUST** match the exact interface shown in the **Interface Description** (I will give you this later)
+\end{lstlisting}
+\end{tcolorbox}
+\caption{User prompt for test-layer-norm part 1 of 2 ($L_2$).}
+\label{fig:Level2TaskStructure}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=User prompt for test-layer-norm (Level 2)  part 2 of 2,    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+
+You are forbidden to access the following URLs:
+black_links:
+- https://github.com/linkedin/Liger-Kernel/
+
+Your final deliverable should be code in the `/testbed/agent_code` directory.
+The final structure is like below, note that all dirs and files under agent_code/ are just examples, you will need to organize your own reasonable project structure to complete our tasks.
+
+\end{lstlisting}
+
+\centering
+\includegraphics[width=1\textwidth]{./figures/directory4.pdf}
+%\caption{Directory structure diagram.}
+
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+
+After you have done all your work, you need to complete three CRITICAL things: 
+1. You need to generate `__init__.py` under the `agent_code/` folder and import all the classes or functions described in the **Interface Descriptions** in it. The purpose of this is that we will be able to access the interface code you wrote directly through `agent_code.ExampleClass()` in this way.
+2. You need to generate `/testbed/setup.py` under `/testbed/` and place the following content exactly:
+```python
+from setuptools import setup, find_packages
+setup(
+    name="agent_code",
+    version="0.1",
+    packages=find_packages(),
+)
+```
+3. After you have done above two things, you need to use `cd /testbed && pip install .` command to install your code.
+Remember, these things are **VERY IMPORTANT**, as they will directly affect whether you can pass our tests.
+
+## Interface Descriptions
+...
+\end{lstlisting}
+\end{tcolorbox}
+\caption{User prompt for test-layer-norm part 2 of 2 ($L_2$).}
+\label{fig:Level2TaskStructure2}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tcolorbox}[
+    colback=white,           % 背景色（浅灰）
+    colframe=black!60,          % 边框颜色
+    coltitle=white,            % 标题文字颜色
+    colbacktitle=black!60,% 标题背景颜色
+    title=Example of an LLM-generated docstring,    % 标题文字
+    fonttitle=\bfseries,       % 标题加粗
+    boxrule=0.7pt,             % 边框粗细
+    arc=1mm,                   % 圆角弧度
+    width=1\linewidth,      % 宽度为正文宽度的 100%
+    %sharp corners=south        % 只有下边框是直角
+]
+\begin{lstlisting}[basicstyle=\footnotesize\ttfamily, breaklines=true]
+class LigerFusedLinearDPOFunction(LigerFusedLinearPreferenceBase):
+    ...
+    @staticmethod
+    def backward(ctx, *grad_output):
+        """
+        Computes gradients for the fused linear DPO (Direct Preference Optimization) function during backpropagation.
+
+        This static method implements the backward pass for automatic differentiation in PyTorch's autograd system. It delegates the gradient computation to the parent class's backward method and then filters the results to match the expected number of parameters for the DPO function.
+
+        Parameters:
+            ctx: PyTorch autograd context object containing saved tensors and other information from the forward pass
+            *grad_output: Variable-length argument list of gradient tensors flowing back from the loss function. Each tensor represents the gradient with respect to the corresponding output of the forward pass
+
+        Returns:
+            tuple: A tuple containing gradients with respect to the input parameters of the forward function:
+                - Gradient w.r.t. input tensor (_input)
+                - Gradient w.r.t. weight tensor (weight) 
+                - Gradient w.r.t. target tensor (target)
+                - Gradient w.r.t. bias tensor (bias)
+                - None values for parameters that don't require gradients (ref_input, ref_weight, ref_bias, ignore_index, beta, compute_nll_loss, compiled, use_ref_model, average_log_prob, chunk_size, loss_type)
+
+        Important Notes:
+            - This method is part of PyTorch's Function interface for custom autograd operations
+            - The method truncates the parent class gradients to the first 4 elements using [:4] slicing
+            - Additional None values are returned to match the signature of the forward method parameters
+            - The actual gradient computation logic is inherited from LigerFusedLinearPreferenceBase.backward()
+            - This ensures proper gradient flow for DPO loss optimization while maintaining compatibility with PyTorch's autograd system
+        """
+        <your code>
+    ...
+\end{lstlisting}
+\end{tcolorbox}
+\caption{Example of an LLM-generated docstring.}
+\label{fig:docstring}
+\end{figure}
+
+
+\begin{figure}[t]
+\centering
+\begin{tcolorbox}[
+    colback=white,
+    colframe=black!60,
+    colbacktitle=black!60,
+    coltitle=white,
+    title=Human Evaluation Guideline for Top-Level Tested Object Classification,
+    fonttitle=\bfseries,
+    boxrule=0.7pt,
+    arc=1mm,
+    width=0.98\linewidth
+]
+
+\setlist[itemize]{left=1em}
+
+Each import statement in a test file should be evaluated independently to determine whether it represents a \textbf{top-level tested object} or an \textbf{auxiliary component}. The procedure is as follows:
+
+\vspace{3pt}
+
+\textbf{Step 1: Understand Test File Purpose}
+\begin{itemize}
+    \item Read the test file to understand its testing objective and scope.
+    \item Identify the main functionality or module being validated.
+\end{itemize}
+
+\textbf{Step 2: Identify All Import Statements}
+\begin{itemize}
+    \item Locate all import statements, including absolute and relative imports.
+\end{itemize}
+
+\textbf{Step 3: Filter External Library Imports}
+\begin{itemize}
+    \item Exclude imports from external libraries (e.g., \texttt{pytest}, \texttt{unittest}, \texttt{torch}).
+\end{itemize}
+
+\textbf{Step 4: Classify Repository-Internal Imports}
+\begin{itemize}
+    \item \textbf{Assert statement usage:} If the imported object appears in assertions comparing results, it is likely a tested object.
+    \item \textbf{Name correspondence:} If the object's name matches keywords in the test filename, it is likely a tested object.
+    \item \textbf{Module correspondence:} If imported from a module matching the test filename, it is likely a tested object.
+    \item \textbf{Utility module exclusion:} Imports from \texttt{utils/}, \texttt{testing/}, \texttt{helpers/}, etc., are usually auxiliary.
+    \item \textbf{Frequency and prominence:} Objects used extensively across the test file are more likely tested objects.
+\end{itemize}
+
+\textbf{Classification Decision}
+
+Mark each import as either a \textbf{Top Import (tested object)} or \textbf{Non-Top Import} (auxiliary).  
+When criteria conflict, prioritize the first three criteria over the last two.
+
+\end{tcolorbox}
+\caption{Human evaluation guideline for identifying top-level tested objects.}
+\label{fig:top_guideline}
+\end{figure}
+
+
+\begin{figure}[t]
+\centering
+\begin{tcolorbox}[
+    colback=white,
+    colframe=black!60,
+    colbacktitle=black!60,
+    coltitle=white,
+    title=Expert Verification Guideline for Feature-Level Tasks (part 1 of 2),
+    fonttitle=\bfseries,
+    boxrule=0.7pt,
+    arc=1mm,
+    width=0.98\linewidth
+]
+
+\setlist[itemize]{left=1em}
+
+Each feature-level task must be manually verified to ensure that
+(1) the task is structurally correct (objects, imports, masking, etc.), and
+(2) a competent engineer can implement the required functionality using \emph{only}
+the prompt and the remaining codebase, without external documentation.
+
+You will typically use two resources:
+\begin{itemize}
+    \item \texttt{metadata\_outputs/}: logs and classification results (lists of top objects and specific objects).
+    \item Level-1 task directory: \texttt{problem\_statement.md} (this is the primary target for verification).
+\end{itemize}
+
+\vspace{4pt}
+\textbf{Stage 1: Check Structural Consistency}
+
+\textbf{1.1 Get the list of top and specific objects}
+\begin{itemize}
+    \item Open the classification summary under \texttt{metadata\_outputs/}.
+    \item Identify:
+    \begin{itemize}
+        \item \emph{Top objects}: top interface of the feature being tested.
+        \item \emph{Specific objects}: objects that are functionally related but are not top interfaces.
+    \end{itemize}
+    \item Treat these lists as a checklist for the following steps.
+\end{itemize}
+
+\textbf{1.2 Check masking of top objects}
+\begin{itemize}
+    \item For each top object, open its source file in the Level-1 directory.
+    \item Confirm that the implementation body is removed and that only the signature,
+    docstring, and minimal scaffolding remain.
+    \item If any implementation detail is still visible, manually remove it while ensuring
+    that tests can still import and call the interface.
+\end{itemize}
+
+\textbf{1.3 Check removing of specific objects}
+\begin{itemize}
+    \item For each specific object, confirm that it does not appear in the remain codebase.
+    \item If leftover definitions are found, please remove them.
+\end{itemize}
+
+\end{tcolorbox}
+\caption{Expert verification guideline for feature-level tasks part 1.}
+\label{fig:feature_verification_guideline_part1}
+\end{figure}
+
+
+\begin{figure}[t]
+\centering
+\begin{tcolorbox}[
+    colback=white,
+    colframe=black!60,
+    colbacktitle=black!60,
+    coltitle=white,
+    title=Expert Verification Guideline for Feature-Level Tasks (part 2 of 2),
+    fonttitle=\bfseries,
+    boxrule=0.7pt,
+    arc=1mm,
+    width=0.98\linewidth
+]
+
+\setlist[itemize]{left=1em}
+
+\textbf{Stage 2: Check Prompt Completeness and Solvability}
+
+\textbf{2.1 Check the high-level Task Description}
+\begin{itemize}
+    \item Read the Task Description and ask:
+    \emph{“If I only had this description and the codebase, do I know what to implement?”}
+    \item Verify that it:
+    \begin{itemize}
+        \item Explains what feature or behavior needs to be implemented.
+        \item Provides context about where the feature sits in the system.
+        \item Mentions any key technical considerations that affect correctness.
+    \end{itemize}
+    \item If the description is vague or incomplete, rewrite it to make the implementation goal clear.
+\end{itemize}
+
+\textbf{2.2 Check the Test Description sections}
+\begin{itemize}
+    \item For each Test Description, verify that:
+    \begin{itemize}
+        \item All required top objects are correctly referenced.
+        \item Imports match the real file structure under the task directory.
+    \end{itemize}
+    \item Fix missing interfaces and incorrect module paths as needed so that the agent will know where to implemenet them.
+\end{itemize}
+
+\textbf{2.3 Check Interface Descriptions and docstrings}
+\begin{itemize}
+    \item For each Interface Description:
+    \begin{itemize}
+        \item Ensure the docstring is semantically complete: what the function/class does, parameter
+        meanings, and return values.
+        \item Confirm that it is self-contained and does not require external documentation.
+        \item Keep it concise but readable; something a real engineer would be happy to follow.
+    \end{itemize}
+    \item If a docstring is too short, ambiguous, or inconsistent with the real behavior,
+    revise it and, if necessary, refer to the original implementation to understand the intended semantics.
+\end{itemize}
+
+\vspace{4pt}
+\textbf{When to Mark a Task as Verified}
+
+A task is considered \textbf{verified} if a competent engineer can implement the required functionality
+using only the prompt.md and the remained codebase without external documentation.
+
+
+Concretely, this requires that:
+\begin{itemize}
+    \item All top objects are correctly masked, imported, and documented.
+    \item All specific objects that should not remain in the codebase are removed.
+    \item The Task Description clearly states what to build.
+    \item Test Descriptions match the actual file layout and cover all required interfaces.
+    \item Interface Descriptions and docstrings are accurate and self-contained.
+\end{itemize}
+
+If any of these conditions are not met, fix the relevant parts
+and re-check the task using the same steps before marking it as verified.
+
+\end{tcolorbox}
+\caption{Expert verification guideline for feature-level tasks part 2.}
+\label{fig:feature_verification_guideline_part2}
+\end{figure}
+
+\end{document}

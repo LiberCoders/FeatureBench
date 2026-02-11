@@ -1,7 +1,7 @@
 [
   {
     "agent": "Claude Code (routing)",
-    "model": "Claude Opus 4.5 (20251101)",
+    "model": "Claude Opus 4.5",
     "passed": 43.29,
     "resolved": 11,
     "org": [
@@ -87,7 +87,7 @@
   },
   {
     "agent": "OpenHands",
-    "model": "Claude Opus 4.5 (20251101)",
+    "model": "Claude Opus 4.5",
     "passed": 45.53,
     "resolved": 10.5,
     "org": [
