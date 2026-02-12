@@ -44,6 +44,14 @@
         --accent-soft: #2f5dff;
         --focus: #2f5dff;
         --hero-title-soft: #8f6325;
+        --chart-grid: color-mix(in srgb, #9aa8c0 22%, transparent 78%);
+        --chart-axis: color-mix(in srgb, #68758c 38%, transparent 62%);
+        --chart-text: color-mix(in srgb, #4f5d73 90%, #0f1728 10%);
+        --chart-bar: #aeb9d9;
+        --chart-bar-active: #899dcd;
+        --chart-line: #355cb4;
+        --chart-point-fill: #f7f9ff;
+        --chart-point-stroke: #2f56ad;
         --card-shadow: 0 16px 46px rgba(15, 23, 40, 0.08);
         --hero-wave-fill: rgba(193, 202, 217, 0.3);
         --hero-wave-shadow: rgba(124, 136, 159, 0.26);
@@ -63,6 +71,14 @@
         --accent-soft: #8db0ff;
         --focus: #8db0ff;
         --hero-title-soft: #386aa6;
+        --chart-grid: color-mix(in srgb, #7d93b8 28%, transparent 72%);
+        --chart-axis: color-mix(in srgb, #9eb4da 36%, transparent 64%);
+        --chart-text: color-mix(in srgb, #b8c7e3 90%, #e8eefb 10%);
+        --chart-bar: #3f5f95;
+        --chart-bar-active: #567cc1;
+        --chart-line: #7aa5ff;
+        --chart-point-fill: #0f1a2d;
+        --chart-point-stroke: #85b0ff;
         --card-shadow: 0 22px 54px rgba(1, 4, 12, 0.45);
         --hero-wave-fill: rgba(58, 83, 123, 0.34);
         --hero-wave-shadow: rgba(109, 144, 206, 0.32);
@@ -919,6 +935,191 @@
         width: 100%;
       }
 
+      .analysis-screen {
+        display: flex;
+        align-items: stretch;
+      }
+
+      .analysis-screen > .story-panel {
+        width: 100%;
+      }
+
+      .analysis-panel {
+        --analysis-body-size: clamp(1.2rem, 1.46vw, 1.34rem);
+        --analysis-body-line-height: 1.7;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+        gap: 6px;
+      }
+
+      .analysis-panel .story-kicker {
+        font-size: clamp(1.46rem, 2.3vw, 1.98rem);
+        letter-spacing: 0.08em;
+        font-weight: 800;
+        color: color-mix(in srgb, var(--text) 88%, var(--muted) 12%);
+        margin-bottom: 2px;
+        width: 100%;
+        max-width: 1320px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .analysis-panel .analysis-body {
+        flex: 1;
+        display: grid;
+        align-content: center;
+        gap: 12px;
+      }
+
+      .analysis-panel h3 {
+        font-size: clamp(1.42rem, 1.95vw, 1.82rem);
+        line-height: 1.38;
+        margin: 0;
+        color: var(--text);
+        font-weight: 700;
+        max-width: min(96ch, 100%);
+      }
+
+      .analysis-panel .analysis-body > h3,
+      .analysis-panel .analysis-body > p,
+      .analysis-panel .analysis-chart-grid {
+        width: 100%;
+        max-width: 1320px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .analysis-panel .analysis-body > p {
+        font-size: var(--analysis-body-size);
+        line-height: var(--analysis-body-line-height);
+        max-width: min(98ch, 100%);
+      }
+
+      .analysis-chart-grid {
+        margin-top: 2px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .analysis-chart-card {
+        border: 1px solid var(--line);
+        background:
+          linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--surface) 97%, transparent 3%) 0%,
+            color-mix(in srgb, var(--surface) 90%, transparent 10%) 100%
+          );
+        padding: 10px 12px 10px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .analysis-chart-title {
+        margin: 0;
+        font-family: var(--font-head);
+        font-size: 1.02rem;
+        line-height: 1.25;
+        font-weight: 700;
+        letter-spacing: 0.005em;
+        text-align: center;
+      }
+
+      .analysis-chart-wrap {
+        position: relative;
+      }
+
+      .analysis-chart-svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .analysis-grid-line {
+        stroke: var(--chart-grid);
+        stroke-width: 1;
+      }
+
+      .analysis-axis {
+        stroke: var(--chart-axis);
+        stroke-width: 1.15;
+      }
+
+      .analysis-axis-text {
+        fill: var(--chart-text);
+        font-family: var(--font-ui);
+        font-size: 12px;
+      }
+
+      .analysis-axis-label {
+        text-anchor: middle;
+        dominant-baseline: hanging;
+      }
+
+      .analysis-bar {
+        fill: var(--chart-bar);
+        transition: fill 160ms ease, opacity 160ms ease, transform 160ms ease;
+        transform-origin: center bottom;
+      }
+
+      .analysis-bar.active {
+        fill: var(--chart-bar-active);
+      }
+
+      .analysis-line {
+        fill: none;
+        stroke: var(--chart-line);
+        stroke-width: 2.35;
+      }
+
+      .analysis-point {
+        fill: var(--chart-point-fill);
+        stroke: var(--chart-point-stroke);
+        stroke-width: 2;
+        transition: fill 160ms ease, stroke-width 160ms ease;
+      }
+
+      .analysis-point.active {
+        fill: color-mix(in srgb, var(--chart-point-fill) 72%, var(--chart-point-stroke) 28%);
+        stroke-width: 2.4;
+      }
+
+      .analysis-hit {
+        fill: transparent;
+        cursor: pointer;
+      }
+
+      .analysis-tooltip {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform: translate(-9999px, -9999px);
+        z-index: 3;
+        pointer-events: none;
+        padding: 7px 9px;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--surface) 94%, transparent 6%);
+        color: var(--text);
+        font-family: "SFMono-Regular", Menlo, Consolas, Monaco, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.25;
+        white-space: nowrap;
+      }
+
+      .analysis-tooltip.visible {
+        transform: translate(0, 0);
+      }
+
+      .analysis-chart-note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+        line-height: 1.4;
+        text-align: center;
+      }
+
       .citation-panel {
         gap: 12px;
       }
@@ -1169,6 +1370,10 @@
         .citation-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
+
+        .analysis-chart-grid {
+          grid-template-columns: 1fr;
+        }
       }
 
       @media (max-width: 780px) {
@@ -1221,6 +1426,10 @@
 
         .citation-card {
           min-height: 210px;
+        }
+
+        .analysis-chart-card {
+          padding: 9px 10px 9px;
         }
 
       }
@@ -1379,13 +1588,11 @@
               <div class="pipeline-copy">
                 <h3>Scalable, test-driven instance construction from repositories</h3>
                 <p class="pipeline-lead">
-                  FeatureBench builds feature-oriented tasks with an execution-based, test-driven pipeline. It selects
-                  fail-to-pass and pass-to-pass tests, traces function dependencies, extracts feature patches, and then
-                  post-verifies each instance for reproducible, continually refreshable evaluation.
+                  FeatureBench builds feature-oriented tasks using an execution-based, test-driven pipeline. It selects fail-to-pass and pass-to-pass tests, traces function dependencies, extracts feature patches, and post-verifies each instance to ensure reproducible and continually refreshable evaluation.
                 </p>
                 <ul class="story-list pipeline-list">
-                  <li>Dependency graphs are built via dynamic tracing rather than static heuristics.</li>
-                  <li>Post verification enforces F2P fail and P2P pass conditions before patch replay.</li>
+                  <li>Dependency graphs are built via dynamic tracing instead of relying solely on static heuristics.</li>
+                  <li>Post-verification enforces fail-to-pass and pass-to-pass conditions before patch replay.</li>
                   <li>Problem statements are synthesized with explicit interfaces and import paths.</li>
                 </ul>
               </div>
@@ -1403,7 +1610,7 @@
                   </div>
                 </div>
                 <p class="dataset-hover" id="datasetHoverText">Hover a slice to inspect repository and count.</p>
-                <figcaption class="story-caption">Dataset composition by repository in the full split.</figcaption>
+                <figcaption class="story-caption">Dataset Composition by Repository (Full Split)</figcaption>
               </figure>
             </div>
           </article>
@@ -1534,40 +1741,51 @@
           </article>
         </section>
 
-        <section class="screen" aria-label="Complexity and Time Analysis">
-          <article class="story-panel no-divider" data-reveal style="--delay: 270ms">
+        <section class="screen analysis-screen" aria-label="Complexity and Time Analysis">
+          <article class="story-panel analysis-panel no-divider" data-reveal style="--delay: 270ms">
             <p class="story-kicker">Complexity & Time Analysis</p>
-            <h3>Pass rate varies with code complexity and task creation time</h3>
-            <p>
-              We also analyze how pass rate shifts across code complexity bands and temporal slices. The figure below
-              summarizes pass-rate trends over lines of pending implementation and task creation periods.
-            </p>
-            <figure class="story-media">
-              <img src="./assets/images/pass_rate.png" alt="FeatureBench pass rate versus code complexity and creation time" loading="lazy" />
-              <figcaption class="story-caption">
-                Pass rate vs. code complexity and creation time on FeatureBench.
-              </figcaption>
-            </figure>
-          </article>
-        </section>
+            <div class="analysis-body">
+              <h3>Pass rate changes across code complexity bands and task creation periods</h3>
+              <p>
+                We analyze two empirical slices: pass rate versus pending implementation lines, and pass rate versus task creation time.
+              </p>
+              <div class="analysis-chart-grid" aria-label="Interactive pass-rate charts">
+                <figure class="analysis-chart-card">
+                  <figcaption class="analysis-chart-title">Pass Rate vs Lines</figcaption>
+                  <div class="analysis-chart-wrap">
+                    <svg
+                      class="analysis-chart-svg"
+                      id="passRateLinesChart"
+                      viewBox="0 0 700 360"
+                      role="img"
+                      aria-label="Pass rate by lines of pending implementation"
+                    ></svg>
+                    <div class="analysis-tooltip" id="passRateLinesTooltip" aria-live="polite"></div>
+                  </div>
+                  <p class="analysis-chart-note">Bins reflect ranges of pending implementation lines.</p>
+                </figure>
 
-        <section class="screen" aria-label="Failure Analysis">
-          <article class="story-panel no-divider" data-reveal style="--delay: 310ms">
-            <p class="story-kicker">Failure Analysis</p>
-            <h3>Frequent failure patterns in unresolved runs</h3>
-            <p>
-              Failure cases cluster around implementation-level correctness and interface alignment, showing that agents
-              can produce plausible code but still miss exact feature behavior required by executable tests.
-            </p>
-            <figure class="story-media">
-              <img src="./assets/images/failure_modes.png" alt="FeatureBench failure mode statistics" loading="lazy" />
-              <figcaption class="story-caption">Failure mode breakdown on FeatureBench runs.</figcaption>
-            </figure>
+                <figure class="analysis-chart-card">
+                  <figcaption class="analysis-chart-title">Pass Rate vs Create Time</figcaption>
+                  <div class="analysis-chart-wrap">
+                    <svg
+                      class="analysis-chart-svg"
+                      id="passRateCreateTimeChart"
+                      viewBox="0 0 700 360"
+                      role="img"
+                      aria-label="Pass rate by task creation period"
+                    ></svg>
+                    <div class="analysis-tooltip" id="passRateCreateTimeTooltip" aria-live="polite"></div>
+                  </div>
+                  <p class="analysis-chart-note">Quarterly cohorts from pre-2023 through 2025 Q4.</p>
+                </figure>
+              </div>
+            </div>
           </article>
         </section>
 
         <section class="screen" aria-label="Citation">
-          <article class="story-panel citation-panel no-divider" data-reveal style="--delay: 390ms">
+          <article class="story-panel citation-panel no-divider" data-reveal style="--delay: 350ms">
             <p class="story-kicker">Citation</p>
             <p>Use one of the following formats when citing FeatureBench.</p>
             <div class="citation-grid" aria-label="Citation formats">
@@ -1946,6 +2164,271 @@
           });
         }
 
+        function initComplexityCharts() {
+          const linesRaw = [
+            [[0, 400], 40.18],
+            [[400, 800], 31.96],
+            [[800, 1200], 15.47],
+            [[1200, 1600], 14.61],
+            [[1600, 2000], 17.96],
+            [[2000, 2400], 16.2],
+            [[2400, 2800], 2.28],
+            [[3200, 3600], 10.19],
+            [[3600, 4000], 12.98],
+            [[4000, 4400], 1.19],
+          ];
+
+          const createTimeRaw = [
+            ["<2023", 45.72],
+            ["2023 Q1", 43.35],
+            ["2023 Q2", 34.16],
+            ["2023 Q3", 44.95],
+            ["2023 Q4", 40.2],
+            ["2024 Q1", 43.5],
+            ["2024 Q2", 47.36],
+            ["2024 Q3", 54.14],
+            ["2024 Q4", 40.38],
+            ["2025 Q1", 29.53],
+            ["2025 Q2", 48.01],
+            ["2025 Q3", 51.76],
+            ["2025 Q4", 65.92],
+          ];
+
+          const linesData = linesRaw.map(([range, value]) => ({
+            label: `${range[0]}-${range[1]}`,
+            value: Number(value),
+          }));
+
+          const createTimeData = createTimeRaw.map(([label, value]) => ({
+            label: String(label),
+            value: Number(value),
+          }));
+
+          renderPassRateChart({
+            svgId: "passRateLinesChart",
+            tooltipId: "passRateLinesTooltip",
+            data: linesData,
+          });
+
+          renderPassRateChart({
+            svgId: "passRateCreateTimeChart",
+            tooltipId: "passRateCreateTimeTooltip",
+            data: createTimeData,
+          });
+        }
+
+        function renderPassRateChart({ svgId, tooltipId, data }) {
+          const svg = document.getElementById(svgId);
+          const tooltip = document.getElementById(tooltipId);
+          if (!svg || !tooltip || !Array.isArray(data) || !data.length) return;
+
+          const NS = "http://www.w3.org/2000/svg";
+          const width = 700;
+          const height = 360;
+          const margin = { top: 16, right: 18, bottom: 92, left: 54 };
+          const innerW = width - margin.left - margin.right;
+          const innerH = height - margin.top - margin.bottom;
+
+          const values = data.map((item) => Number(item.value) || 0);
+          const maxVal = Math.max(...values, 0);
+          const stepY = maxVal > 60 ? 20 : 10;
+          const yMax = Math.max(stepY, Math.ceil((maxVal * 1.15) / stepY) * stepY);
+          const yTicks = Math.floor(yMax / stepY);
+
+          const band = innerW / data.length;
+          const barW = band * 0.62;
+          const labelAngle = data.length > 11 ? -30 : -24;
+          const pointRadius = 4.1;
+          const activePointRadius = 5.25;
+
+          function yScale(value) {
+            return margin.top + innerH - (value / yMax) * innerH;
+          }
+
+          function xCenter(index) {
+            return margin.left + band * index + band * 0.5;
+          }
+
+          function createSvg(tag, attrs = {}) {
+            const node = document.createElementNS(NS, tag);
+            for (const [key, value] of Object.entries(attrs)) {
+              node.setAttribute(key, String(value));
+            }
+            return node;
+          }
+
+          function showTooltip(text, clientX, clientY) {
+            tooltip.textContent = text;
+            tooltip.classList.add("visible");
+
+            const wrap = svg.parentElement;
+            if (!wrap) return;
+            const wrapRect = wrap.getBoundingClientRect();
+            const tipRect = tooltip.getBoundingClientRect();
+
+            let x = 10;
+            let y = 10;
+            if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+              x = clientX - wrapRect.left + 12;
+              y = clientY - wrapRect.top - tipRect.height - 12;
+            }
+
+            if (y < 8) y = clientY - wrapRect.top + 12;
+            const maxX = Math.max(8, wrap.clientWidth - tipRect.width - 8);
+            const maxY = Math.max(8, wrap.clientHeight - tipRect.height - 8);
+            const clampedX = Math.max(8, Math.min(x, maxX));
+            const clampedY = Math.max(8, Math.min(y, maxY));
+            tooltip.style.left = `${clampedX}px`;
+            tooltip.style.top = `${clampedY}px`;
+          }
+
+          function hideTooltip() {
+            tooltip.classList.remove("visible");
+            tooltip.style.left = "0px";
+            tooltip.style.top = "0px";
+          }
+
+          svg.innerHTML = "";
+
+          for (let i = 0; i <= yTicks; i += 1) {
+            const value = i * stepY;
+            const y = yScale(value);
+            svg.appendChild(
+              createSvg("line", {
+                x1: margin.left,
+                y1: y,
+                x2: width - margin.right,
+                y2: y,
+                class: "analysis-grid-line",
+              })
+            );
+
+            const yText = createSvg("text", {
+              x: margin.left - 10,
+              y: y + 4,
+              "text-anchor": "end",
+              class: "analysis-axis-text",
+            });
+            yText.textContent = `${value.toFixed(0)}%`;
+            svg.appendChild(yText);
+          }
+
+          svg.appendChild(
+            createSvg("line", {
+              x1: margin.left,
+              y1: margin.top + innerH,
+              x2: width - margin.right,
+              y2: margin.top + innerH,
+              class: "analysis-axis",
+            })
+          );
+
+          svg.appendChild(
+            createSvg("line", {
+              x1: margin.left,
+              y1: margin.top,
+              x2: margin.left,
+              y2: margin.top + innerH,
+              class: "analysis-axis",
+            })
+          );
+
+          const bars = [];
+          const points = [];
+          const linePoints = [];
+
+          data.forEach((item, index) => {
+            const cx = xCenter(index);
+            const y = yScale(item.value);
+            const x = cx - barW / 2;
+
+            const bar = createSvg("rect", {
+              x,
+              y,
+              width: barW,
+              height: Math.max(0, margin.top + innerH - y),
+              class: "analysis-bar",
+            });
+            svg.appendChild(bar);
+            bars.push(bar);
+
+            const label = createSvg("text", {
+              x: cx,
+              y: margin.top + innerH + 15,
+              class: "analysis-axis-text analysis-axis-label",
+              transform: `rotate(${labelAngle} ${cx} ${margin.top + innerH + 15})`,
+            });
+            label.textContent = item.label;
+            svg.appendChild(label);
+
+            linePoints.push([cx, y]);
+          });
+
+          const linePath = createSvg("path", {
+            d: linePoints.map((point, index) => `${index ? "L" : "M"} ${point[0]} ${point[1]}`).join(" "),
+            class: "analysis-line",
+          });
+          svg.appendChild(linePath);
+
+          linePoints.forEach((point) => {
+            const node = createSvg("circle", {
+              cx: point[0],
+              cy: point[1],
+              r: pointRadius,
+              class: "analysis-point",
+            });
+            svg.appendChild(node);
+            points.push(node);
+          });
+
+          function setActive(index) {
+            bars.forEach((bar, i) => bar.classList.toggle("active", i === index));
+            points.forEach((point, i) => {
+              const active = i === index;
+              point.classList.toggle("active", active);
+              point.setAttribute("r", active ? String(activePointRadius) : String(pointRadius));
+            });
+          }
+
+          function clearActive() {
+            bars.forEach((bar) => bar.classList.remove("active"));
+            points.forEach((point) => {
+              point.classList.remove("active");
+              point.setAttribute("r", String(pointRadius));
+            });
+          }
+
+          data.forEach((item, index) => {
+            const hit = createSvg("rect", {
+              x: margin.left + band * index,
+              y: margin.top,
+              width: band,
+              height: innerH,
+              class: "analysis-hit",
+              "aria-label": `${item.label}: ${item.value.toFixed(2)} percent`,
+            });
+
+            const text = `${item.label}: ${item.value.toFixed(2)}%`;
+
+            hit.addEventListener("mouseenter", (event) => {
+              setActive(index);
+              showTooltip(text, event.clientX, event.clientY);
+            });
+
+            hit.addEventListener("mousemove", (event) => {
+              setActive(index);
+              showTooltip(text, event.clientX, event.clientY);
+            });
+
+            hit.addEventListener("mouseleave", () => {
+              clearActive();
+              hideTooltip();
+            });
+
+            svg.appendChild(hit);
+          });
+        }
+
         function initCitationCopy() {
           const buttons = Array.from(document.querySelectorAll(".citation-copy-btn"));
           if (!buttons.length) return;
@@ -2136,6 +2619,7 @@
         loadSnapshot();
         loadResources();
         initDatasetDonut();
+        initComplexityCharts();
         initCitationCopy();
       })();
     </script>
