@@ -9,6 +9,7 @@
       name="description"
       content="FeatureBench is an execution-based benchmark for end-to-end, feature-oriented agentic coding."
     />
+    <script defer src="https://vercount.one/js"></script>
     <script>
       (() => {
         let stored = null;
@@ -1829,11 +1830,14 @@
                   <h4>BibTeX</h4>
                   <button class="citation-copy-btn" type="button" data-copy-target="cite-bibtex">Copy</button>
                 </div>
-                <pre class="citation-code" id="cite-bibtex">@inproceedings{zhou2026featurebench,
-  title={FeatureBench: Benchmarking Agentic Coding in End-to-End Development of Complex Features},
+                <pre class="citation-code" id="cite-bibtex">@misc{zhou2026featurebenchbenchmarkingagenticcoding,
+  title={FeatureBench: Benchmarking Agentic Coding for Complex Feature Development},
   author={Qixing Zhou and Jiacheng Zhang and Haiyang Wang and Rui Hao and Jiahe Wang and Minghao Han and Yuxue Yang and Shuzhe Wu and Feiyang Pan and Lue Fan and Dandan Tu and Zhaoxiang Zhang},
-  booktitle={International Conference on Learning Representations},
-  year={2026}
+  year={2026},
+  eprint={2602.10975},
+  archivePrefix={arXiv},
+  primaryClass={cs.SE},
+  url={https://arxiv.org/abs/2602.10975}
 }</pre>
               </section>
 
@@ -1842,7 +1846,7 @@
                   <h4>APA</h4>
                   <button class="citation-copy-btn" type="button" data-copy-target="cite-apa">Copy</button>
                 </div>
-                <pre class="citation-code" id="cite-apa">Zhou, Q., Zhang, J., Wang, H., Hao, R., Wang, J., Han, M., Yang, Y., Wu, S., Pan, F., Fan, L., Tu, D., &amp; Zhang, Z. (2026). FeatureBench: Benchmarking agentic coding in end-to-end development of complex features. In International Conference on Learning Representations (ICLR).</pre>
+                <pre class="citation-code" id="cite-apa"></pre>
               </section>
 
               <section class="citation-card" aria-label="MLA citation">
@@ -1850,12 +1854,15 @@
                   <h4>MLA</h4>
                   <button class="citation-copy-btn" type="button" data-copy-target="cite-mla">Copy</button>
                 </div>
-                <pre class="citation-code" id="cite-mla">Zhou, Qixing, et al. "FeatureBench: Benchmarking Agentic Coding in End-to-End Development of Complex Features." International Conference on Learning Representations (ICLR), 2026.</pre>
+                <pre class="citation-code" id="cite-mla"></pre>
               </section>
             </div>
             <div class="visitor-counter-strip" aria-live="polite">
               <span class="visitor-counter-line" aria-hidden="true"></span>
-              <span class="visitor-counter-text" id="visitorCounter">Visitor Count: loading...</span>
+              <span class="visitor-counter-text">
+                Visitors:
+                <span id="busuanzi_value_site_uv">--</span>
+              </span>
               <span class="visitor-counter-line" aria-hidden="true"></span>
             </div>
           </article>
@@ -1982,7 +1989,7 @@
           if (!row) return;
 
           const fallback = [
-            { label: "arXiv", value: "25xx.xxxxx", href: "https://arxiv.org/abs/2500.00000" },
+            { label: "arXiv", value: "2602.10975", href: "https://arxiv.org/abs/2602.10975" },
             { label: "DockerHub", value: "Images", href: "https://hub.docker.com/u/libercoders" },
             { label: "HuggingFace", value: "datasets", href: "https://huggingface.co/datasets/LiberCoders/FeatureBench" },
             { label: "GitHub", value: "Code", href: "https://github.com/LiberCoders/FeatureBench" },
@@ -2522,39 +2529,6 @@
           }
         }
 
-        async function initVisitorCounter() {
-          const counter = document.getElementById("visitorCounter");
-          if (!counter) return;
-
-          const namespace = "featurebench.libercoders.github.io";
-          const key = "visits";
-
-          try {
-            const response = await fetch(
-              `https://api.countapi.xyz/hit/${encodeURIComponent(namespace)}/${encodeURIComponent(key)}`,
-              { cache: "no-store" }
-            );
-            if (!response.ok) throw new Error("counter request failed");
-            const data = await response.json();
-            const value = Number(data?.value);
-            if (!Number.isFinite(value)) throw new Error("invalid counter value");
-            counter.textContent = `Visitor Count: ${value.toLocaleString("en-US")}`;
-            return;
-          } catch {
-            // fall through to local fallback
-          }
-
-          try {
-            const localKey = "featurebench.local.visits";
-            const previous = Number(localStorage.getItem(localKey) || "0");
-            const next = (Number.isFinite(previous) ? previous : 0) + 1;
-            localStorage.setItem(localKey, String(next));
-            counter.textContent = `Visitor Count (Local): ${next.toLocaleString("en-US")}`;
-          } catch {
-            counter.textContent = "Visitor Count: unavailable";
-          }
-        }
-
         function initScreenDots() {
           const scroller = document.getElementById("slides");
           const dotsRoot = document.getElementById("screenDots");
@@ -2711,7 +2685,6 @@
         initDatasetDonut();
         initComplexityCharts();
         initCitationCopy();
-        initVisitorCounter();
       })();
     </script>
   </body>
