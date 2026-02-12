@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href=""><img src="https://img.shields.io/badge/arXiv-25xx.xxxxx-b31b1b.svg" alt="arXiv"></a>
+  <a href="https://arxiv.org/abs/2602.10975"><img src="https://img.shields.io/badge/arXiv-2602.10975-b31b1b.svg" alt="arXiv"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License"></a>
   <a href="https://hub.docker.com/u/libercoders"><img src="https://img.shields.io/badge/DockerHub-Images-blue.svg" alt="DockerHub"></a>
   <a href="https://huggingface.co/datasets/LiberCoders/FeatureBench"><img src="https://img.shields.io/badge/HuggingFace-datasets-yellow.svg" alt="HuggingFace"></a>
@@ -80,7 +80,15 @@ fb eval \
 If you found FeatureBench useful, please cite us as:
 
 ```bibtex
-xxx
+@misc{zhou2026featurebenchbenchmarkingagenticcoding,
+      title={FeatureBench: Benchmarking Agentic Coding for Complex Feature Development}, 
+      author={Qixing Zhou and Jiacheng Zhang and Haiyang Wang and Rui Hao and Jiahe Wang and Minghao Han and Yuxue Yang and Shuzhe Wu and Feiyang Pan and Lue Fan and Dandan Tu and Zhaoxiang Zhang},
+      year={2026},
+      eprint={2602.10975},
+      archivePrefix={arXiv},
+      primaryClass={cs.SE},
+      url={https://arxiv.org/abs/2602.10975}, 
+}
 ```
 
 ## 📧 Contact
