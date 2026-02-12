@@ -1121,7 +1121,16 @@
       }
 
       .citation-panel {
+        display: flex;
+        flex-direction: column;
         gap: 12px;
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+
+      .citation-screen {
+        display: flex;
+        padding-bottom: clamp(4px, 0.55vh, 8px);
       }
 
       .citation-panel .story-kicker {
@@ -1209,6 +1218,32 @@
         line-height: 1.5;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
+      }
+
+      .visitor-counter-strip {
+        width: min(1320px, 100%);
+        margin: auto auto 0;
+        padding-top: clamp(10px, 1.4vh, 16px);
+        padding-bottom: clamp(4px, 0.8vh, 10px);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .visitor-counter-line {
+        flex: 1 1 auto;
+        height: 1px;
+        background: color-mix(in srgb, var(--line) 70%, transparent 30%);
+      }
+
+      .visitor-counter-text {
+        flex: 0 0 auto;
+        color: color-mix(in srgb, var(--muted) 88%, var(--text) 12%);
+        font-size: clamp(0.64rem, 0.74vw, 0.76rem);
+        line-height: 1.2;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        white-space: nowrap;
       }
 
       [data-reveal] {
@@ -1784,7 +1819,7 @@
           </article>
         </section>
 
-        <section class="screen" aria-label="Citation">
+        <section class="screen citation-screen" aria-label="Citation">
           <article class="story-panel citation-panel no-divider" data-reveal style="--delay: 350ms">
             <p class="story-kicker">Citation</p>
             <p>Use one of the following formats when citing FeatureBench.</p>
@@ -1817,6 +1852,11 @@
                 </div>
                 <pre class="citation-code" id="cite-mla">Zhou, Qixing, et al. "FeatureBench: Benchmarking Agentic Coding in End-to-End Development of Complex Features." International Conference on Learning Representations (ICLR), 2026.</pre>
               </section>
+            </div>
+            <div class="visitor-counter-strip" aria-live="polite">
+              <span class="visitor-counter-line" aria-hidden="true"></span>
+              <span class="visitor-counter-text" id="visitorCounter">Visitor Count: loading...</span>
+              <span class="visitor-counter-line" aria-hidden="true"></span>
             </div>
           </article>
         </section>
@@ -2482,6 +2522,39 @@
           }
         }
 
+        async function initVisitorCounter() {
+          const counter = document.getElementById("visitorCounter");
+          if (!counter) return;
+
+          const namespace = "featurebench.libercoders.github.io";
+          const key = "visits";
+
+          try {
+            const response = await fetch(
+              `https://api.countapi.xyz/hit/${encodeURIComponent(namespace)}/${encodeURIComponent(key)}`,
+              { cache: "no-store" }
+            );
+            if (!response.ok) throw new Error("counter request failed");
+            const data = await response.json();
+            const value = Number(data?.value);
+            if (!Number.isFinite(value)) throw new Error("invalid counter value");
+            counter.textContent = `Visitor Count: ${value.toLocaleString("en-US")}`;
+            return;
+          } catch {
+            // fall through to local fallback
+          }
+
+          try {
+            const localKey = "featurebench.local.visits";
+            const previous = Number(localStorage.getItem(localKey) || "0");
+            const next = (Number.isFinite(previous) ? previous : 0) + 1;
+            localStorage.setItem(localKey, String(next));
+            counter.textContent = `Visitor Count (Local): ${next.toLocaleString("en-US")}`;
+          } catch {
+            counter.textContent = "Visitor Count: unavailable";
+          }
+        }
+
         function initScreenDots() {
           const scroller = document.getElementById("slides");
           const dotsRoot = document.getElementById("screenDots");
@@ -2638,6 +2711,7 @@
         initDatasetDonut();
         initComplexityCharts();
         initCitationCopy();
+        initVisitorCounter();
       })();
     </script>
   </body>
