@@ -1,5 +1,25 @@
 [
   {
+    "agent": "Mini-SWE-Agent",
+    "model": "GLM 4.7",
+    "passed": 41.2,
+    "resolved": 6.7,
+    "org": [
+      "./logos/zhipu.png"
+    ],
+    "date": "2026-02-14",
+    "siteUrl": "https://www.zhipuai.cn/en",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: GLM 4.7",
+      "Scaffold: Mini-SWE-Agent",
+      "Org: Zhipu"
+    ]
+  },
+  {
     "agent": "Claude Code (routing)",
     "model": "Claude Opus 4.5",
     "passed": 59.12,
