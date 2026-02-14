@@ -1,6 +1,26 @@
 [
   {
     "agent": "Mini-SWE-Agent",
+    "model": "MiniMax M2.1",
+    "passed": 41.9,
+    "resolved": 10.0,
+    "org": [
+      "./logos/minimax.png"
+    ],
+    "date": "2026-02-14",
+    "siteUrl": "https://www.minimaxi.com/",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: MiniMax M2.1",
+      "Scaffold: Mini-SWE-Agent",
+      "Org: MiniMax"
+    ]
+  },
+  {
+    "agent": "Mini-SWE-Agent",
     "model": "GLM 4.7",
     "passed": 41.2,
     "resolved": 6.7,
