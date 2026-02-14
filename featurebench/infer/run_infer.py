@@ -338,11 +338,11 @@ class InferenceRunner:
                 # Avoid inheriting config/env values when not forcing.
                 self.agent_env_vars.pop("LLM_NATIVE_TOOL_CALLING", None)
 
-            # Surface force-timeout behavior to the agent via env.
-            if getattr(config, "force_timeout", False):
-                self.agent_env_vars["FB_FORCE_TIMEOUT"] = "true"
-            else:
-                self.agent_env_vars.pop("FB_FORCE_TIMEOUT", None)
+        # Surface force-timeout behavior to all agents via env.
+        if getattr(config, "force_timeout", False):
+            self.agent_env_vars["FB_FORCE_TIMEOUT"] = "true"
+        else:
+            self.agent_env_vars.pop("FB_FORCE_TIMEOUT", None)
 
         # Resume mode: metadata is the source of truth for reproducibility.
         # Non-resume: config/env wins; CLI only fills when config has no setting.
@@ -1225,8 +1225,8 @@ def parse_args() -> argparse.Namespace:
         "--force-timeout",
         action="store_true",
         help=(
-            "When resuming OpenHands runs, treat attempts with existing infer.log TIMEOUT markers as completed "
-            "so they are not rerun."
+            "If a task run times out (infer.log contains a TIMEOUT marker), treat the attempt as successful "
+            "instead of failed. Useful for resume workflows that should skip timed-out attempts."
         ),
     )
 

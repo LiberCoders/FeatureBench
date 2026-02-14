@@ -110,6 +110,11 @@ flags can override metadata (see the argument list below).
   Default: all available.  
   Resume mode: can override metadata if explicitly provided.
 
+- `--force-timeout`  
+  If a task run times out (`infer.log` contains `[TIMEOUT after ... seconds]`), treat that attempt as successful instead of failed.  
+  Default: disabled.  
+  Resume mode: can override metadata if explicitly provided.
+
 ### Prompt Control (For ablation experiment)
 
 - `--without`  
@@ -130,11 +135,6 @@ flags can override metadata (see the argument list below).
   Maximum iterations for OpenHands (`OPENHANDS_MAX_ITERATIONS`).  
   Default: no override (OpenHands default applies).  
   Resume mode: ignored (uses metadata).
-
-- `--force-timeout`  
-  When resuming OpenHands runs, treat attempts with existing `infer.log` TIMEOUT markers as completed so they are not rerun.  
-  Default: disabled.  
-  Resume mode: can override metadata if explicitly provided.
 
 ## Section 4: Output Directory Structure
 

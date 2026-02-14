@@ -3,6 +3,7 @@ Base agent class for FeatureBench inference.
 """
 
 import logging
+import re
 import shlex
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
 
 class BaseAgent(ABC):
     """Abstract base class for agents."""
+    _TIMEOUT_MARKER_RE = re.compile(r"\[TIMEOUT after \d+ seconds\]")
     
     def __init__(
         self,
@@ -98,6 +100,31 @@ class BaseAgent(ABC):
             "# Disable proxy for runtime API calls",
             "unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy ALL_PROXY all_proxy",
         ]
+
+    def _force_timeout_enabled(self) -> bool:
+        """Return whether --force-timeout is enabled for this run."""
+        return str(self.env_vars.get("FB_FORCE_TIMEOUT", "")).strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+
+    def _infer_log_has_timeout_marker(self, log_file: Path) -> bool:
+        """Check whether current agent execution section contains a timeout marker."""
+        try:
+            content = log_file.read_text(encoding="utf-8", errors="ignore")
+        except Exception as e:
+            self.logger.warning(f"Failed to read infer log for timeout detection: {e}")
+            return False
+
+        # Focus on the latest execution block for this agent to avoid stale matches.
+        begin_marker = f"BEGIN Agent Execution: {self.name}"
+        begin_idx = content.rfind(begin_marker)
+        if begin_idx >= 0:
+            content = content[begin_idx:]
+
+        return bool(self._TIMEOUT_MARKER_RE.search(content))
     
     def install(
         self,
@@ -345,24 +372,14 @@ class BaseAgent(ABC):
                 self.logger.info(f"{self.name} agent completed successfully")
                 return True
 
-            # special handling for openhands under --force-timeout
-            force_timeout = (
-                str(self.env_vars.get("FB_FORCE_TIMEOUT", "")).strip().lower()
-                in {"1", "true", "yes", "on"}
-            )
-            if (
-                not success_run
-                and success_post_run
-                and self.name == "openhands"
-                and force_timeout
-            ):
-                self.logger.warning(
-                    "openhands exited with non-zero status, but post-run hook accepted it "
-                    "under --force-timeout; treating run as successful"
-                )
-                return True
-
             if not success_run:
+                if self._force_timeout_enabled() and self._infer_log_has_timeout_marker(log_file):
+                    post_run_state = "passed" if success_post_run else "failed"
+                    self.logger.warning(
+                        f"{self.name} run hit timeout marker (post-run hook {post_run_state}); "
+                        "treating run as successful under --force-timeout"
+                    )
+                    return True
                 raise RuntimeError(f"Agent execution failed with code {exit_code}")
 
             raise RuntimeError("Post-run hook failed. Agent execution may not be successful.")
