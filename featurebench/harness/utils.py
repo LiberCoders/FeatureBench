@@ -203,8 +203,13 @@ def get_docker_runtime_config(repo_settings: dict) -> dict:
     run_args = docker_specs.get("run_args", {})
     custom_docker_args = docker_specs.get("custom_docker_args", [])
 
-    # check if need GPU
-    need_gpu = True if run_args.get("cuda_visible_devices", None) else False
+    # Check whether GPU runtime is requested.
+    # Prefer new key cuda_visible_num; fall back to legacy cuda_visible_devices.
+    cuda_visible_cfg = run_args.get("cuda_visible_num", run_args.get("cuda_visible_devices", None))
+    if isinstance(cuda_visible_cfg, int):
+        need_gpu = cuda_visible_cfg > 0
+    else:
+        need_gpu = bool(cuda_visible_cfg)
 
     # Parse shm_size
     shm_size = run_args.get("shm_size")
@@ -269,4 +274,3 @@ def build_test_command(test_cmd: str, timeout_one: Optional[int] = None) -> str:
     if timeout_one is not None and timeout_one > 0:
         return f"{test_cmd} --timeout={timeout_one}"
     return test_cmd
-

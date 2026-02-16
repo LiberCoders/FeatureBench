@@ -115,6 +115,7 @@ class StorageManager:
 			"debug_repo": config.debug_repo,
 			"debug_sample": config.debug_sample,
 			"log_level": config.log_level,
+			"gpu_ids": config.gpu_ids,
 			"cmd": config.cmd,  # Full command line
 		}
 		
@@ -1268,4 +1269,3 @@ class StorageManager:
 				return f.read()
 		except Exception as e:
 			return ''
-

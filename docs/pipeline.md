@@ -58,6 +58,10 @@ The **data** stage performs:
   Optional override for local repo storage.  
   Default: `featurebench/resources/repos`.
 
+- `--gpu-ids`  
+  Comma-separated GPU rank IDs for data pipeline scheduling (e.g. `6,7,8`).  
+  Required when any repo uses `docker_specs.run_args.cuda_visible_num`.
+
 ## Advanced Debugging (`--debug`)
 
 `--debug` takes a comma-separated list of `key=value` items:
@@ -128,11 +132,13 @@ dictionary describes how to build, run, and filter a repo.
 
 ### Docker Runtime (`docker_specs`)
 
-- `docker_specs.run_args.cuda_visible_devices`  
-  GPU selection. Examples: `None`, `"all"`, `"0,1,2"`.
+- `docker_specs.run_args.cuda_visible_num`  
+  Candidate pool size for GPU scheduling.  
+  Type: positive integer or `None` (`None` means no GPU allocation in data pipeline).
 
 - `docker_specs.run_args.number_once`  
-  Number of GPUs to allocate per container run.
+  Actual number of GPUs allocated per container run.  
+  Must satisfy: `cuda_visible_num >= number_once` (when `cuda_visible_num` is not `None`).
 
 - `docker_specs.run_args.shm_size`  
   Shared memory size passed to Docker (`--shm-size`).

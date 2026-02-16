@@ -24,6 +24,7 @@ class Config:
 		log_level: str = "INFO",
 		logs_dir: Optional[Path] = None,
 		repos_dir: Optional[Path] = None,
+		gpu_ids: Optional[List[int]] = None,
 		cmd: Optional[str] = None,
 		env_vars: Optional[Dict[str, str]] = None,
 		llm_config: Optional[Dict[str, Any]] = None,
@@ -41,6 +42,7 @@ class Config:
 		# Log directory; defaults to actual_output_dir/logs when None
 		self.logs_dir = logs_dir if logs_dir is not None else actual_output_dir / "logs"
 		self.repos_dir = repos_dir  # Repo storage dir; default location if None
+		self.gpu_ids = gpu_ids  # GPU rank IDs from CLI (e.g., [0, 1, 2]); None means unset
 		self.cmd = cmd  # Full command line
 		self.env_vars = env_vars or {}  # Environment variable config
 		self.llm_config = llm_config or {}  # LLM config
@@ -120,6 +122,32 @@ class Config:
 				)
 		
 		return debug_end_stage, debug_cache_overrides
+
+	@staticmethod
+	def _parse_gpu_ids(gpu_ids_str: Optional[str]) -> Optional[List[int]]:
+		"""Parse --gpu-ids value (comma-separated integers)."""
+		if gpu_ids_str is None:
+			return None
+
+		parts = [part.strip() for part in gpu_ids_str.split(",")]
+		parts = [part for part in parts if part]
+		if not parts:
+			raise ValueError("Invalid --gpu-ids: empty value; expected format like '0,1,2'")
+
+		parsed_ids: List[int] = []
+		seen = set()
+		for part in parts:
+			if not part.isdigit():
+				raise ValueError(
+					f"Invalid GPU id '{part}' in --gpu-ids; expected non-negative integers like '0,1,2'"
+				)
+			gpu_id = int(part)
+			if gpu_id in seen:
+				continue
+			seen.add(gpu_id)
+			parsed_ids.append(gpu_id)
+
+		return parsed_ids
 	
 	def get_cache_config(self, stage: str, default: bool = True) -> bool:
 		"""
@@ -294,6 +322,11 @@ class Config:
 			help="Repo storage directory; defaults to featurebench/resources/repos",
 		)
 		parser.add_argument(
+			"--gpu-ids",
+			default=None,
+			help="Comma-separated GPU rank IDs for data pipeline, e.g. 6,7",
+		)
+		parser.add_argument(
 			"--global-config-path",
 			default="config.toml",
 			help="Global config file path with user token and LLM config; default: config.toml",
@@ -329,6 +362,7 @@ class Config:
 		debug_cache_overrides = {}
 		if args.debug:
 			debug_end_stage, debug_cache_overrides = cls._parse_debug_config(args.debug)
+		gpu_ids = cls._parse_gpu_ids(args.gpu_ids)
 
 		return cls(
 			config_path=Path(args.config_path),
@@ -343,6 +377,7 @@ class Config:
 			log_level=args.log_level.upper(),
 			logs_dir=Path(args.logs_dir) if args.logs_dir else None,
 			repos_dir=Path(args.repos_dir) if args.repos_dir else None,
+			gpu_ids=gpu_ids,
 			cmd=cmd,
 			env_vars=env_vars,
 			llm_config=llm_config,

@@ -21,7 +21,7 @@ from featurebench.utils.logger import (
 	print_build_report,
 	run_command_with_streaming_log
 )
-from featurebench.utils.utils import select_and_allocate_gpu, get_all_available_gpus, release_gpu
+from featurebench.utils.utils import select_candidate_pool_and_allocate_gpu, release_gpu
 
 
 class ImageManager:
@@ -42,6 +42,7 @@ class ImageManager:
         self.logs_dir = config.logs_dir
         self.logger = logger if logger is not None else logging.getLogger(__name__)
         self.env_vars = config.env_vars or {}  # Global env vars from config
+        self.gpu_ids = list(config.gpu_ids) if getattr(config, "gpu_ids", None) else None
         
         # Image info: {specs_name: {base_image: str, instance_image: str}}
         self.image_info: Dict[str, Dict[str, str]] = {}
@@ -787,33 +788,62 @@ RUN echo "source /opt/miniconda3/etc/profile.d/conda.sh && conda activate testbe
                     self.logger.warning("custom_docker_args has invalid format; expected list or dict")
         
         # Handle GPU support
-        cuda_visible_devices = run_args.get("cuda_visible_devices")
+        if "cuda_visible_devices" in run_args:
+            raise ValueError(
+                "run_args.cuda_visible_devices is no longer supported; "
+                "use run_args.cuda_visible_num plus CLI --gpu-ids"
+            )
+
+        cuda_visible_num = run_args.get("cuda_visible_num")
         number_once = run_args.get("number_once", 1)
         if not isinstance(number_once, int) or number_once <= 0:
             number_once = 1
 
-        if cuda_visible_devices is not None:
-            requested_gpu_count = number_once
-            if isinstance(cuda_visible_devices, str) and cuda_visible_devices:
-                candidate_gpus: List[int]
-                if cuda_visible_devices == "all":
-                    candidate_gpus = get_all_available_gpus()
-                else:
-                    candidate_gpus = [int(x.strip()) for x in cuda_visible_devices.split(',') if x.strip().isdigit()]
+        if cuda_visible_num is not None:
+            if not isinstance(cuda_visible_num, int) or cuda_visible_num <= 0:
+                raise ValueError(
+                    f"Invalid run_args.cuda_visible_num={cuda_visible_num}; expected a positive integer or None"
+                )
 
-                if candidate_gpus:
-                    selected_gpu_ids = select_and_allocate_gpu(candidate_gpus, self.logger, count=requested_gpu_count)
-                    if selected_gpu_ids:
-                        selected_str = ",".join(str(gid) for gid in selected_gpu_ids)
-                        docker_command.extend(['--gpus', f'"device={selected_str}"'])
-                        if len(selected_gpu_ids) < requested_gpu_count:
-                            self.logger.warning(
-                                f"Only allocated {len(selected_gpu_ids)} GPUs (requested {requested_gpu_count})"
-                            )
-                    else:
-                        self.logger.warning("Unable to select GPUs; running without GPU")
-                else:
-                    self.logger.warning(f"Invalid cuda_visible_devices format: {cuda_visible_devices}")
+            if cuda_visible_num < number_once:
+                raise ValueError(
+                    f"Invalid GPU config: cuda_visible_num ({cuda_visible_num}) must be >= number_once ({number_once})"
+                )
+
+            if not self.gpu_ids:
+                raise ValueError(
+                    "GPU is requested by run_args.cuda_visible_num, but CLI --gpu-ids is not provided"
+                )
+
+            if len(self.gpu_ids) < cuda_visible_num:
+                raise ValueError(
+                    f"GPU config mismatch: provided --gpu-ids has {len(self.gpu_ids)} id(s), "
+                    f"which is smaller than cuda_visible_num ({cuda_visible_num})"
+                )
+
+            # Semantics:
+            # - cuda_visible_num: smart-selected candidate pool size (from CLI --gpu-ids)
+            # - number_once: actual GPU count allocated to this container
+            requested_gpu_count = number_once
+            candidate_gpus, selected_gpu_ids = select_candidate_pool_and_allocate_gpu(
+                list(self.gpu_ids),
+                self.logger,
+                pool_count=cuda_visible_num,
+                allocate_count=requested_gpu_count
+            )
+            if len(candidate_gpus) < cuda_visible_num:
+                raise RuntimeError(
+                    f"Unable to choose candidate GPU pool: requested {cuda_visible_num}, "
+                    f"selected {len(candidate_gpus)} from --gpu-ids {self.gpu_ids}"
+                )
+            if len(selected_gpu_ids) < requested_gpu_count:
+                raise RuntimeError(
+                    f"Unable to allocate enough GPUs: requested {requested_gpu_count}, "
+                    f"allocated {len(selected_gpu_ids)} from pool {candidate_gpus}"
+                )
+
+            selected_str = ",".join(str(gid) for gid in selected_gpu_ids)
+            docker_command.extend(['--gpus', f'"device={selected_str}"'])
         
         # Handle shared memory size
         shm_size = run_args.get("shm_size")

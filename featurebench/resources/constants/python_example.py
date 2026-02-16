@@ -36,7 +36,7 @@ SPECS_ACCELERATE = {
     ],
     "docker_specs": {   # Docker runtime config
         "run_args": {
-            "cuda_visible_devices": "4,5,6,7", # GPU config: "all" uses all GPUs, "0,1,2" uses first 3, None disables
+            "cuda_visible_num": 4, # GPU candidate pool size: positive integer or None (None disables GPU); actual allocation uses number_once
             "number_once": 2,
             "shm_size": None,
             "cap_add": [],

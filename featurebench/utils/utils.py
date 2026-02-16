@@ -410,6 +410,109 @@ def initialize_gpu_tracking(logger) -> None:
 		logger.warning(f"Error initializing GPU tracking: {e}")
 
 
+def select_least_used_gpus(candidate_gpus: List[int], logger, count: int = 1) -> List[int]:
+	"""Select least-used GPUs without reserving usage counters."""
+	global _gpu_usage_counter
+
+	if not candidate_gpus or count <= 0:
+		return []
+
+	try:
+		with _gpu_usage_lock:
+			# Initialize counter on first use
+			if not _gpu_usage_counter:
+				_gpu_usage_counter = {gpu_id: 0 for gpu_id in candidate_gpus}
+
+			# Ensure candidate GPU exists in counter
+			for gpu_id in candidate_gpus:
+				_gpu_usage_counter.setdefault(gpu_id, 0)
+
+			ranked = sorted(
+				set(candidate_gpus),
+				key=lambda gid: (_gpu_usage_counter.get(gid, 0), gid)
+			)
+			selected = ranked[: min(count, len(ranked))]
+
+			logger.debug(f"[GPU Rank] Candidates: {candidate_gpus}")
+			logger.debug(f"[GPU Rank] Current usage: {dict(sorted(_gpu_usage_counter.items()))}")
+			logger.debug(f"[GPU Rank] Selected (non-allocating): {selected}")
+			return selected
+	except Exception as e:
+		logger.warning(f"Error ranking GPUs: {e}")
+		# Fallback: preserve original order, remove duplicates.
+		seen = set()
+		fallback: List[int] = []
+		for gid in candidate_gpus:
+			if gid in seen:
+				continue
+			seen.add(gid)
+			fallback.append(gid)
+		return fallback[: min(count, len(fallback))]
+
+
+def select_candidate_pool_and_allocate_gpu(
+	candidate_gpus: List[int],
+	logger,
+	pool_count: int = 1,
+	allocate_count: int = 1
+):
+	"""
+	Atomically select a least-used candidate GPU pool, then allocate from it.
+
+	This avoids a race where stage-1 (pool selection) and stage-2 (allocation)
+	are split across two lock acquisitions.
+	"""
+	global _gpu_usage_counter
+
+	if not candidate_gpus or pool_count <= 0 or allocate_count <= 0:
+		return [], []
+
+	try:
+		with _gpu_usage_lock:
+			# Initialize counter on first use
+			if not _gpu_usage_counter:
+				_gpu_usage_counter = {gpu_id: 0 for gpu_id in candidate_gpus}
+
+			# Ensure candidate GPU exists in counter
+			for gpu_id in candidate_gpus:
+				_gpu_usage_counter.setdefault(gpu_id, 0)
+
+			# Stage 1: choose candidate pool by least-used policy.
+			ranked_pool = sorted(
+				set(candidate_gpus),
+				key=lambda gid: (_gpu_usage_counter.get(gid, 0), gid)
+			)
+			selected_pool = ranked_pool[: min(pool_count, len(ranked_pool))]
+
+			# Stage 2: allocate from selected pool by least-used policy.
+			available = sorted(set(selected_pool))
+			selected_alloc: List[int] = []
+			for _ in range(min(allocate_count, len(available))):
+				best_gpu = None
+				best_usage = float('inf')
+				for gpu_id in available:
+					usage = _gpu_usage_counter.get(gpu_id, 0)
+					if usage < best_usage:
+						best_gpu = gpu_id
+						best_usage = usage
+
+				if best_gpu is None:
+					break
+
+				_gpu_usage_counter[best_gpu] = _gpu_usage_counter.get(best_gpu, 0) + 1
+				selected_alloc.append(best_gpu)
+				available.remove(best_gpu)
+
+			logger.debug(f"[GPU Pool+Alloc] Candidates: {candidate_gpus}")
+			logger.debug(f"[GPU Pool+Alloc] Current usage: {dict(sorted(_gpu_usage_counter.items()))}")
+			logger.debug(f"[GPU Pool+Alloc] Selected pool: {selected_pool}")
+			logger.debug(f"[GPU Pool+Alloc] Allocated: {selected_alloc}")
+			return selected_pool, selected_alloc
+	except Exception as e:
+		logger.warning(f"Error selecting candidate pool and allocating GPUs: {e}")
+		return [], []
+
+
 def select_and_allocate_gpu(candidate_gpus: List[int], logger, count: int = 1) -> List[int]:
 	"""Allocate least-used GPUs; supports multiple allocations."""
 	global _gpu_usage_counter
@@ -1142,4 +1245,3 @@ def _log_success_case_summary(
 					logger.info(
 						f"    - {error_type}: {count} ({count / total_level_errors * 100:.1f}%)"
 					)
-
