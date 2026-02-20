@@ -80,14 +80,11 @@ fb eval \
 If you found FeatureBench useful, please cite us as:
 
 ```bibtex
-@misc{zhou2026featurebenchbenchmarkingagenticcoding,
-      title={FeatureBench: Benchmarking Agentic Coding for Complex Feature Development}, 
-      author={Qixing Zhou and Jiacheng Zhang and Haiyang Wang and Rui Hao and Jiahe Wang and Minghao Han and Yuxue Yang and Shuzhe Wu and Feiyang Pan and Lue Fan and Dandan Tu and Zhaoxiang Zhang},
-      year={2026},
-      eprint={2602.10975},
-      archivePrefix={arXiv},
-      primaryClass={cs.SE},
-      url={https://arxiv.org/abs/2602.10975}, 
+@article{zhou2026featurebench,
+  title={FeatureBench: Benchmarking Agentic Coding for Complex Feature Development},
+  author={Zhou, Qixing and Zhang, Jiacheng and Wang, Haiyang and Hao, Rui and Wang, Jiahe and Han, Minghao and Yang, Yuxue and Wu, Shuzhe and Pan, Feiyang and Fan, Lue and others},
+  journal={arXiv preprint arXiv:2602.10975},
+  year={2026}
 }
 ```
 
