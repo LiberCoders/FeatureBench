@@ -20,6 +20,7 @@ fb eval \
 - `--predictions-path, -p`  
   Path to predictions JSONL file (typically `runs/<timestamp>/output.jsonl`).  
   Required.
+  > If use `-p gold`, gold patches will be deployed and the resulte will be saved under `./runs/gold/`. Note that currently only lv1 tasks have gold patch.
 
 - `--task-id`  
   Specific task IDs (instance IDs) to evaluate. Accepts space-separated values.  

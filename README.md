@@ -34,6 +34,7 @@ pip install featurebench
 git clone https://github.com/LiberCoders/FeatureBench.git
 cd FeatureBench
 uv sync
+source .venv/bin/activate
 ```
 
 **Configure:**
@@ -66,6 +67,7 @@ fb infer \
 fb eval \
     -p runs/<timestamp>/output.jsonl \
     --split lite
+    # use -p gold to verify the gold patches
 ```
 
 ## 🧭 CLI Overview

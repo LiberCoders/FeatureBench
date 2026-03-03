@@ -13,6 +13,7 @@ Usage:
     python -m featurebench.harness.run_evaluation --predictions-path runs/xxx/output.jsonl --split lite
     python -m featurebench.harness.run_evaluation --predictions-path runs/xxx/output.jsonl --split full --n-concurrent 8
     python -m featurebench.harness.run_evaluation --predictions-path runs/xxx/output.jsonl --dataset LiberCoders/FeatureBench
+    python -m featurebench.harness.run_evaluation --predictions-path gold --split full
 """
 
 import argparse
@@ -65,6 +66,7 @@ from featurebench.harness.utils import (
     get_docker_runtime_config,
     get_instance_from_dataset,
     get_predictions_from_file,
+    preprocess_hf_patch,
     parse_repo_settings,
 )
 
@@ -482,7 +484,7 @@ def parse_args() -> argparse.Namespace:
         "--predictions-path", "-p",
         type=str,
         required=True,
-        help="Path to predictions JSONL file",
+        help="Path to predictions JSONL file, or 'gold' to evaluate gold patch",
     )
     parser.add_argument(
         "--task-id",
@@ -598,9 +600,12 @@ def main():
     """Main entry point for FeatureBench evaluation."""
     args = parse_args()
 
+    use_gold_patch = args.predictions_path == "gold"
+
     # Get output directory from predictions_path
-    predictions_path = Path(args.predictions_path)
-    output_dir = predictions_path.parent
+    predictions_path = Path(args.predictions_path) if not use_gold_patch else Path("gold")
+    output_dir = Path("./runs/gold") if use_gold_patch else predictions_path.parent
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Auto-detect white-box mode from FeatureBench infer metadata (best-effort).
     #
@@ -623,7 +628,10 @@ def main():
     console.print()
     console.print("[bold cyan]" + "=" * 60 + "[/]")
     console.print("[bold cyan]FeatureBench Evaluation[/]")
-    console.print(f"[white]Predictions:[/] [green]{predictions_path}[/]")
+    if use_gold_patch:
+        console.print(f"[white]Predictions:[/] [green]gold (from dataset 'patch' field)[/]")
+    else:
+        console.print(f"[white]Predictions:[/] [green]{predictions_path}[/]")
     console.print(f"[white]Output:[/] [green]{output_dir}[/]")
     console.print(f"[white]Dataset:[/] [green]{args.dataset}[/]")
     console.print(f"[white]Split:[/] [green]{args.split}[/]")
@@ -650,12 +658,33 @@ def main():
 
     # Load predictions
     console.print(f"[bold blue]Loading predictions...[/]")
-    predictions = get_predictions_from_file(args.predictions_path)
+    if use_gold_patch:
+        if "patch" not in dataset.columns:
+            raise RuntimeError("Dataset does not contain required 'patch' field for --predictions-path gold")
+        before_gold_filter = len(dataset)
+        dataset_gold = dataset[~dataset[KEY_INSTANCE_ID].astype(str).str.endswith("lv2")]
+        filtered_lv2 = before_gold_filter - len(dataset_gold)
+        if filtered_lv2:
+            console.print(f"[yellow]Gold mode: filtered out {filtered_lv2} lv2 instances[/]")
+        predictions = []
+        for _, row in dataset_gold.iterrows():
+            raw_patch = "" if pd.isna(row["patch"]) else str(row["patch"])
+            # Preprocess HF patch for evaluation
+            # Note: This is necessary because the dataset stores the corruption patch, but we need to evaluate the fix patch.
+            processed_patch = preprocess_hf_patch(raw_patch, row.get("FAIL_TO_PASS"))
+            predictions.append(
+                {
+                    KEY_INSTANCE_ID: row[KEY_INSTANCE_ID],
+                    KEY_PREDICTION: processed_patch,
+                }
+            )
+    else:
+        predictions = get_predictions_from_file(args.predictions_path)
 
     # If predictions come from FeatureBench infer output.jsonl, they include a boolean `success`.
     # By default, skip failed infer results to avoid spending harness time on instances that
     # never produced a usable patch.
-    if not args.include_failed:
+    if not use_gold_patch and not args.include_failed:
         before = len(predictions)
         predictions = [p for p in predictions if p.get("success") is not False]
         skipped = before - len(predictions)

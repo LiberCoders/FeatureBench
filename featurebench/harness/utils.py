@@ -1,6 +1,7 @@
 """Utility functions for FeatureBench evaluation harness."""
 
 import json
+import re
 import pandas as pd
 from pathlib import Path
 from typing import Any, Optional
@@ -274,3 +275,149 @@ def build_test_command(test_cmd: str, timeout_one: Optional[int] = None) -> str:
     if timeout_one is not None and timeout_one > 0:
         return f"{test_cmd} --timeout={timeout_one}"
     return test_cmd
+
+
+def preprocess_hf_patch(patch_text: str, raw_fail_to_pass: Any) -> str:
+    """
+    Preprocess HF patch for harness evaluation.
+
+    Steps:
+    1) Reverse patch direction (dataset stores corruption patch).
+    2) Parse FAIL_TO_PASS paths.
+    3) Remove patch operations touching FAIL_TO_PASS files.
+    """
+    reversed_patch = reverse_unified_patch(patch_text)
+    fail_to_pass_paths = parse_fail_to_pass_paths(raw_fail_to_pass)
+    return remove_patch_operations_for_paths(reversed_patch, fail_to_pass_paths)
+
+
+def reverse_unified_patch(patch_text: str) -> str:
+    """Reverse a unified diff patch so it can be applied in the opposite direction."""
+    if not patch_text:
+        return patch_text
+
+    hunk_header_pattern = re.compile(r"^@@ -(\d+(?:,\d+)?) \+(\d+(?:,\d+)?) @@(.*)$")
+    reversed_lines: list[str] = []
+
+    for line in patch_text.splitlines():
+        if line.startswith("--- "):
+            reversed_lines.append("+++ " + line[4:])
+            continue
+        if line.startswith("+++ "):
+            reversed_lines.append("--- " + line[4:])
+            continue
+
+        match = hunk_header_pattern.match(line)
+        if match:
+            old_range, new_range, tail = match.groups()
+            reversed_lines.append(f"@@ -{new_range} +{old_range} @@{tail}")
+            continue
+
+        if line.startswith("new file mode "):
+            reversed_lines.append(line.replace("new file mode ", "deleted file mode ", 1))
+            continue
+        if line.startswith("deleted file mode "):
+            reversed_lines.append(line.replace("deleted file mode ", "new file mode ", 1))
+            continue
+        if line.startswith("old mode "):
+            reversed_lines.append(line.replace("old mode ", "new mode ", 1))
+            continue
+        if line.startswith("new mode "):
+            reversed_lines.append(line.replace("new mode ", "old mode ", 1))
+            continue
+        if line.startswith("rename from "):
+            reversed_lines.append(line.replace("rename from ", "rename to ", 1))
+            continue
+        if line.startswith("rename to "):
+            reversed_lines.append(line.replace("rename to ", "rename from ", 1))
+            continue
+        if line.startswith("copy from "):
+            reversed_lines.append(line.replace("copy from ", "copy to ", 1))
+            continue
+        if line.startswith("copy to "):
+            reversed_lines.append(line.replace("copy to ", "copy from ", 1))
+            continue
+
+        if line.startswith("+") and not line.startswith("+++ "):
+            reversed_lines.append("-" + line[1:])
+            continue
+        if line.startswith("-") and not line.startswith("--- "):
+            reversed_lines.append("+" + line[1:])
+            continue
+
+        reversed_lines.append(line)
+
+    return "\n".join(reversed_lines) + ("\n" if patch_text.endswith("\n") else "")
+
+
+def _normalize_patch_path(path: str) -> str:
+    path = str(path).strip()
+    if path.startswith("a/") or path.startswith("b/"):
+        path = path[2:]
+    if path.startswith("./"):
+        path = path[2:]
+    return path
+
+
+def parse_fail_to_pass_paths(raw_fail_to_pass: Any) -> set[str]:
+    """Parse FAIL_TO_PASS field into normalized file-path set."""
+    if raw_fail_to_pass is None:
+        return set()
+
+    values: Any = raw_fail_to_pass
+    if isinstance(raw_fail_to_pass, str):
+        try:
+            values = json.loads(raw_fail_to_pass)
+        except json.JSONDecodeError:
+            return set()
+
+    if not isinstance(values, list):
+        return set()
+
+    result: set[str] = set()
+    for item in values:
+        if isinstance(item, str) and item.strip():
+            result.add(_normalize_patch_path(item))
+    return result
+
+
+def remove_patch_operations_for_paths(patch_text: str, excluded_paths: set[str]) -> str:
+    """
+    Remove file-level operations in unified diff when file path is excluded.
+
+    This works on `diff --git ...` blocks and drops whole blocks whose target
+    file path matches any path in `excluded_paths`.
+    """
+    if not patch_text or not excluded_paths:
+        return patch_text
+
+    normalized_excluded = {_normalize_patch_path(p) for p in excluded_paths if p}
+    lines = patch_text.splitlines(keepends=True)
+    output: list[str] = []
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+        if not line.startswith("diff --git "):
+            output.append(line)
+            i += 1
+            continue
+
+        block_start = i
+        i += 1
+        while i < len(lines) and not lines[i].startswith("diff --git "):
+            i += 1
+        block = lines[block_start:i]
+        header = block[0].strip()
+        parts = header.split()
+        if len(parts) >= 4:
+            path_a = _normalize_patch_path(parts[2])
+            path_b = _normalize_patch_path(parts[3])
+            should_drop = path_a in normalized_excluded or path_b in normalized_excluded
+        else:
+            should_drop = False
+
+        if not should_drop:
+            output.extend(block)
+
+    return "".join(output)
