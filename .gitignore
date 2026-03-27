@@ -12,6 +12,7 @@ featurebench/resources/constants/*
 !featurebench/resources/constants/python_example.py
 !featurebench/resources/constants/full_images.txt
 !featurebench/resources/constants/lite_images.txt
+!featurebench/resources/constants/fast_images.txt
 config.toml
 tmp/
 runs/

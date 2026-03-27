@@ -4,11 +4,13 @@
 Usage:
   python featurebench/scripts/pull_images.py --mode full
   python featurebench/scripts/pull_images.py --mode lite
+  python featurebench/scripts/pull_images.py --mode fast
   python featurebench/scripts/pull_images.py --mode /path/to/images.txt
 
 Mode:
   - full: use featurebench/resources/constants/full_images.txt
   - lite: use featurebench/resources/constants/lite_images.txt
+  - fast: use featurebench/resources/constants/fast_images.txt
   - custom path: any txt file where each line is an image reference
 
 Notes:
@@ -39,6 +41,8 @@ def _default_list_path(mode: str) -> Path:
         return root / "featurebench" / "resources" / "constants" / "full_images.txt"
     if mode == "lite":
         return root / "featurebench" / "resources" / "constants" / "lite_images.txt"
+    if mode == "fast":
+        return root / "featurebench" / "resources" / "constants" / "fast_images.txt"
     raise ValueError(f"Unknown mode: {mode}")
 
 
@@ -110,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
         "--mode",
         type=str,
         default="full",
-        help="full | lite | /path/to/images.txt (default: full)",
+        help="full | lite | fast | /path/to/images.txt (default: full)",
     )
     parser.add_argument(
         "--n-concurrent",
@@ -131,7 +135,7 @@ def main(argv: list[str] | None = None) -> int:
         print("❌ docker not found in PATH. Please install Docker and ensure the daemon is running.")
         return 2
 
-    if mode in {"full", "lite"}:
+    if mode in {"full", "lite", "fast"}:
         list_path = _default_list_path(mode)
     else:
         list_path = Path(mode).expanduser()

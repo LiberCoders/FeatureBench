@@ -17,6 +17,8 @@ It provides a unified CLI to run inference, evaluation, and dataset generation.
 
 ## 📰 News
 
+🚀 **2026.03.27**: We released the **fast split** containing 100 instances (a subset of full split). These instances require no GPU and are optimized for rapid evaluation. On an Intel Xeon Platinum 8457C with 944GB RAM, the average evaluation time per instance using gold patches is **57.2 seconds**.
+
 🎁 **2026.02.06**: We now support one-click inference for mainstream agent frameworks, including **OpenHands, Claude Code, Codex, Gemini CLI, and mini-swe-agent**. All supported agent frameworks can be found [here](featurebench/infer/agents/). We have also open-sourced the FeatureBench **data pipeline**.
 
 ## 🚀 Quickstart
@@ -46,11 +48,13 @@ See [docs/config.md](docs/config.md) for a comprehensive reference (harness, inf
 **Optional: pre-pull images to reduce network variance:**
 ```bash
 fb pull --mode lite                 # lite split image list (13 images)
+fb pull --mode fast                 # fast split image list (18 images)
 fb pull --mode full                 # full split image list (24 images)
 fb pull --mode /path/to/images.txt  # one image name per line
 
 # full list: featurebench/resources/constants/full_images.txt
 # lite list: featurebench/resources/constants/lite_images.txt
+# fast list: featurebench/resources/constants/fast_images.txt
 ```
 
 **Run inference:**
@@ -59,14 +63,14 @@ fb infer \
     --config-path config.toml \
     --agent mini_swe_agent \
     --model openai/qwen3-coder-480b-a35b-instruct \
-    --split lite
+    --split fast
 ```
 
 **Run evaluation:**
 ```bash
 fb eval \
     -p runs/<timestamp>/output.jsonl \
-    --split lite
+    --split fast
     # use -p gold to verify the gold patches
 ```
 
