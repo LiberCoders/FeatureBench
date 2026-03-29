@@ -513,7 +513,7 @@
           if (!value.startsWith("./")) {
             value = "./" + value.replace(/^\.?\//, "");
           }
-          if (!value.startsWith("./data/lite/") && !value.startsWith("./data/full/")) {
+          if (!/^\.\/data\/[^/]+\/.+\.md$/.test(value)) {
             return null;
           }
           if (!value.endsWith(".md")) {

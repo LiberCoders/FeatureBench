@@ -54,7 +54,7 @@ function updateFootnotes(notesUsed) {
 }
 
 function setActiveSplit(split, updateTagMenu = true) {
-  const active = SPLITS.includes(split) ? split : "lite";
+  const active = SPLITS.includes(split) ? split : "fast";
   const rows = state.leaderboardData?.[active] ?? [];
   const filtered = getFilteredRows(state, active, rows);
   const sorted = getSortedRows(state.sortState, filtered);

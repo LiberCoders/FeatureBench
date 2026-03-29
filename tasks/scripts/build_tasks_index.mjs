@@ -3,7 +3,9 @@ import path from "node:path";
 
 const root = process.cwd();
 const tasksRoot = path.join(root, "tasks", "data");
+const splitOrder = ["fast", "lite", "full"];
 const splitRoots = {
+  fast: path.join(tasksRoot, "fast"),
   lite: path.join(tasksRoot, "lite"),
   full: path.join(tasksRoot, "full"),
 };
@@ -112,16 +114,17 @@ for (const [split, splitDir] of Object.entries(splitRoots)) {
 }
 
 items.sort((a, b) => {
-  if (a.split !== b.split) return a.split.localeCompare(b.split);
+  if (a.split !== b.split) return splitOrder.indexOf(a.split) - splitOrder.indexOf(b.split);
   if (a.repo !== b.repo) return a.repo.localeCompare(b.repo);
   return a.case.localeCompare(b.case);
 });
 
+const counts = Object.fromEntries(splitOrder.map((split) => [split, items.filter((x) => x.split === split).length]));
+
 const payload = {
   generated_at: new Date().toISOString(),
   counts: {
-    lite: items.filter((x) => x.split === "lite").length,
-    full: items.filter((x) => x.split === "full").length,
+    ...counts,
     total: items.length,
   },
   repos: Array.from(new Set(items.map((x) => x.repo))).sort(),

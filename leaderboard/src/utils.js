@@ -30,6 +30,7 @@ export function slugifyKey(label) {
 
 export function splitFromHash(splits) {
   const raw = window.location.hash.replace(/^#/, "").trim();
-  const v = raw || "lite";
-  return splits.includes(v) ? v : "lite";
+  const fallback = splits[0] || "fast";
+  const v = raw || fallback;
+  return splits.includes(v) ? v : fallback;
 }

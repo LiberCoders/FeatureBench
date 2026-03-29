@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FeatureBench Tasks</title>
     <link rel="icon" type="image/jpeg" href="../leaderboard/logos/logo.jpg" />
-    <meta name="description" content="FeatureBench task cards from Lite and Full splits." />
+    <meta name="description" content="FeatureBench task cards from Fast, Lite, and Full splits." />
     <script>
       (() => {
         let stored = null;
@@ -510,6 +510,7 @@
               <span class="filter-label">Split</span>
               <select id="splitFilter">
                 <option value="all">All splits</option>
+                <option value="fast">Fast</option>
                 <option value="lite">Lite</option>
                 <option value="full">Full</option>
               </select>
@@ -632,8 +633,23 @@
 
         function splitLabel(split) {
           if (split === "lite") return "Lite";
+          if (split === "fast") return "Fast";
           if (split === "full") return "Full";
-          return split;
+          return split ? split.charAt(0).toUpperCase() + split.slice(1) : split;
+        }
+
+        function orderedSplitKeys(counts) {
+          const preferred = ["fast", "lite", "full"];
+          const dynamic = Object.keys(counts || {}).filter((key) => key !== "total");
+          dynamic.sort((a, b) => {
+            const ai = preferred.indexOf(a);
+            const bi = preferred.indexOf(b);
+            if (ai !== -1 && bi !== -1) return ai - bi;
+            if (ai !== -1) return -1;
+            if (bi !== -1) return 1;
+            return a.localeCompare(b);
+          });
+          return dynamic;
         }
 
         function repoGitHubUrl(repo) {
@@ -684,17 +700,17 @@
             return;
           }
 
-          const counts = state.payload.counts || { lite: 0, full: 0, total: 0 };
+          const counts = state.payload.counts || { lite: 0, fast: 0, full: 0, total: 0 };
+          const splitSummary = orderedSplitKeys(counts)
+            .map((split) => splitLabel(split) + " " + counts[split])
+            .join(" | ");
           const from = filteredCount === 0 ? 0 : start + 1;
           const to = start + shownCount;
           tasksMeta.textContent =
             "Showing " + from + "-" + to + " of " + filteredCount + " filtered" + " / " +
             counts.total +
             " tasks" +
-            " | Lite " +
-            counts.lite +
-            " | Full " +
-            counts.full;
+            (splitSummary ? " | " + splitSummary : "");
         }
 
         function updatePagination(totalItems, totalPages) {
