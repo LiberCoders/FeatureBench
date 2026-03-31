@@ -1,0 +1,107 @@
+你是一名具有代码阅读能力与算法经验的高级工程师。你的任务是验证我们构造的 CodeAgent 评测案例中，任务信息是否“完备”。
+
+请严格按以下说明执行。
+
+# 一、任务背景
+我们的 benchmark 用于评估 LLM CodeAgent 的“功能级开发能力”。  
+每一条任务仅包含：
+
+**任务说明（problem_statement.md，路径: /workspace/problem_statement.md）**：这是待测 agent 能看到的唯一信息，包含文字描述、接口说明、算法规范、输入输出解释等。
+
+在评测时，待测 agent 只能看到 **problem_statement.md**，需要基于这些信息正确实现 **top 对象列表** 如下：
+{top}
+
+验证时，你拥有 **上帝视角**：你可以查看完整 codebase（/workspace/codebase），用于判断“信息是否足够还原正确实现”。
+
+# 二、完备性的定义
+对于 top 列表中的每一个目标对象（函数/类），若满足以下条件，则任务信息被认为“完备”：
+
+> 只要 *problem_statement.md* 中提供的信息 **足以让一个正常工作的代码智能体实现出一种能够完全通过 f2p 测试（{f2p_test_file_path}）的等价实现**（无需与原实现逐行一致，但逻辑等价），则该对象信息完备。
+
+换句话说：  
+- **完整 codebase 的作用：仅用于对照判断信息是否缺失，不是 agent 可见内容**  
+- **不要求 agent 恢复完全相同的写法**  
+- **但必须能够基于提供的信息实现一个完全正确的版本**
+
+# 三、你的注意事项（非常重要）
+1. **你在搜索代码时必须区分：当前代码片段是否来自完整 codebase。**  
+   - codebase：agent 不可见，只能用于对照检查信息缺失
+
+2. 判断“不完备”的常见原因包括（但不限于）：  
+   - 返回值类型不明确  
+   - 缺少必须的边界条件说明  
+   - 依赖隐藏的常量/超参  
+   - 关键数学公式或规则缺失  
+   - 任务说明不包含任何可用于实现的示例
+
+# 四、输出格式要求
+你必须输出一个文件 **verified_result.txt**，格式如下：
+
+编号: 1  
+对象: {{top 对象 1}}  
+判断结果: 完备 / 不完备  
+判断理由:  
+1. <理由1>  
+2. <理由2>  
+3. <理由3>  
+
+编号: 2  
+对象: {{top 对象 2}}  
+判断结果: 完备 / 不完备  
+判断理由:  
+1. <理由1>  
+2. <理由2>
+
+（按此格式继续）
+
+请务必遵守：  
+- **每个 top 对象必须对应一个编号，且顺序必须一致**  
+- 判断理由必须按有序列表逐条给出  
+- 不得输出额外解释  
+
+# 五、示例（few-shot）
+以下提供若干示范，用于展示如何判定完备性与如何书写理由：
+
+示例一：
+
+编号: 1
+对象: /testbed/math/topk_sampler.py::sample_topk::34
+判断结果: 完备
+判断理由:
+1. problem_statement.md 明确描述了 top-k 采样的完整流程，包括 logits 截断、归一化、随机采样步骤以及对应数学公式，使 agent 能依据文字实现完整算法。
+2. 输入输出结构（输入 logits 为一维数组，输出为单个整数 token id）以及所有边界条件（如 k≥len、负无穷元素处理）均在说明中被清楚列出。
+3. 对照完整 codebase 可知原实现未依赖额外隐藏参数或外部配置，problem_statement.md 提供的信息足以使 agent 从零实现逻辑等价版本并通过 f2p 测试。
+
+编号: 2
+对象: /testbed/sequence/greedy_decode.py::decode_step::58
+判断结果: 完备
+判断理由:
+1. problem_statement.md 为 decode_step 指定了明确的输入格式（当前 logits、已生成序列、最大长度限制），并清晰定义输出为“更新后的序列及被选中的下一个 token”，无结构歧义。
+2. 算法规则（取 argmax、附加到序列尾部、检测是否达到 max_length）均以自然语言形式完整描述，不需要额外上下文。
+3. 完整 codebase 的实现仅包含这些规则，不依赖未在 problem_statement.md 中出现的隐含逻辑，因此 agent 能据此完全恢复等价行为。
+
+编号: 3
+对象: /testbed/sequence/beam_search.py::beam_step::112
+判断结果: 不完备
+判断理由:
+1. problem_statement.md 只提到“对每个候选进行 beam 扩展”，但未说明 beam score 的具体计算方法，也未给出 length penalty、log-prob 累积规则等关键细节。
+2. 返回结构未明确（例如每个 beam 的字段内容、排序方式、截断数量），使 agent 无法确定输出格式。
+3. 对照完整 codebase 可知 beam_step 的行为依赖多个必要细节，而这些在 problem_statement.md 中完全缺失，因此 agent 无法从零实现可通过 f2p 测试的等价版本。
+
+编号: 4
+对象: /testbed/losses/contrastive_loss.py::compute_loss::77
+判断结果: 不完备
+判断理由:
+1. problem_statement.md 仅给出高层次描述（“计算两个 embedding 之间的对比损失”），但未提供任何数学公式或温度参数（temperature）、margin 值等必要超参。
+2. 输入的张量形状、返回标量的定义方式未在说明中明确，会导致 agents 在多种不等价实现之间产生歧义。
+3. 完整 codebase 依赖固定 margin、温度缩放、正负样本处理方式，而这些关键逻辑均未在 problem_statement.md 中出现，因此无法构建正确行为。
+
+编号: 5
+对象: /testbed/nlp/tokenizer.py::split_with_offsets::23
+判断结果: 完备
+判断理由:
+1. problem_statement.md 明确给出了文本切分规则（按空白切分、连续空白视为单个分隔符）及 offset 的计算方式（记录 token 在原字符串中的起始位置）。
+2. 示例中展示了典型输入与对应输出 offsets，使 agent 能准确掌握边界情况（多个空格、字符串首尾空格）。
+3. 完整 codebase 的实现与示例规则一致，没有依赖任何说明未提供的外部资源，因此可视为信息完备。
+
+请在你的工作目录中完成上述分析，并生成 verified_result.txt。

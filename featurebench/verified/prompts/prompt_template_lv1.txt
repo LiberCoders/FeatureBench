@@ -1,0 +1,119 @@
+你是一名具有代码阅读能力与算法经验的高级工程师。你的任务是验证我们构造的 CodeAgent 评测案例中，任务信息是否“完备”。
+
+请严格按以下说明执行。
+
+# 一、任务背景
+我们的 benchmark 用于评估 LLM CodeAgent 的“功能级开发能力”。  
+每一条任务包含两部分：
+
+1. **残缺代码仓（maskcodebase，路径: {maskcodebase}）**：基于某 repo 的某 commit，通过 patch.diff + test_patch.diff 对完整代码（codebase）进行裁剪得到。
+2. **任务说明（problem_statement.md，路径: {problem_statement}）**：包含文字描述与必要的 docstring。
+3. **完整代码仓（codebase，路径: {codebase}）**：仅供你对照检查信息缺失，agent 在评测时不可见。
+
+在评测时，待测 agent 只能看到 **maskcodebase + problem_statement.md**，需要基于这些信息正确实现 **top 对象列表** 如下：
+{top}
+
+但是在验证时，你拥有 **上帝视角**：你可以查看完整 codebase（{codebase}），用于判断“信息是否足够还原正确实现”。
+
+# 二、完备性的定义
+对于 top 列表中的每一个目标对象（函数/类），若满足以下条件，则任务信息被认为“完备”：
+
+> 只要 *maskcodebase + problem_statement.md* 中提供的信息 **足以让一个正常工作的代码智能体实现出一种能够完全通过 f2p 测试（{f2p_test_file_path}）的等价实现**（无需与原实现逐行一致，但逻辑等价），则该对象信息完备。
+
+换句话说：  
+- **完整 codebase 的作用：仅用于对照判断信息是否缺失，不是 agent 可见内容**  
+- **不要求 agent 恢复完全相同的写法**  
+- **但必须能够基于提供的信息实现一个完全正确的版本**
+
+# 三、你的注意事项（非常重要）
+1. **你在搜索代码时必须区分：当前代码片段来自 maskcodebase 还是完整 codebase。**  
+   - maskcodebase：agent 可见  
+   - codebase：agent 不可见，只能用于对照检查信息缺失
+
+2. 判断“不完备”的常见原因包括（但不限于）：  
+   - 返回值类型不明确  
+   - 缺少必须的边界条件说明  
+   - 依赖隐藏的常量/超参  
+   - 关键数学公式或规则缺失  
+   - 任务说明不包含任何可用于实现的示例  
+   - maskcodebase 去掉的部分包含关键逻辑，导致信息断层
+
+3. 你必须基于完整 codebase 进行“对照式判断”，但不能直接引用完整代码的内容给出答案。
+
+# 四、输出格式要求
+你必须输出一个文件 **verified_result.txt**，格式如下：
+
+编号: 1  
+对象: {{top 对象 1}}  
+判断结果: 完备 / 不完备  
+判断理由:  
+1. <理由1>  
+2. <理由2>  
+3. <理由3>  
+
+编号: 2  
+对象: {{top 对象 2}}  
+判断结果: 完备 / 不完备  
+判断理由:  
+1. <理由1>  
+2. <理由2>
+
+（按此格式继续）
+
+请务必遵守：  
+- **每个 top 对象必须对应一个编号，且顺序必须一致**  
+- 判断理由必须按有序列表逐条给出  
+- 不得输出额外解释  
+
+# 五、示例（few-shot）
+以下提供若干示范，用于展示如何判定完备性与如何书写理由：
+
+示例一：
+
+编号: 1
+对象: /testbed/medical/metrics/roc.py::compute_roc_auc::42
+判断结果: 完备
+判断理由:
+1. problem_statement.md 中其 docstring 中明确说明该函数用于计算二分类 ROC-AUC，清晰给出了输入为一维预测概率数组和一维 0/1 标签数组，且要求遵循 sklearn.metrics.roc_auc_score 的定义。
+2. maskcodebase 中的其余模块代码中展示了典型用例，包括正负样本混合、全 0/1 边界情况，且没有依赖任何额外的隐藏配置或 repo 其他模块。
+3. 在完整 codebase 中，对应实现仅依赖标准 ROC 曲线下的积分计算逻辑，与任务描述完全一致，没有额外隐含约束，因此基于当前给定信息可以实现一个等价版本并完全通过测试。
+
+示例二：
+
+编号: 1
+对象: /testbed/rl/sampling/gumbel.py::sample_gumbel_noise::27
+判断结果: 完备
+判断理由:
+1. maskcodebase 中的调用方式仅以 sample_gumbel_noise(logits) 的形式出现，完整 codebase 中的实现是根据 logits 的 shape 生成同形状噪声，这一点在 problem_statement.md 中未直接说明。然而，通过阅读 maskcodebase 其他部分可以发现，该函数唯一的调用场景都是用于对 logits 加噪声，对结果再做 argmax 或 softmax，agent 可以合理推断“输出张量形状应与输入 logits 一致”。
+2. 虽然缺乏对“输入参数类型与形状”的显式说明，但结合调用上下文，一个有经验的 agent 仍可以推导出正确的行为，并实现通过测试的等价版本，因此属于“信息有轻微缺失但仍可通过对 maskcodebase 进行推理完成任务”的情况，判定为“完备”。
+
+编号: 2
+对象: /testbed/nlp/metrics/f1.py::compute_micro_macro_f1::91
+判断结果: 不完备
+判断理由:
+1. problem_statement.md 中 docstring 说明该函数计算多分类任务的 micro-F1 和 macro-F1，但仅提到“返回两个浮点数指标”，未明确说明返回顺序（例如先 micro 再 macro，或相反）。
+2. maskcodebase 中的测试仅对返回的两个值分别命名为 micro_f1, macro_f1，并检查它们是否位于合理区间 [0, 1]，没有对名称与顺序的文字说明。
+3. 完整 codebase 中的实现确实约定了返回顺序为 (micro_f1, macro_f1)，但这一点在任务描述中没有被单独突出。
+
+示例四：
+
+编号: 1
+对象: /testbed/training/scheduler.py::build_learning_rate_scheduler::105
+判断结果: 不完备
+判断理由:
+1. problem_statement.md 中 docstring 仅笼统说明该函数“构建余弦退火学习率调度器”，并提示“需与原有训练曲线一致”，但没有给出具体公式、初始学习率、最大学习率、最小学习率、周期长度等关键超参数的取值范围。
+2. maskcodebase 中对该调度器的使用依赖于一个外部配置对象 config.scheduler，完整 codebase 中的实现从配置中读取多个关键超参（如 warmup_steps、min_lr_ratio），而这些字段在当前任务可见的信息中完全缺失。
+3. 由于测试严格比较每个训练 step 的学习率曲线，与完整 codebase 的输出几乎逐步对齐，在缺乏上述关键超参值和精确公式的前提下，合理的 agent 无法基于现有信息唯一地恢复等价实现，存在大量不可辨识的自由度。
+4. 因此，当前案例的任务信息不足以保证 agent 能实现一个完全通过测试的等价调度器实现，属于“信息严重不完备”的情况，判定为“不完备”。
+
+编号: 2
+对象: /testbed/losses/custom_loss.py::compute_custom_loss::64
+判断结果: 不完备
+判断理由:
+1. problem_statement.md 中 docstring 仅提到该损失函数是“在交叉熵基础上加入额外正则项的自定义损失”，并指出“正则项用于约束类别间的距离”，但未给出任何明确的数学形式或示例。
+2. maskcodebase 中的调用方只传入 logits 和 labels，没有任何关于正则项所需的额外结构信息，而完整 codebase 中的实现依赖一个预先计算好的类别嵌入矩阵以及一项基于余弦距离的正则惩罚。
+3. 类别嵌入矩阵在当前任务可见信息中从未被提及，且其构造方式（维度、归一化方式、距离度量）对于损失值及测试通过与否具有决定性影响。
+4. 在缺乏正则项具体公式、类别嵌入信息及相关超参设定（权重系数 lambda 等）的前提下，一个 agent 无法根据现有描述恢复与完整实现等价的损失函数，难以保证通过测试。
+5. 因此，该对象的任务信息明显不完备，判定为“不完备”。
+
+请在你的工作目录中完成上述分析，并生成 verified_result.txt。
