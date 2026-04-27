@@ -12,6 +12,7 @@ from featurebench.harness.constants import (
     KEY_N_ATTEMPT,
     KEY_PREDICTION,
 )
+from featurebench.utils.docker_images import build_legacy_instance_image_name, normalize_image_name
 
 
 class EvaluationError(Exception):
@@ -121,18 +122,13 @@ def get_docker_image_name(instance: pd.Series) -> str:
     """
     # HuggingFace dataset uses 'image_name' field
     if "image_name" in instance and pd.notna(instance["image_name"]):
-        image_name = instance["image_name"]
-        # If doesn't have registry prefix, add docker.io
-        if '/' not in image_name or not image_name.startswith(('docker.io/', 'gcr.io/', 'ghcr.io/')):
-            return f"docker.io/{image_name}".lower()
-        return image_name.lower()
+        return normalize_image_name(instance["image_name"])
 
     # Fallback to old instance_image field for backward compatibility
     if "instance_image" not in instance or pd.isna(instance["instance_image"]):
         raise ValueError(f"image_name not found for {instance[KEY_INSTANCE_ID]}")
 
-    image_name = instance["instance_image"]
-    return f"docker.io/libercoders/{image_name}".lower()
+    return build_legacy_instance_image_name(instance["instance_image"])
 
 
 def str2bool(v: str) -> bool:

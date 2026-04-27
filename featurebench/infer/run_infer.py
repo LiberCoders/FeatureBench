@@ -31,8 +31,8 @@ from featurebench.infer.container import ContainerManager
 from featurebench.infer.models import InferConfig, InferResult, RunMetadata, TaskInstance, TaskPaths
 from featurebench.infer.output import OutputManager
 from featurebench.infer.runtime import RuntimeHandler
-
 from featurebench.infer.gpu_scheduler import GpuLease, GpuScheduler, detect_host_gpu_ids, parse_gpu_id_list
+from featurebench.utils.docker_images import normalize_image_name
 
 
 # Configure console logging - minimal output to terminal
@@ -482,13 +482,7 @@ class InferenceRunner:
 
     def _get_image_name(self, instance: TaskInstance) -> str:
         """Get Docker image name for an instance."""
-        image_name = instance.image_name
-        
-        # Add docker.io prefix if needed
-        if '/' not in image_name or not image_name.startswith(('docker.io/', 'gcr.io/', 'ghcr.io/')):
-            image_name = f'docker.io/{image_name}'
-        
-        return image_name.lower()
+        return normalize_image_name(instance.image_name)
     
     def _process_single_task(
         self,

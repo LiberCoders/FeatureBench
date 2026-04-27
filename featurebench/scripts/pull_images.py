@@ -23,12 +23,14 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import shutil
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-
-ALLOWED_REGISTRY_PREFIXES = ("docker.io/", "ghcr.io/", "gcr.io/")
+from featurebench.utils.docker_images import (
+    IMAGE_PREFIX_ENV_VAR,
+    get_image_prefix,
+    normalize_image_name,
+)
 
 
 def _repo_root() -> Path:
@@ -47,12 +49,7 @@ def _default_list_path(mode: str) -> Path:
 
 
 def _normalize_image_name(raw: str) -> str:
-    s = (raw or "").strip().lower()
-    if not s:
-        return ""
-    if "/" not in s or not s.startswith(ALLOWED_REGISTRY_PREFIXES):
-        s = "docker.io/" + s
-    return s
+    return normalize_image_name(raw)
 
 
 def _load_images_from_txt(path: Path) -> list[str]:
@@ -157,6 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"List: {list_path}")
     print(f"Images: {len(images)}")
     print(f"Concurrency: {n_concurrent}")
+    print(f"Image prefix: {get_image_prefix()} (env: {IMAGE_PREFIX_ENV_VAR})")
 
     results: list[PullResult] = []
     if n_concurrent == 1:
