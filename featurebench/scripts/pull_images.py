@@ -28,6 +28,7 @@ from pathlib import Path
 
 from featurebench.utils.docker_images import (
     IMAGE_PREFIX_ENV_VAR,
+    canonical_docker_hub_image_name,
     get_image_prefix,
     normalize_image_name,
 )
@@ -48,30 +49,44 @@ def _default_list_path(mode: str) -> Path:
     raise ValueError(f"Unknown mode: {mode}")
 
 
-def _normalize_image_name(raw: str) -> str:
-    return normalize_image_name(raw)
+@dataclass(frozen=True)
+class ImagePullSpec:
+    image: str
+    official_tag: str | None = None
 
 
-def _load_images_from_txt(path: Path) -> list[str]:
+def _make_image_pull_spec(raw: str) -> ImagePullSpec | None:
+    image = normalize_image_name(raw)
+    if not image:
+        return None
+
+    official_tag = canonical_docker_hub_image_name(raw)
+    if official_tag == image:
+        official_tag = None
+
+    return ImagePullSpec(image=image, official_tag=official_tag)
+
+
+def _load_images_from_txt(path: Path) -> list[ImagePullSpec]:
     if not path.exists():
         raise FileNotFoundError(f"Image list file not found: {path}")
 
-    images: list[str] = []
+    images: list[ImagePullSpec] = []
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        img = _normalize_image_name(line)
-        if img:
-            images.append(img)
+        spec = _make_image_pull_spec(line)
+        if spec is not None:
+            images.append(spec)
 
     # Deduplicate while preserving order.
     seen: set[str] = set()
-    uniq: list[str] = []
-    for img in images:
-        if img not in seen:
-            uniq.append(img)
-            seen.add(img)
+    uniq: list[ImagePullSpec] = []
+    for spec in images:
+        if spec.image not in seen:
+            uniq.append(spec)
+            seen.add(spec.image)
     return uniq
 
 
@@ -79,30 +94,80 @@ def _load_images_from_txt(path: Path) -> list[str]:
 class PullResult:
     image: str
     ok: bool
+    official_tag: str | None = None
+    tagged_official: bool = False
     error: str | None = None
     output: str | None = None
 
 
-def _docker_pull(image: str, *, capture_output: bool = False) -> PullResult:
+def _run_docker_command(args: list[str], *, capture_output: bool) -> tuple[int, str | None]:
+    proc = subprocess.run(
+        args,
+        text=True,
+        stdout=subprocess.PIPE if capture_output else None,
+        stderr=subprocess.STDOUT if capture_output else None,
+    )
+    return proc.returncode, proc.stdout if capture_output else None
+
+
+def _docker_pull(spec: ImagePullSpec, *, capture_output: bool = False) -> PullResult:
     try:
-        proc = subprocess.run(
-            ["docker", "pull", image],
-            text=True,
-            stdout=subprocess.PIPE if capture_output else None,
-            stderr=subprocess.STDOUT if capture_output else None,
+        pull_code, pull_output = _run_docker_command(
+            ["docker", "pull", spec.image],
+            capture_output=capture_output,
         )
-        if proc.returncode == 0:
-            return PullResult(image=image, ok=True, output=proc.stdout if capture_output else None)
+        if pull_code != 0:
+            return PullResult(
+                image=spec.image,
+                ok=False,
+                official_tag=spec.official_tag,
+                error=f"docker pull exited with {pull_code}",
+                output=pull_output,
+            )
+
+        if spec.official_tag:
+            tag_code, tag_output = _run_docker_command(
+                ["docker", "tag", spec.image, spec.official_tag],
+                capture_output=capture_output,
+            )
+            output = "\n".join(part for part in (pull_output, tag_output) if part)
+            if tag_code != 0:
+                return PullResult(
+                    image=spec.image,
+                    ok=False,
+                    official_tag=spec.official_tag,
+                    error=f"docker tag exited with {tag_code}",
+                    output=output or None,
+                )
+            return PullResult(
+                image=spec.image,
+                ok=True,
+                official_tag=spec.official_tag,
+                tagged_official=True,
+                output=output or None,
+            )
+
         return PullResult(
-            image=image,
-            ok=False,
-            error=f"docker pull exited with {proc.returncode}",
-            output=proc.stdout if capture_output else None,
+            image=spec.image,
+            ok=True,
+            official_tag=spec.official_tag,
+            output=pull_output,
         )
+
     except FileNotFoundError:
-        return PullResult(image=image, ok=False, error="docker command not found")
+        return PullResult(
+            image=spec.image,
+            ok=False,
+            official_tag=spec.official_tag,
+            error="docker command not found",
+        )
     except Exception as e:  # noqa: BLE001
-        return PullResult(image=image, ok=False, error=str(e))
+        return PullResult(
+            image=spec.image,
+            ok=False,
+            official_tag=spec.official_tag,
+            error=str(e),
+        )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -155,26 +220,30 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Images: {len(images)}")
     print(f"Concurrency: {n_concurrent}")
     print(f"Image prefix: {get_image_prefix()} (env: {IMAGE_PREFIX_ENV_VAR})")
+    official_tag_count = sum(1 for spec in images if spec.official_tag)
+    print(f"Official Docker Hub tags: {official_tag_count} to add locally")
 
     results: list[PullResult] = []
     if n_concurrent == 1:
-        for idx, image in enumerate(images, 1):
+        for idx, spec in enumerate(images, 1):
             print("\n" + "-" * 60)
-            print(f"[{idx}/{len(images)}] Pulling {image}")
+            print(f"[{idx}/{len(images)}] Pulling {spec.image}")
             print("-" * 60)
-            res = _docker_pull(image)
+            res = _docker_pull(spec)
             results.append(res)
             if res.ok:
-                print(f"✅ OK: {image}")
+                print(f"✅ OK: {res.image}")
+                if res.tagged_official:
+                    print(f"🏷️  TAG: {res.official_tag}")
             else:
-                print(f"❌ FAIL: {image} ({res.error})")
+                print(f"❌ FAIL: {res.image} ({res.error})")
     else:
         # With concurrency > 1, capture docker output to avoid interleaved progress logs.
         results_by_image: dict[str, PullResult] = {}
         with ThreadPoolExecutor(max_workers=n_concurrent) as ex:
             futs = {
-                ex.submit(_docker_pull, image, capture_output=True): image
-                for image in images
+                ex.submit(_docker_pull, spec, capture_output=True): spec.image
+                for spec in images
             }
             done = 0
             total = len(images)
@@ -186,17 +255,19 @@ def main(argv: list[str] | None = None) -> int:
                 except Exception as e:  # noqa: BLE001
                     res = PullResult(image=image, ok=False, error=str(e))
                 results_by_image[image] = res
-                status = "OK" if res.ok else "FAIL"
+                status = "OK+TAG" if res.tagged_official else ("OK" if res.ok else "FAIL")
                 print(f"[{done}/{total}] {status}: {image}")
 
         # Rebuild results list in the same order as input.
-        results = [results_by_image[i] for i in images]
+        results = [results_by_image[spec.image] for spec in images]
 
     failed = [r for r in results if not r.ok]
+    tagged = [r for r in results if r.tagged_official]
     print("\n" + "=" * 60)
     print("Summary")
     print("=" * 60)
     print(f"✅ Success: {len(results) - len(failed)}/{len(results)}")
+    print(f"🏷️  Official tags added: {len(tagged)}")
     if failed:
         print(f"❌ Failed:  {len(failed)}")
         for r in failed:

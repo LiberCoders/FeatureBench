@@ -39,6 +39,25 @@ def normalize_image_name(raw: str) -> str:
     return image_name
 
 
+def canonical_docker_hub_image_name(raw: str) -> str | None:
+    """Return the Docker Hub reference for images that originate from Docker Hub.
+
+    This intentionally ignores ``FEATUREBENCH_IMAGE_PREFIX`` so callers that pull
+    from a mirror can also tag the local image with its official Docker Hub name.
+    """
+    image_name = (raw or "").strip().lower()
+    if not image_name:
+        return None
+
+    if not _has_explicit_registry(image_name):
+        return f"{DEFAULT_IMAGE_PREFIX}/{image_name}"
+
+    if image_name.startswith(f"{DEFAULT_IMAGE_PREFIX}/"):
+        return image_name
+
+    return None
+
+
 def build_legacy_instance_image_name(raw: str) -> str:
     """Build the legacy instance image reference and apply the prefix override."""
     image_name = (raw or "").strip().lower()
