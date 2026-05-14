@@ -126,16 +126,6 @@
           <div class="tabs" role="tablist" aria-label="Settings">
             <button
               class="tab"
-              id="tab-fast"
-              role="tab"
-              aria-selected="false"
-              aria-controls="panel"
-              data-split="fast"
-            >
-              fast
-            </button>
-            <button
-              class="tab"
               id="tab-lite"
               role="tab"
               aria-selected="false"
@@ -153,6 +143,16 @@
               data-split="full"
             >
               full
+            </button>
+            <button
+              class="tab"
+              id="tab-fast"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panel"
+              data-split="fast"
+            >
+              fast
             </button>
           </div>
         </div>
@@ -204,7 +204,7 @@
       </div>
 
       <div class="table-shell" id="tableShell">
-        <section class="card" id="panel" role="tabpanel" aria-labelledby="tab-fast">
+        <section class="card" id="panel" role="tabpanel" aria-labelledby="tab-lite">
           <div class="table-wrap">
             <table aria-label="FeatureBench leaderboard table">
               <thead>

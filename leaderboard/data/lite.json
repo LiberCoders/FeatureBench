@@ -1,6 +1,28 @@
 [
   {
     "agent": "OpenHands",
+    "model": "GPT-5.4",
+    "passed": 66.17,
+    "resolved": 23.3,
+    "org": [
+      "./logos/openhands.png",
+      "./logos/openai.png"
+    ],
+    "date": "2026-05-14",
+    "siteUrl": "https://github.com/OpenHands/OpenHands",
+    "filter_1": [
+      "Open Scaffold",
+      "Close Weights"
+    ],
+    "filter_2": [
+      "Model: GPT-5.4",
+      "Scaffold: OpenHands",
+      "Org: OpenHands",
+      "Org: OpenAI"
+    ]
+  },
+  {
+    "agent": "OpenHands",
     "model": "DeepSeek-V4-Flash",
     "passed": 41.9,
     "resolved": 16.7,
