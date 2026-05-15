@@ -1,6 +1,28 @@
 [
   {
     "agent": "OpenHands",
+    "model": "Claude Opus 4.6",
+    "passed": 69.53,
+    "resolved": 20,
+    "org": [
+      "./logos/openhands.png",
+      "./logos/anthropic.png"
+    ],
+    "date": "2026-05-15",
+    "siteUrl": "https://github.com/OpenHands/OpenHands",
+    "filter_1": [
+      "Open Scaffold",
+      "Close Weights"
+    ],
+    "filter_2": [
+      "Model: Claude Opus 4.6",
+      "Scaffold: OpenHands",
+      "Org: OpenHands",
+      "Org: Anthropic"
+    ]
+  },
+  {
+    "agent": "OpenHands",
     "model": "Claude Opus 4.7",
     "passed": 78.16,
     "resolved": 46.7,
