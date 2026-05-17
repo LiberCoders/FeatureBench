@@ -6,7 +6,7 @@ export const state = {
   optionsConfig: null,
 
   /** @type {{ key: 'passed' | 'resolved' | 'date', dir: 'asc' | 'desc' }} */
-  sortState: { key: "resolved", dir: "desc" },
+  sortState: { key: "passed", dir: "desc" },
 
   /** @type {Map<string, Set<string>>} */
   selectedTagsBySplit: new Map(),
