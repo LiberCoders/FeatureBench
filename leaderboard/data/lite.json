@@ -1,6 +1,28 @@
 [
   {
     "agent": "OpenHands",
+    "model": "DeepSeek-V4-Pro",
+    "passed": 59.57,
+    "resolved": 26.7,
+    "org": [
+      "./logos/openhands.png",
+      "./logos/deepseek.png"
+    ],
+    "date": "2026-05-17",
+    "siteUrl": "https://github.com/OpenHands/OpenHands",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: DeepSeek-V4-Pro",
+      "Scaffold: OpenHands",
+      "Org: OpenHands",
+      "Org: DeepSeek"
+    ]
+  },
+  {
+    "agent": "OpenHands",
     "model": "Claude Opus 4.6",
     "passed": 69.53,
     "resolved": 20,
