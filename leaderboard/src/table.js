@@ -150,7 +150,7 @@ export function renderRows(tbody, rows) {
       tdSite.textContent = "-";
     }
 
-    tr.append(tdRank, tdModel, tdAgent, tdResolved, tdPassed, tdOrg, tdDate, tdSite);
+    tr.append(tdRank, tdModel, tdAgent, tdPassed, tdResolved, tdOrg, tdDate, tdSite);
     tbody.appendChild(tr);
   }
 
