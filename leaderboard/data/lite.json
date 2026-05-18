@@ -325,7 +325,7 @@
   },
   {
     "agent": "OpenHands",
-    "model": "Gemini-3-Pro-Preview (low reasoning)",
+    "model": "Gemini-3-Pro-Preview",
     "passed": 45.14,
     "resolved": 10,
     "org": [
@@ -347,7 +347,7 @@
   },
   {
     "agent": "Gemini-CLI",
-    "model": "Gemini-3-Pro-Preview (low reasoning)",
+    "model": "Gemini-3-Pro-Preview",
     "passed": 43.38,
     "resolved": 10,
     "org": [
@@ -367,7 +367,7 @@
   },
   {
     "agent": "Codex",
-    "model": "GPT-5.1-Codex (medium reasoning)",
+    "model": "GPT-5.1-Codex",
     "passed": 60.22,
     "resolved": 20,
     "org": [
