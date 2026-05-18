@@ -1,6 +1,28 @@
 [
   {
     "agent": "OpenHands",
+    "model": "Kimi-2.6",
+    "passed": 49.4,
+    "resolved": 20,
+    "org": [
+      "./logos/openhands.png",
+      "./logos/moonshot.png"
+    ],
+    "date": "2026-05-18",
+    "siteUrl": "https://github.com/OpenHands/OpenHands",
+    "filter_1": [
+      "Open Scaffold",
+      "Close Weights"
+    ],
+    "filter_2": [
+      "Model: Kimi-2.6",
+      "Scaffold: OpenHands",
+      "Org: OpenHands",
+      "Org: Moonshot"
+    ]
+  },
+  {
+    "agent": "OpenHands",
     "model": "GLM-5.1",
     "passed": 44.16,
     "resolved": 13.3,
