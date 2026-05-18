@@ -1,6 +1,28 @@
 [
   {
     "agent": "OpenHands",
+    "model": "GLM-5.1",
+    "passed": 44.16,
+    "resolved": 13.3,
+    "org": [
+      "./logos/openhands.png",
+      "./logos/zhipu.png"
+    ],
+    "date": "2026-05-18",
+    "siteUrl": "https://github.com/OpenHands/OpenHands",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: GLM-5.1",
+      "Scaffold: OpenHands",
+      "Org: OpenHands",
+      "Org: Zhipu"
+    ]
+  },
+  {
+    "agent": "OpenHands",
     "model": "DeepSeek-V4-Pro",
     "passed": 59.57,
     "resolved": 26.7,
