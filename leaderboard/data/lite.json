@@ -1,6 +1,28 @@
 [
   {
     "agent": "OpenHands",
+    "model": "Mimo-V2.5-Pro",
+    "passed": 47.76,
+    "resolved": 13.3,
+    "org": [
+      "./logos/openhands.png",
+      "./logos/mimo.png"
+    ],
+    "date": "2026-05-19",
+    "siteUrl": "https://github.com/OpenHands/OpenHands",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: Mimo-V2.5-Pro",
+      "Scaffold: OpenHands",
+      "Org: OpenHands",
+      "Org: Mimo"
+    ]
+  },
+  {
+    "agent": "OpenHands",
     "model": "Kimi-2.6",
     "passed": 49.4,
     "resolved": 20,
