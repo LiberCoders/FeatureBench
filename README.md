@@ -40,7 +40,7 @@ It provides a unified CLI to run inference, evaluation, and dataset generation.
 | 5 | GPT-5.4 | OpenHands | 66.2 | 23.3 |
 | 6 | GPT-5.1-Codex | Codex | 60.2 | 20 |
 | 7 | DeepSeek-V4-Pro | OpenHands | 59.6 | 26.7 |
-| 8 | Claude Opus 4.5 | Claude Code (routing) | 59.1 | 20 |
+| 8 | Claude Opus 4.5 | Claude Code | 59.1 | 20 |
 | 9 | Kimi-2.6 | OpenHands | 49.4 | 20 |
 | 10 | Mimo-V2.5-Pro | OpenHands | 47.8 | 13.3 |
 | 11 | Gemini-3-Pro-Preview | OpenHands | 45.1 | 10 |
