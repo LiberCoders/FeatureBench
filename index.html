@@ -175,33 +175,16 @@
         position: relative;
         isolation: isolate;
         padding-top: clamp(14px, 2.2vh, 28px);
-        padding-bottom: 0;
+        padding-bottom: clamp(22px, 4.6vh, 48px);
         overflow: hidden;
       }
 
       .hero::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        z-index: -2;
-        pointer-events: none;
-        background:
-          radial-gradient(
-            680px 420px at 14% 28%,
-            color-mix(in srgb, var(--accent-soft) 7%, transparent),
-            transparent 72%
-          ),
-          radial-gradient(
-            760px 500px at 86% 64%,
-            color-mix(in srgb, var(--hero-title-soft) 5%, transparent),
-            transparent 76%
-          );
+        content: none;
       }
 
       .hero-copy {
-        position: relative;
-        z-index: 1;
-        margin-top: clamp(36px, 7.2vh, 96px);
+        margin-top: clamp(48px, 10vh, 150px);
       }
 
       .kicker {
@@ -264,8 +247,8 @@
         position: absolute;
         left: -2%;
         right: -2%;
-        bottom: clamp(-12px, -1vh, -4px);
-        height: clamp(58%, 65%, 72%);
+        bottom: clamp(92px, 13vh, 220px);
+        height: clamp(54%, 60%, 68%);
         pointer-events: none;
         z-index: -1;
       }
@@ -299,11 +282,46 @@
         will-change: transform, opacity, filter;
       }
 
+      .stats {
+        margin-top: clamp(-118px, -11.5vh, -46px);
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .stat-card {
+        padding: 20px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--surface) 92%, transparent 8%);
+        box-shadow: var(--card-shadow);
+      }
+
+      .stat-label {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.3;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .stat-value {
+        margin: 10px 0 6px;
+        font-family: var(--font-head);
+        font-size: clamp(2rem, 4vw, 2.35rem);
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+
+      .stat-sub {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+
       .resource-row {
-        position: relative;
-        z-index: 1;
-        margin-top: clamp(18px, 2.4vh, 28px);
-        margin-bottom: 0;
+        margin-top: clamp(6px, 1.2vh, 12px);
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
@@ -314,9 +332,7 @@
         padding: 0 14px;
         border-radius: 999px;
         border: 1px solid var(--line);
-        background: color-mix(in srgb, var(--surface) 90%, transparent 10%);
-        box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 7%, transparent 93%);
-        backdrop-filter: blur(8px);
+        background: var(--surface);
         display: inline-flex;
         align-items: center;
         gap: 8px;
@@ -895,9 +911,14 @@
           min-height: auto;
         }
 
+        .stats {
+          margin-top: clamp(10px, 1.8vh, 18px);
+          grid-template-columns: 1fr;
+        }
+
         .hero-wave {
-          bottom: 0;
-          height: clamp(56%, 62%, 70%);
+          bottom: clamp(34px, 7vh, 110px);
+          height: clamp(52%, 58%, 66%);
         }
 
         .pipeline-layout {
@@ -1090,22 +1111,42 @@
               <p>
                 Tasks from real repositories, evaluated by executable tests.
               </p>
-              <section class="resource-row" id="resourceRow" data-reveal style="--delay: 260ms" aria-label="Project Links"></section>
             </div>
             <div class="hero-wave" aria-hidden="true">
               <svg viewBox="0 0 1200 340" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                   class="hero-wave-fill"
-                  d="M0 228 C170 224 330 218 500 204 C660 192 760 168 840 134 C915 102 990 80 1088 64 C1146 54 1182 48 1200 46 L1200 340 L0 340 Z"
+                  d="M0 322 C160 316 320 304 500 286 C670 268 760 236 840 178 C915 122 990 86 1088 68 C1146 58 1182 52 1200 50 L1200 340 L0 340 Z"
                 />
                 <path
                   class="hero-wave-shadow"
-                  d="M-10 228 C160 224 330 218 500 204 C660 192 760 168 840 134 C915 102 990 80 1088 64 C1146 54 1182 48 1210 46"
+                  d="M-10 322 C150 316 320 304 500 286 C670 268 760 236 840 178 C915 122 990 86 1088 68 C1146 58 1182 52 1210 50"
                 />
               </svg>
             </div>
           </section>
 
+          <section class="stats" data-reveal style="--delay: 200ms" aria-label="Leaderboard Snapshot">
+            <article class="stat-card">
+              <p class="stat-label">Best %Resolved (Full)</p>
+              <p class="stat-value" id="resolvedBest">--</p>
+              <p class="stat-sub" id="resolvedSub">Loading latest results...</p>
+            </article>
+
+            <article class="stat-card">
+              <p class="stat-label">Best %Passed (Full)</p>
+              <p class="stat-value" id="fullBest">--</p>
+              <p class="stat-sub" id="fullSub">Loading latest results...</p>
+            </article>
+
+            <article class="stat-card">
+              <p class="stat-label">Latest Update</p>
+              <p class="stat-value" id="latestDate">--</p>
+              <p class="stat-sub" id="latestSub">Reading local benchmark data...</p>
+            </article>
+          </section>
+
+          <section class="resource-row" id="resourceRow" data-reveal style="--delay: 260ms" aria-label="Project Links"></section>
         </section>
 
         <section class="screen more-content" id="more-content" aria-label="FeatureBench Overview">
@@ -1220,6 +1261,68 @@
             stored = "light";
           }
           applyTheme(stored);
+        }
+
+        function formatPercent(value) {
+          const number = Number(value);
+          if (!Number.isFinite(number)) return "--";
+          return `${number.toFixed(2)}%`;
+        }
+
+        function formatDate(isoDate) {
+          if (!isoDate) return "--";
+          const date = new Date(`${isoDate}T00:00:00Z`);
+          if (Number.isNaN(date.getTime())) return isoDate;
+          return date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            timeZone: "UTC",
+          });
+        }
+
+        function maxNumeric(rows, key) {
+          let best = null;
+          for (const row of rows) {
+            const value = Number(row?.[key]);
+            if (!Number.isFinite(value)) continue;
+            if (best === null || value > best) best = value;
+          }
+          return best;
+        }
+
+        async function loadSnapshot() {
+          try {
+            const [liteRes, fullRes] = await Promise.all([
+              fetch("./leaderboard/data/lite.json", { cache: "no-store" }),
+              fetch("./leaderboard/data/full.json", { cache: "no-store" }),
+            ]);
+            if (!liteRes.ok || !fullRes.ok) throw new Error("failed to fetch data");
+
+            const [liteRows, fullRows] = await Promise.all([liteRes.json(), fullRes.json()]);
+            const lite = Array.isArray(liteRows) ? liteRows : [];
+            const full = Array.isArray(fullRows) ? fullRows : [];
+
+            const fullResolvedBest = maxNumeric(full, "resolved");
+            const fullBest = maxNumeric(full, "passed");
+            const latestIso = [...lite, ...full]
+              .map((item) => String(item?.date || ""))
+              .filter(Boolean)
+              .sort()
+              .at(-1);
+
+            document.getElementById("resolvedBest").textContent = formatPercent(fullResolvedBest);
+            document.getElementById("fullBest").textContent = formatPercent(fullBest);
+            document.getElementById("latestDate").textContent = formatDate(latestIso);
+
+            document.getElementById("resolvedSub").textContent = `${full.length} runs in full split`;
+            document.getElementById("fullSub").textContent = `${full.length} runs in full split`;
+            document.getElementById("latestSub").textContent = "Auto-read from leaderboard data";
+          } catch {
+            document.getElementById("resolvedSub").textContent = "Unable to load full data";
+            document.getElementById("fullSub").textContent = "Unable to load full data";
+            document.getElementById("latestSub").textContent = "Serve via HTTP to load snapshot";
+          }
         }
 
         function iconMarkup(label) {
@@ -1673,6 +1776,7 @@
         darkBtn.addEventListener("click", () => applyTheme("dark"));
 
         initScreenDots();
+        loadSnapshot();
         loadResources();
         initDatasetDonut();
         initCitationCopy();
