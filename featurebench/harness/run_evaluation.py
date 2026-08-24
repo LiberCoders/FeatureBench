@@ -74,7 +74,13 @@ from featurebench.harness.utils import (
     parse_repo_settings,
 )
 
-from featurebench.infer.config import InferConfigLoader
+from featurebench.infer.config import (
+    DEFAULT_DATASET_REVISION,
+    InferConfigLoader,
+    configure_hf_access,
+    resolve_hf_dataset_revision,
+    verify_loaded_dataset_revision,
+)
 from featurebench.infer.gpu_scheduler import GpuLease, GpuScheduler, detect_host_gpu_ids, parse_gpu_id_list
 
 # Global console for rich output
@@ -747,6 +753,7 @@ def load_dataset_from_hf(
     split: str,
     dataset: str,
     config_path: str | None = None,
+    dataset_revision: str | None = None,
 ) -> pd.DataFrame:
     """
     Load dataset from HuggingFace using config.toml settings.
@@ -766,21 +773,39 @@ def load_dataset_from_hf(
         resolved_path = Path(config_path).expanduser() if config_path else None
         config_loader = InferConfigLoader(resolved_path)
         env_vars = config_loader.env_vars
-        hf_token = env_vars.get("HF_TOKEN")
+        hf_token, hf_endpoint = configure_hf_access(env_vars)
+        configured_revision = config_loader.get_dataset_revision()
     except FileNotFoundError:
         console.print("[yellow]Warning: config.toml not found, using defaults[/]")
-        hf_token = os.environ.get('HF_TOKEN', None)
+        hf_token, hf_endpoint = configure_hf_access({})
+        configured_revision = DEFAULT_DATASET_REVISION
+
+    requested_revision = str(dataset_revision or "").strip()
+    effective_revision = requested_revision or configured_revision
 
     console.print(f"[bold blue]Loading dataset from HuggingFace...[/]")
     console.print(f"[dim]Repository: {dataset}[/]")
     console.print(f"[dim]Split: {split}[/]")
+    console.print(f"[dim]Version: {effective_revision}[/]")
 
     if hf_token:
         console.print("[dim]Using HuggingFace token from config[/]")
 
     try:
+        resolved_revision = resolve_hf_dataset_revision(
+            dataset,
+            effective_revision,
+            hf_token,
+            hf_endpoint,
+        )
         # Load the specified split
-        hf_dataset = load_dataset(dataset, split=split, token=hf_token)
+        hf_dataset = load_dataset(
+            dataset,
+            split=split,
+            token=hf_token,
+            revision=resolved_revision,
+        )
+        verify_loaded_dataset_revision(hf_dataset, resolved_revision)
         df = pd.DataFrame(hf_dataset)
 
         # Determine level from instance_id's last segment (e.g., "xxx.lv1" -> level 1)
@@ -807,6 +832,28 @@ def load_dataset_from_hf(
         console.print(f"  2. Check access: https://huggingface.co/datasets/{dataset}")
         console.print(f"  3. Verify split '{split}' exists in the dataset")
         raise
+
+
+def resolve_eval_dataset_revision(
+    cli_revision: str | None,
+    run_metadata: dict | None,
+) -> str | None:
+    """Resolve the dataset revision for evaluation.
+
+    An explicit CLI value wins. Otherwise, evaluation follows the revision
+    recorded by inference. Runs created before revision tracking belong to the
+    original v1.0 dataset. When no run metadata is available, the dataset
+    loader falls back to the configured/default revision.
+    """
+    requested_revision = str(cli_revision or "").strip()
+    if requested_revision:
+        return requested_revision
+
+    if run_metadata:
+        recorded_revision = str(run_metadata.get("dataset_revision") or "").strip()
+        return recorded_revision or "v1.0"
+
+    return None
 
 
 def parse_args() -> argparse.Namespace:
@@ -872,6 +919,17 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=DEFAULT_DATASET,
         help="HuggingFace dataset repo name (e.g., 'LiberCoders/FeatureBench')",
+    )
+
+    parser.add_argument(
+        "--data-version",
+        dest="dataset_version",
+        type=str,
+        default=None,
+        help=(
+            "Hugging Face dataset version (tag, branch, or commit SHA). "
+            "Default: infer from run_metadata.json, then [dataset].revision, then v1.1"
+        ),
     )
 
     parser.add_argument(
@@ -956,15 +1014,23 @@ def main():
     # we keep FAIL_TO_PASS test files visible during Level 1 patch application to avoid
     # "patch touches deleted test file" apply failures.
     white_enabled = False
+    run_metadata = None
     try:
         metadata_path = output_dir / "run_metadata.json"
-        if metadata_path.exists():
+        if not use_gold_patch and metadata_path.exists():
             with open(metadata_path, "r", encoding="utf-8") as f:
                 meta = json.load(f)
-            if isinstance(meta, dict) and meta.get("white_box") is True:
-                white_enabled = True
+            if isinstance(meta, dict):
+                run_metadata = meta
+                white_enabled = meta.get("white_box") is True
     except Exception:
         white_enabled = False
+        run_metadata = None
+
+    dataset_revision = resolve_eval_dataset_revision(
+        args.dataset_version,
+        run_metadata,
+    )
 
     # Print startup banner
     console.print()
@@ -996,7 +1062,13 @@ def main():
     console.print()
 
     # Load dataset
-    dataset = load_dataset_from_hf(console, args.split, args.dataset, args.config_path)
+    dataset = load_dataset_from_hf(
+        console,
+        args.split,
+        args.dataset,
+        args.config_path,
+        dataset_revision,
+    )
 
     # Load predictions
     console.print(f"[bold blue]Loading predictions...[/]")

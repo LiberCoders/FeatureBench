@@ -5,8 +5,75 @@ Configuration loader for the inference module.
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import toml
+from huggingface_hub import HfApi
+
+
+DEFAULT_DATASET_REVISION = "v1.1"
+
+
+def configure_hf_access(env_vars: Dict[str, Any]) -> Tuple[Union[str, bool, None], Optional[str]]:
+    """Apply configured Hub access settings and return normalized values."""
+    configured_endpoint = str(env_vars.get("HF_ENDPOINT") or "").strip()
+    endpoint = configured_endpoint or str(os.environ.get("HF_ENDPOINT") or "").strip()
+    if endpoint:
+        os.environ["HF_ENDPOINT"] = endpoint
+        # ``datasets.config.HF_ENDPOINT`` is initialized at import time, so update
+        # it as well when callers load their config after importing datasets.
+        import datasets
+
+        datasets.config.HF_ENDPOINT = endpoint
+
+    if "HF_TOKEN" in env_vars:
+        configured_token = str(env_vars.get("HF_TOKEN") or "").strip()
+        token: Union[str, bool, None] = configured_token or False
+    else:
+        token = str(os.environ.get("HF_TOKEN") or "").strip() or None
+
+    return token, endpoint or None
+
+
+def resolve_hf_dataset_revision(
+    dataset: str,
+    revision: str,
+    token: Union[str, bool, None],
+    endpoint: Optional[str],
+) -> str:
+    """Resolve a Hub dataset revision to its immutable commit SHA."""
+    try:
+        info = HfApi(endpoint=endpoint, token=token).dataset_info(
+            repo_id=dataset,
+            revision=revision,
+        )
+    except Exception as exc:
+        raise RuntimeError(
+            f"Unable to resolve dataset revision '{revision}' for '{dataset}'. "
+            "Refusing to use an unverified cached dataset."
+        ) from exc
+
+    resolved_revision = str(info.sha or "").strip()
+    if not resolved_revision:
+        raise RuntimeError(
+            f"Hugging Face returned no commit SHA for '{dataset}' at '{revision}'"
+        )
+    return resolved_revision
+
+
+def verify_loaded_dataset_revision(dataset: Any, resolved_revision: str) -> None:
+    """Reject Hugging Face's fallback to a cache from another revision."""
+    cache_files = getattr(dataset, "cache_files", None) or []
+    cache_paths = [
+        Path(item["filename"])
+        for item in cache_files
+        if isinstance(item, dict) and item.get("filename")
+    ]
+    if cache_paths and any(resolved_revision not in path.parts for path in cache_paths):
+        raise RuntimeError(
+            f"Loaded dataset cache does not match resolved commit {resolved_revision}. "
+            "Refusing to use a different dataset version."
+        )
 
 
 class InferConfigLoader:
@@ -74,6 +141,12 @@ class InferConfigLoader:
         if path:
             return Path(path).expanduser()
         return None
+
+    def get_dataset_revision(self) -> str:
+        """Get the pinned Hugging Face dataset revision."""
+        dataset_cfg = self._config.get("dataset", {}) or {}
+        revision = str(dataset_cfg.get("revision") or "").strip()
+        return revision or DEFAULT_DATASET_REVISION
 
     def get_agent_env_vars(self, agent_name: str) -> Dict[str, str]:
         """
@@ -153,20 +226,15 @@ class DatasetLoader:
     
     def _setup_hf_env(self) -> None:
         """Set up HuggingFace environment variables."""
-        env_vars = self.config.env_vars
-        
-        if env_vars.get("HF_ENDPOINT"):
-            os.environ["HF_ENDPOINT"] = env_vars["HF_ENDPOINT"]
-        
-        if env_vars.get("HF_TOKEN"):
-            os.environ["HF_TOKEN"] = env_vars["HF_TOKEN"]
+        configure_hf_access(self.config.env_vars)
     
     def load_dataset(
         self,
         dataset: str,
         split: Optional[str] = None,
         levels: Optional[List[int]] = None,
-        task_ids: Optional[List[str]] = None
+        task_ids: Optional[List[str]] = None,
+        revision: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Load dataset from HuggingFace.
@@ -177,6 +245,8 @@ class DatasetLoader:
             levels: List of levels to filter (1, 2). If None, loads all levels.
                    Level is determined by the last segment of instance_id (e.g., "lv1", "lv2").
             task_ids: Specific task IDs to filter. If None, loads all tasks.
+            revision: Hugging Face dataset revision (tag, branch, or commit SHA).
+                      If omitted, uses ``[dataset].revision`` or ``v1.1``.
             
         Returns:
             List of task instances as dictionaries
@@ -193,7 +263,8 @@ class DatasetLoader:
         from datasets import load_dataset
         
         env_vars = self.config.env_vars
-        hf_token = env_vars.get("HF_TOKEN")
+        hf_token, hf_endpoint = configure_hf_access(env_vars)
+        dataset_revision = str(revision or "").strip() or self.config.get_dataset_revision()
 
         dataset_name = str(dataset or "").strip()
         if not dataset_name:
@@ -205,11 +276,19 @@ class DatasetLoader:
         all_instances = []
         
         try:
+            resolved_revision = resolve_hf_dataset_revision(
+                dataset_name,
+                dataset_revision,
+                hf_token,
+                hf_endpoint,
+            )
             dataset = load_dataset(
                 dataset_name,
                 split=split,
-                token=hf_token
+                token=hf_token,
+                revision=resolved_revision,
             )
+            verify_loaded_dataset_revision(dataset, resolved_revision)
             
             for item in dataset:
                 item_dict = dict(item)

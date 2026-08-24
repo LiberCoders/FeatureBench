@@ -51,6 +51,11 @@ fb eval \
   HuggingFace dataset repo name (e.g., `LiberCoders/FeatureBench`).  
   Default: `LiberCoders/FeatureBench`.
 
+- `--data-version`
+  Hugging Face dataset tag, branch, or commit SHA.
+  Normally inferred from the inference run's `run_metadata.json`.
+  If unavailable, falls back to `[dataset].revision` or `v1.1`.
+
 - `--split`  
   Dataset split name (e.g., `lite`, `full`).  
   Default: `full`.

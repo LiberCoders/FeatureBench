@@ -6,6 +6,7 @@ This document describes all CLI arguments supported by `fb infer`.
 
 ```bash
 fb infer \
+  --data-version v1.1 \
   --agent gemini_cli \
   --model gemini-3-pro-preview
 ```
@@ -52,6 +53,12 @@ flags can override metadata (see the argument list below).
 - `--dataset`  
   HuggingFace dataset repo name (e.g., `LiberCoders/FeatureBench`).  
   Default: `LiberCoders/FeatureBench` in non-resume mode.
+
+- `--data-version`
+  Hugging Face dataset tag, branch, or commit SHA.
+  Overrides `[dataset].revision` from `config.toml`; default: `v1.1`.
+  Saved into `run_metadata.json`; resume mode keeps the recorded dataset version.
+  This is separate from `--version`, which controls the agent software version.
 
 - `--split`  
   Dataset split name (e.g., `lite`, `full`).  

@@ -31,13 +31,25 @@ HF_TOKEN = ""
 GITHUB_TOKEN = ""
 ```
 
+### [dataset] (dataset version used by harness / infer)
+
+```toml
+[dataset]
+revision = "v1.1"
+```
+
+- `revision`: Hugging Face dataset tag, branch, or commit SHA used by both
+  `fb infer` and `fb eval`. The default is `v1.1`.
+- `--data-version` overrides this value for a single command.
+
 ---
 
 ## A. Harness
 
 The core idea of harness is: read the `output.jsonl` produced by infer, apply each patch to the corresponding repository image, run tests, and generate evaluation results.
 
-When harness loads the HuggingFace dataset during evaluation, it uses `HF_ENDPOINT` from `[env_vars]`.
+When harness loads the HuggingFace dataset during evaluation, it uses `HF_ENDPOINT`
+from `[env_vars]` and the pinned revision from `[dataset]`.
 
 ---
 

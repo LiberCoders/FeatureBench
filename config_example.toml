@@ -7,6 +7,14 @@ HF_TOKEN=""
 GITHUB_TOKEN=""
 
 # ==============================================================================
+# Hugging Face Dataset
+# ==============================================================================
+[dataset]
+# Dataset tag, branch, or commit SHA used by both `fb infer` and `fb eval`.
+# The CLI flag `--data-version` overrides this value.
+revision="v1.1"
+
+# ==============================================================================
 # DataPipeline Configuration
 # ==============================================================================
 

@@ -152,6 +152,8 @@ class InferConfig:
     model: str
     # HuggingFace dataset repo name (e.g., "LiberCoders/FeatureBench")
     dataset: str = "LiberCoders/FeatureBench"
+    # Hugging Face dataset tag, branch, or commit SHA. None defers to config.toml/default.
+    dataset_revision: Optional[str] = None
     n_concurrent: int = 1
     n_attempts: int = 1
     task_ids: Optional[List[str]] = None
@@ -191,6 +193,7 @@ class InferConfig:
             "agent": self.agent,
             "model": self.model,
             "dataset": self.dataset,
+            "dataset_revision": self.dataset_revision,
             "n_concurrent": self.n_concurrent,
             "n_attempts": self.n_attempts,
             "task_ids": self.task_ids,
@@ -257,6 +260,7 @@ class RunMetadata:
     task_ids: List[str]
     output_path: str
     start_time: str
+    dataset_revision: str = "v1.1"
     timeout: int = 7200
     proxy_port: Optional[int] = None
     runtime_proxy: Optional[bool] = None
@@ -284,6 +288,7 @@ class RunMetadata:
             "agent": self.agent,
             "model": self.model,
             "dataset": self.dataset,
+            "dataset_revision": self.dataset_revision,
             "n_concurrent": self.n_concurrent,
             "n_attempts": self.n_attempts,
             "task_ids": self.task_ids,
@@ -321,6 +326,8 @@ class RunMetadata:
         """Load metadata from a JSON file."""
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
+        # Runs created before dataset versioning used the original Hub release.
+        data.setdefault("dataset_revision", "v1.0")
         return cls(**data)
 
 

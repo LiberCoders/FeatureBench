@@ -31,7 +31,7 @@ def _print_help(stream=None) -> None:
         "  data   Run data pipeline (supports featurebench-pipeline args)\n"
         "\n"
         "Examples:\n"
-        "  fb infer --agent mini_swe_agent --model openai/gpt-4o --split fast\n"
+        "  fb infer --data-version v1.1 --agent mini_swe_agent --model openai/gpt-4o --split fast\n"
         "  fb eval --predictions-path runs/xxx/output.jsonl --split fast\n"
         "  fb pull --mode fast\n"
         "  fb data --config-path constants/python_new.py --output-dir runs/data\n"

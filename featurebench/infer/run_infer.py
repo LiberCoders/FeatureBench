@@ -5,8 +5,8 @@ Main entry point for running agents on FeatureBench instances.
 Supports parallel execution, multiple attempts, and generates output.jsonl.
 
 Usage:
-    python -m featurebench.infer.run_infer --agent claude_code --model claude-sonnet-4-20250514
-    python -m featurebench.infer.run_infer --agent openhands --model gpt-4o --n-concurrent 4
+    python -m featurebench.infer.run_infer --data-version v1.1 --agent claude_code --model claude-sonnet-4-20250514
+    python -m featurebench.infer.run_infer --data-version v1.1 --agent openhands --model gpt-4o --n-concurrent 4
 """
 
 import argparse
@@ -31,7 +31,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskPr
 from rich.table import Table
 
 from featurebench.infer.agents import get_agent
-from featurebench.infer.config import InferConfigLoader, DatasetLoader
+from featurebench.infer.config import DatasetLoader, InferConfigLoader
 from featurebench.infer.container import ContainerManager
 from featurebench.infer.models import InferConfig, InferResult, RunMetadata, TaskInstance, TaskPaths
 from featurebench.infer.output import OutputManager
@@ -291,6 +291,9 @@ class InferenceRunner:
         
         # Load configuration
         self.config_loader = InferConfigLoader(config_path=config_path)
+        configured_revision = self.config_loader.get_dataset_revision()
+        requested_revision = str(self.config.dataset_revision or "").strip()
+        self.config.dataset_revision = requested_revision or configured_revision
         self.cache_dir = self.config_loader.get_cache_dir()
         
         # Set output directory
@@ -689,7 +692,8 @@ class InferenceRunner:
             dataset=self.config.dataset,
             split=self.config.split,
             levels=levels,
-            task_ids=task_ids
+            task_ids=task_ids,
+            revision=self.config.dataset_revision,
         )
         
         # Convert to TaskInstance objects
@@ -1073,6 +1077,7 @@ class InferenceRunner:
             agent=self.config.agent,
             model=self.config.model,
             dataset=self.config.dataset,
+            dataset_revision=self.config.dataset_revision,
             n_concurrent=self.config.n_concurrent,
             n_attempts=self.config.n_attempts,
             task_ids=task_ids,
@@ -1111,6 +1116,7 @@ class InferenceRunner:
             self.console.print("[bold cyan]Starting FeatureBench Inference[/]")
         self.console.print(f"[white]Agent:[/] [green]{self.config.agent}[/]")
         self.console.print(f"[white]Model:[/] [green]{self.config.model}[/]")
+        self.console.print(f"[white]Dataset version:[/] [green]{self.config.dataset_revision}[/]")
         if self.config.api_key is not None and str(self.config.api_key).strip():
             self.console.print(f"[white]API key:[/] [green]{self.config.api_key}[/]")
         if self.config.base_url is not None and str(self.config.base_url).strip():
@@ -1410,6 +1416,10 @@ def parse_args() -> argparse.Namespace:
     argv = sys.argv[1:]
     split_provided = "--split" in argv
     dataset_provided = "--dataset" in argv
+    dataset_version_provided = any(
+        value == "--data-version" or value.startswith("--data-version=")
+        for value in argv
+    )
     
     parser.add_argument(
         "--config-path",
@@ -1470,6 +1480,17 @@ def parse_args() -> argparse.Namespace:
         help=(
             "HuggingFace dataset repo name (e.g., 'LiberCoders/FeatureBench'). "
             "Default: 'LiberCoders/FeatureBench' (only applies when not using --resume)"
+        ),
+    )
+
+    parser.add_argument(
+        "--data-version",
+        dest="dataset_version",
+        type=str,
+        default=None,
+        help=(
+            "Hugging Face dataset version (tag, branch, or commit SHA). "
+            "Overrides [dataset].revision from config.toml; default: v1.1"
         ),
     )
     
@@ -1674,6 +1695,7 @@ def parse_args() -> argparse.Namespace:
     # Stash explicit-provided flags for resume-mode warning logic.
     args._split_provided = split_provided
     args._dataset_provided = dataset_provided
+    args._dataset_version_provided = dataset_version_provided
 
     return args
 
@@ -1708,6 +1730,11 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
         warnings.append(f"--model (using '{metadata['model']}' from metadata)")
     if getattr(args, "_dataset_provided", False):
         warnings.append(f"--dataset (using '{metadata.get('dataset')}' from metadata)")
+    if getattr(args, "_dataset_version_provided", False):
+        warnings.append(
+            "--data-version "
+            f"(using '{metadata.get('dataset_revision', 'v1.0')}' from metadata)"
+        )
     if args.n_attempts != 1:  # Default is 1
         warnings.append(f"--n-attempts (using '{metadata['n_attempts']}' from metadata)")
     if args.task_id is not None:
@@ -1836,6 +1863,8 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
         agent=metadata['agent'],
         model=metadata['model'],
         dataset=str(metadata.get('dataset') or "LiberCoders/FeatureBench"),
+        # Metadata written before dataset versioning corresponds to the original v1.0 release.
+        dataset_revision=str(metadata.get('dataset_revision') or "v1.0"),
         n_concurrent=n_concurrent,
         n_attempts=metadata.get('n_attempts', 1),
         task_ids=metadata.get('task_ids'),
@@ -1900,6 +1929,11 @@ def main() -> int:
                 args.dataset.strip()
                 if args.dataset is not None and str(args.dataset).strip()
                 else "LiberCoders/FeatureBench"
+            ),
+            dataset_revision=(
+                str(args.dataset_version).strip()
+                if args.dataset_version is not None and str(args.dataset_version).strip()
+                else None
             ),
             n_concurrent=args.n_concurrent if args.n_concurrent is not None else 1,
             n_attempts=args.n_attempts,
