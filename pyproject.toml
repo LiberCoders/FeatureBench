@@ -1,6 +1,6 @@
 [project]
 name = "featurebench"
-version = "0.2.1"
+version = "0.2.2"
 description = "FeatureBench Pipeline - A test-driven data generation pipeline for building and evaluating feature-level coding benchmarks"
 readme = "README.md"
 requires-python = ">=3.12"
