@@ -24,9 +24,14 @@ function initThemeFromStorageOrSystem() {
 initThemeFromStorageOrSystem();
 
 const CITATIONS = {
-  bibtex: `ABCABCABC`,
-  apa: "ABCABCABC",
-  mla: "ABCABCABC",
+  bibtex: `@article{zhou2026featurebench,
+  title={FeatureBench: Benchmarking Agentic Coding for Complex Feature Development},
+  author={Zhou, Qixing and Zhang, Jiacheng and Wang, Haiyang and Hao, Rui and Wang, Jiahe and Han, Minghao and Yang, Yuxue and Wu, Shuzhe and Pan, Feiyang and Fan, Lue and others},
+  journal={arXiv preprint arXiv:2602.10975},
+  year={2026}
+}`,
+  apa: "Zhou, Q., Zhang, J., Wang, H., Hao, R., Wang, J., Han, M., Yang, Y., Wu, S., Pan, F., Fan, L., Tu, D., & Zhang, Z. (2026). FeatureBench: Benchmarking agentic coding for complex feature development. arXiv. https://doi.org/10.48550/arXiv.2602.10975",
+  mla: "Zhou, Qixing, et al. “FeatureBench: Benchmarking Agentic Coding for Complex Feature Development.” arXiv, 2026, https://doi.org/10.48550/arXiv.2602.10975.",
 };
 
 /** @type {HTMLElement | null} */

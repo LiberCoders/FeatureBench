@@ -395,9 +395,13 @@ a {
 
       .left-controls {
         display: flex;
-        flex-direction: column;
-        gap: 10px;
+        align-items: flex-start;
+        gap: 12px;
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
         min-width: 0;
+        max-width: 100%;
+        overflow-x: auto;
       }
 
       .top-badges {
@@ -515,6 +519,16 @@ a {
 .tab:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
+}
+
+.dataset-version-tabs {
+  flex: 0 0 auto;
+}
+
+.dataset-version-tab:disabled {
+  background: var(--surface-soft);
+  color: color-mix(in srgb, var(--muted) 52%, transparent 48%);
+  cursor: not-allowed;
 }
 
 .meta {

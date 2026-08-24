@@ -2,7 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const tasksRoot = path.join(root, "tasks", "data");
+const dataRoot = path.join(root, "tasks", "data");
+const versionFlag = process.argv.indexOf("--version");
+const version = versionFlag >= 0 ? process.argv[versionFlag + 1] : "v1.0";
+if (!/^v\d+\.\d+$/.test(version)) {
+  throw new Error("Use --version with a value such as v1.0 or v1.1.");
+}
+const tasksRoot = version === "v1.0" ? dataRoot : path.join(dataRoot, version);
 const splitOrder = ["fast", "lite", "full"];
 const splitRoots = {
   fast: path.join(tasksRoot, "fast"),
@@ -98,6 +104,7 @@ for (const [split, splitDir] of Object.entries(splitRoots)) {
     const normalized = normalizeText(md);
     const preview = normalized.slice(0, 420);
     const previewMd = previewMarkdown(md, 360, 8);
+    const statementBase = version === "v1.0" ? `./data/${split}` : `./data/${version}/${split}`;
 
     items.push({
       id,
@@ -108,7 +115,7 @@ for (const [split, splitDir] of Object.entries(splitRoots)) {
       title: caseName,
       preview,
       preview_md: previewMd,
-      statement_path: `./data/${split}/${parts.join("/")}`,
+      statement_path: `${statementBase}/${parts.join("/")}`,
     });
   }
 }
@@ -123,6 +130,7 @@ const counts = Object.fromEntries(splitOrder.map((split) => [split, items.filter
 
 const payload = {
   generated_at: new Date().toISOString(),
+  version,
   counts: {
     ...counts,
     total: items.length,

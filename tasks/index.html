@@ -112,12 +112,49 @@
         margin: 34px auto 0;
       }
 
+      .tasks-title-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
       .tasks-hero h1 {
         margin: 0;
         font-family: var(--font-head);
         font-size: clamp(1.38rem, 2.45vw, 2rem);
         line-height: 1.08;
         letter-spacing: -0.02em;
+      }
+
+      .tasks-version-tabs {
+        display: inline-flex;
+        align-items: stretch;
+        border: 1px solid var(--line);
+        background: var(--surface-soft);
+      }
+
+      .version-tab {
+        min-width: 66px;
+        height: 32px;
+        padding: 0 12px;
+        border: 0;
+        border-right: 1px solid var(--line);
+        background: transparent;
+        color: var(--muted);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .version-tab:last-child {
+        border-right: 0;
+      }
+
+      .version-tab[aria-selected="true"] {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: inset 0 -2px 0 var(--accent-soft);
       }
 
       .tasks-hero p {
@@ -175,6 +212,7 @@
 
       .filter-field select:focus-visible,
       .filter-field input:focus-visible,
+      .version-tab:focus-visible,
       .clear-btn:focus-visible,
       .page-btn:focus-visible,
       .task-link:focus-visible,
@@ -419,6 +457,10 @@
           grid-template-columns: 1fr;
         }
 
+        .tasks-title-row {
+          gap: 12px;
+        }
+
         .filter-field,
         .clear-wrap {
           border-right: 0;
@@ -498,7 +540,13 @@
 
       <main>
         <section class="tasks-hero">
-          <h1>Tasks</h1>
+          <div class="tasks-title-row">
+            <h1>Tasks</h1>
+            <div class="tasks-version-tabs" role="tablist" aria-label="Dataset version">
+              <button class="version-tab" type="button" role="tab" data-version="v1.1" aria-selected="true">v1.1</button>
+              <button class="version-tab" type="button" role="tab" data-version="v1.0" aria-selected="false">v1.0</button>
+            </div>
+          </div>
           <p>
             Browse all FeatureBench problem statements copied into this site, with filters for split and repository.
           </p>
@@ -589,9 +637,22 @@
         const pageInfo = document.getElementById("pageInfo");
         const tasksEmpty = document.getElementById("tasksEmpty");
         const cardTemplate = document.getElementById("taskCardTemplate");
+        const versionTabs = Array.from(document.querySelectorAll(".version-tab"));
+
+        const supportedVersions = new Set(["v1.0", "v1.1"]);
+        const taskIndexes = {
+          "v1.0": "./data/tasks_index.json",
+          "v1.1": "./data/v1.1/tasks_index.json",
+        };
+
+        function versionFromLocation() {
+          const requested = new URLSearchParams(window.location.search).get("version");
+          return supportedVersions.has(requested) ? requested : "v1.1";
+        }
 
         const state = {
           payload: null,
+          version: versionFromLocation(),
           split: "all",
           repo: "all",
           query: "",
@@ -764,6 +825,7 @@
             const viewerParams = new URLSearchParams({
               path: item.statement_path,
               title: item.title || item.case,
+              version: state.version,
               split: item.split,
               repo: item.repo,
               case: item.case,
@@ -810,9 +872,50 @@
           onFilterChange();
         }
 
+        function syncVersionTabs() {
+          for (const tab of versionTabs) {
+            const selected = tab.dataset.version === state.version;
+            tab.setAttribute("aria-selected", selected ? "true" : "false");
+            tab.tabIndex = selected ? 0 : -1;
+          }
+        }
+
+        function updateVersionUrl(version, replace = false) {
+          const url = new URL(window.location.href);
+          url.searchParams.set("version", version);
+          window.history[replace ? "replaceState" : "pushState"]({ version }, "", url);
+        }
+
+        function selectVersion(version, options = {}) {
+          const nextVersion = supportedVersions.has(version) ? version : "v1.1";
+          const changed = state.version !== nextVersion;
+          state.version = nextVersion;
+          state.page = 1;
+          syncVersionTabs();
+
+          if (options.updateUrl !== false && (changed || options.replaceUrl)) {
+            updateVersionUrl(nextVersion, Boolean(options.replaceUrl));
+          }
+
+          if (changed || !state.payload || options.reload) {
+            loadTaskIndex();
+          }
+        }
+
+        let taskIndexRequest = 0;
         async function loadTaskIndex() {
+          const requestId = ++taskIndexRequest;
+          const requestedVersion = state.version;
+          const indexPath = taskIndexes[requestedVersion];
+          state.payload = null;
+          tasksLoading.hidden = false;
+          tasksLoading.textContent = "Reading " + requestedVersion + " task index...";
+          tasksGrid.hidden = true;
+          tasksPagination.hidden = true;
+          tasksEmpty.hidden = true;
+
           try {
-            const response = await fetch("./data/tasks_index.json", { cache: "no-store" });
+            const response = await fetch(indexPath, { cache: "no-store" });
             if (!response.ok) {
               throw new Error("Failed to load task index: HTTP " + response.status);
             }
@@ -821,15 +924,20 @@
             if (!payload || !Array.isArray(payload.items)) {
               throw new Error("Invalid task index payload.");
             }
+            if (requestId !== taskIndexRequest || requestedVersion !== state.version) {
+              return;
+            }
 
             state.payload = payload;
             buildRepoFilterOptions(payload.repos || []);
             tasksLoading.hidden = true;
             renderTasks();
           } catch (error) {
+            if (requestId !== taskIndexRequest || requestedVersion !== state.version) {
+              return;
+            }
             tasksLoading.hidden = false;
-            tasksLoading.textContent =
-              "Could not load tasks/data/tasks_index.json. Run: node tasks/scripts/build_tasks_index.mjs";
+            tasksLoading.textContent = "Could not load the " + requestedVersion + " task index.";
             tasksMeta.textContent = "Task index unavailable.";
             tasksGrid.hidden = true;
             tasksPagination.hidden = true;
@@ -849,7 +957,23 @@
         pagePrev.addEventListener("click", goPrevPage);
         pageNext.addEventListener("click", goNextPage);
 
-        loadTaskIndex();
+        versionTabs.forEach((tab, index) => {
+          tab.addEventListener("click", () => selectVersion(tab.dataset.version || "v1.1"));
+          tab.addEventListener("keydown", (event) => {
+            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+            event.preventDefault();
+            const direction = event.key === "ArrowRight" ? 1 : -1;
+            const next = (index + direction + versionTabs.length) % versionTabs.length;
+            versionTabs[next].focus();
+            versionTabs[next].click();
+          });
+        });
+
+        window.addEventListener("popstate", () => {
+          selectVersion(versionFromLocation(), { updateUrl: false });
+        });
+
+        selectVersion(state.version, { replaceUrl: true, reload: true });
       })();
     </script>
   </body>

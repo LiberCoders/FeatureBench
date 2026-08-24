@@ -327,6 +327,7 @@
         const themeStorageKey = "featurebench.theme";
 
         const rawLink = document.getElementById("rawLink");
+        const backToTasks = document.getElementById("backToTasks");
         const taskMeta = document.getElementById("taskMeta");
         const taskTitle = document.getElementById("taskTitle");
         const markdownContent = document.getElementById("markdownContent");
@@ -540,6 +541,7 @@
           }
 
           const split = params.get("split") || "";
+          const version = params.get("version");
           const repo = params.get("repo") || "";
           const caseId = params.get("case") || "";
           const title = params.get("title") || caseId || "Task statement";
@@ -549,6 +551,9 @@
             [split ? split.toUpperCase() : "", repo, caseId].filter(Boolean).join("  |  ") || "Task";
 
           rawLink.href = safePath;
+          if (version === "v1.0" || version === "v1.1") {
+            backToTasks.href = "./?version=" + encodeURIComponent(version);
+          }
 
           try {
             const response = await fetch(safePath, { cache: "no-store" });

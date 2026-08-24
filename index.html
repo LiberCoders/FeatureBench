@@ -45,14 +45,6 @@
         --accent-soft: #2f5dff;
         --focus: #2f5dff;
         --hero-title-soft: #8f6325;
-        --chart-grid: color-mix(in srgb, #9aa8c0 22%, transparent 78%);
-        --chart-axis: color-mix(in srgb, #68758c 38%, transparent 62%);
-        --chart-text: color-mix(in srgb, #4f5d73 90%, #0f1728 10%);
-        --chart-bar: #aeb9d9;
-        --chart-bar-active: #899dcd;
-        --chart-line: #355cb4;
-        --chart-point-fill: #f7f9ff;
-        --chart-point-stroke: #2f56ad;
         --card-shadow: 0 16px 46px rgba(15, 23, 40, 0.08);
         --hero-wave-fill: rgba(193, 202, 217, 0.3);
         --hero-wave-shadow: rgba(124, 136, 159, 0.26);
@@ -72,14 +64,6 @@
         --accent-soft: #8db0ff;
         --focus: #8db0ff;
         --hero-title-soft: #386aa6;
-        --chart-grid: color-mix(in srgb, #7d93b8 28%, transparent 72%);
-        --chart-axis: color-mix(in srgb, #9eb4da 36%, transparent 64%);
-        --chart-text: color-mix(in srgb, #b8c7e3 90%, #e8eefb 10%);
-        --chart-bar: #3f5f95;
-        --chart-bar-active: #567cc1;
-        --chart-line: #7aa5ff;
-        --chart-point-fill: #0f1a2d;
-        --chart-point-stroke: #85b0ff;
         --card-shadow: 0 22px 54px rgba(1, 4, 12, 0.45);
         --hero-wave-fill: rgba(58, 83, 123, 0.34);
         --hero-wave-shadow: rgba(109, 144, 206, 0.32);
@@ -191,16 +175,33 @@
         position: relative;
         isolation: isolate;
         padding-top: clamp(14px, 2.2vh, 28px);
-        padding-bottom: clamp(22px, 4.6vh, 48px);
+        padding-bottom: 0;
         overflow: hidden;
       }
 
       .hero::after {
-        content: none;
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -2;
+        pointer-events: none;
+        background:
+          radial-gradient(
+            680px 420px at 14% 28%,
+            color-mix(in srgb, var(--accent-soft) 7%, transparent),
+            transparent 72%
+          ),
+          radial-gradient(
+            760px 500px at 86% 64%,
+            color-mix(in srgb, var(--hero-title-soft) 5%, transparent),
+            transparent 76%
+          );
       }
 
       .hero-copy {
-        margin-top: clamp(48px, 10vh, 150px);
+        position: relative;
+        z-index: 1;
+        margin-top: clamp(36px, 7.2vh, 96px);
       }
 
       .kicker {
@@ -263,8 +264,8 @@
         position: absolute;
         left: -2%;
         right: -2%;
-        bottom: clamp(92px, 13vh, 220px);
-        height: clamp(54%, 60%, 68%);
+        bottom: clamp(-12px, -1vh, -4px);
+        height: clamp(58%, 65%, 72%);
         pointer-events: none;
         z-index: -1;
       }
@@ -298,46 +299,11 @@
         will-change: transform, opacity, filter;
       }
 
-      .stats {
-        margin-top: clamp(-118px, -11.5vh, -46px);
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
-      }
-
-      .stat-card {
-        padding: 20px;
-        border-radius: 14px;
-        border: 1px solid var(--line);
-        background: color-mix(in srgb, var(--surface) 92%, transparent 8%);
-        box-shadow: var(--card-shadow);
-      }
-
-      .stat-label {
-        margin: 0;
-        font-size: 14px;
-        line-height: 1.3;
-        font-weight: 700;
-        color: var(--muted);
-      }
-
-      .stat-value {
-        margin: 10px 0 6px;
-        font-family: var(--font-head);
-        font-size: clamp(2rem, 4vw, 2.35rem);
-        line-height: 1;
-        letter-spacing: -0.02em;
-      }
-
-      .stat-sub {
-        margin: 0;
-        font-size: 14px;
-        line-height: 1.45;
-        color: var(--muted);
-      }
-
       .resource-row {
-        margin-top: clamp(6px, 1.2vh, 12px);
+        position: relative;
+        z-index: 1;
+        margin-top: clamp(18px, 2.4vh, 28px);
+        margin-bottom: 0;
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
@@ -348,7 +314,9 @@
         padding: 0 14px;
         border-radius: 999px;
         border: 1px solid var(--line);
-        background: var(--surface);
+        background: color-mix(in srgb, var(--surface) 90%, transparent 10%);
+        box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 7%, transparent 93%);
+        backdrop-filter: blur(8px);
         display: inline-flex;
         align-items: center;
         gap: 8px;
@@ -682,22 +650,6 @@
         text-align: center;
       }
 
-      .story-media {
-        width: min(560px, 100%);
-        margin: 8px auto 0;
-        border: 0;
-        background: transparent;
-      }
-
-      .story-media img {
-        width: auto;
-        max-width: 100%;
-        max-height: 380px;
-        height: auto;
-        display: block;
-        margin: 0 auto;
-      }
-
       .story-caption {
         margin: 10px auto 0;
         max-width: min(560px, 100%);
@@ -706,418 +658,6 @@
         color: var(--muted);
         font-size: 0.86rem;
         line-height: 1.45;
-        text-align: center;
-      }
-
-      .story-media-row {
-        width: min(860px, 100%);
-        margin: 8px auto 0;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-        align-items: start;
-      }
-
-      .story-media-row .story-media {
-        width: 100%;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .story-media-row .story-media img {
-        width: 100%;
-        height: 280px;
-        max-height: none;
-        object-fit: contain;
-        object-position: center top;
-      }
-
-      .story-media-row .story-caption {
-        max-width: none;
-        margin: 8px 0 0;
-      }
-
-      .story-facts {
-        margin-top: 6px;
-        display: grid;
-        grid-template-columns: repeat(4, minmax(0, max-content));
-        gap: 8px;
-        align-items: center;
-      }
-
-      .story-fact {
-        border: 1px solid var(--line);
-        background: color-mix(in srgb, var(--surface) 95%, transparent 5%);
-        padding: 6px 10px;
-        display: inline-flex;
-        align-items: baseline;
-        gap: 6px;
-      }
-
-      .fact-value {
-        margin: 0;
-        font-family: var(--font-head);
-        font-size: 1rem;
-        line-height: 1;
-      }
-
-      .fact-label {
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.78rem;
-        line-height: 1.2;
-      }
-
-      .paper-table-wrap {
-        width: min(1320px, 100%);
-        margin: 8px auto 0;
-        overflow-x: auto;
-      }
-
-      .paper-table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 820px;
-      }
-
-      .paper-table th,
-      .paper-table td {
-        border: 1px solid var(--line);
-        padding: 8px 10px;
-        font-size: 0.86rem;
-        line-height: 1.35;
-        text-align: left;
-        white-space: nowrap;
-      }
-
-      .paper-table th {
-        background: color-mix(in srgb, var(--surface) 78%, var(--line) 22%);
-        color: var(--text);
-        font-weight: 700;
-      }
-
-      .paper-table thead tr:first-child th {
-        background: color-mix(in srgb, var(--surface) 88%, var(--line) 12%);
-        font-size: 1rem;
-        letter-spacing: 0.01em;
-        text-align: center;
-        border-bottom: 0;
-        padding-top: 10px;
-        padding-bottom: 6px;
-      }
-
-      .paper-table thead tr:first-child th.paper-col-stub {
-        text-align: left;
-        vertical-align: middle;
-        padding-top: 0;
-        padding-bottom: 0;
-      }
-
-      .paper-table thead tr:nth-child(2) th {
-        background: color-mix(in srgb, var(--surface) 80%, var(--line) 20%);
-        border-top: 0;
-      }
-
-      .paper-table thead tr:first-child th.paper-group-head {
-        position: relative;
-      }
-
-      .paper-table thead tr:first-child th.paper-group-head::after {
-        content: "";
-        position: absolute;
-        left: 20px;
-        right: 20px;
-        bottom: 5px;
-        height: 1px;
-        background: color-mix(in srgb, var(--line) 72%, transparent 28%);
-        opacity: 0.62;
-      }
-
-      .paper-table .paper-group-start {
-        border-left: 1px solid var(--line);
-      }
-
-      .paper-table td:nth-child(n + 3),
-      .paper-table th.paper-metric {
-        text-align: center;
-      }
-
-      .paper-table td:nth-child(3),
-      .paper-table td:nth-child(6) {
-        border-left: 1px solid var(--line);
-      }
-
-      .paper-table tbody tr:nth-child(even) {
-        background: color-mix(in srgb, var(--surface) 86%, transparent 14%);
-      }
-
-      .paper-footnote {
-        margin: 8px 0 0;
-        color: var(--muted);
-        font-size: 0.8rem;
-        line-height: 1.35;
-      }
-
-      .paper-footnote sup {
-        font-size: 0.72em;
-      }
-
-      .results-panel {
-        --results-body-size: clamp(1.2rem, 1.46vw, 1.34rem);
-        --results-body-line-height: 1.7;
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        min-height: 100%;
-        gap: 6px;
-      }
-
-      .results-panel .story-kicker {
-        font-size: clamp(1.46rem, 2.3vw, 1.98rem);
-        letter-spacing: 0.08em;
-        font-weight: 800;
-        color: color-mix(in srgb, var(--text) 88%, var(--muted) 12%);
-        margin-bottom: 2px;
-        width: 100%;
-        max-width: 1320px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      .results-panel .results-body {
-        flex: 1;
-        display: grid;
-        align-content: center;
-        gap: 10px;
-      }
-
-      .results-panel h3 {
-        font-size: clamp(1.42rem, 1.95vw, 1.82rem);
-        line-height: 1.38;
-        margin: 0;
-        color: var(--text);
-        font-weight: 700;
-        max-width: min(96ch, 100%);
-      }
-
-      .results-panel .results-body > h3,
-      .results-panel .results-body > p,
-      .results-panel .story-facts,
-      .results-panel .paper-table-wrap,
-      .results-panel .paper-footnote {
-        width: 100%;
-        max-width: 1320px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      .results-panel .results-body > p:not(.paper-footnote) {
-        font-size: var(--results-body-size);
-        line-height: var(--results-body-line-height);
-      }
-
-      .results-panel .story-facts {
-        margin-top: 10px;
-      }
-
-      .results-panel .results-body > p.paper-footnote {
-        font-size: clamp(1rem, 1.2vw, 1.12rem);
-        line-height: 1.4;
-      }
-
-      .results-screen {
-        display: flex;
-        align-items: stretch;
-      }
-
-      .results-screen > .story-panel {
-        width: 100%;
-      }
-
-      .analysis-screen {
-        display: flex;
-        align-items: stretch;
-      }
-
-      .analysis-screen > .story-panel {
-        width: 100%;
-      }
-
-      .analysis-panel {
-        --analysis-body-size: clamp(1.2rem, 1.46vw, 1.34rem);
-        --analysis-body-line-height: 1.7;
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        min-height: 100%;
-        gap: 6px;
-      }
-
-      .analysis-panel .story-kicker {
-        font-size: clamp(1.46rem, 2.3vw, 1.98rem);
-        letter-spacing: 0.08em;
-        font-weight: 800;
-        color: color-mix(in srgb, var(--text) 88%, var(--muted) 12%);
-        margin-bottom: 2px;
-        width: 100%;
-        max-width: 1320px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      .analysis-panel .analysis-body {
-        flex: 1;
-        display: grid;
-        align-content: center;
-        gap: 12px;
-      }
-
-      .analysis-panel h3 {
-        font-size: clamp(1.42rem, 1.95vw, 1.82rem);
-        line-height: 1.38;
-        margin: 0;
-        color: var(--text);
-        font-weight: 700;
-        max-width: min(96ch, 100%);
-      }
-
-      .analysis-panel .analysis-body > h3,
-      .analysis-panel .analysis-body > p,
-      .analysis-panel .analysis-chart-grid {
-        width: 100%;
-        max-width: 1320px;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      .analysis-panel .analysis-body > p {
-        font-size: var(--analysis-body-size);
-        line-height: var(--analysis-body-line-height);
-        max-width: min(98ch, 100%);
-      }
-
-      .analysis-chart-grid {
-        margin-top: 2px;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-      }
-
-      .analysis-chart-card {
-        border: 1px solid var(--line);
-        background:
-          linear-gradient(
-            180deg,
-            color-mix(in srgb, var(--surface) 97%, transparent 3%) 0%,
-            color-mix(in srgb, var(--surface) 90%, transparent 10%) 100%
-          );
-        padding: 10px 12px 10px;
-        display: grid;
-        gap: 8px;
-      }
-
-      .analysis-chart-title {
-        margin: 0;
-        font-family: var(--font-head);
-        font-size: 1.02rem;
-        line-height: 1.25;
-        font-weight: 700;
-        letter-spacing: 0.005em;
-        text-align: center;
-      }
-
-      .analysis-chart-wrap {
-        position: relative;
-      }
-
-      .analysis-chart-svg {
-        width: 100%;
-        height: auto;
-        display: block;
-      }
-
-      .analysis-grid-line {
-        stroke: var(--chart-grid);
-        stroke-width: 1;
-      }
-
-      .analysis-axis {
-        stroke: var(--chart-axis);
-        stroke-width: 1.15;
-      }
-
-      .analysis-axis-text {
-        fill: var(--chart-text);
-        font-family: var(--font-ui);
-        font-size: 12px;
-      }
-
-      .analysis-axis-label {
-        text-anchor: middle;
-        dominant-baseline: hanging;
-      }
-
-      .analysis-bar {
-        fill: var(--chart-bar);
-        transition: fill 160ms ease, opacity 160ms ease, transform 160ms ease;
-        transform-origin: center bottom;
-      }
-
-      .analysis-bar.active {
-        fill: var(--chart-bar-active);
-      }
-
-      .analysis-line {
-        fill: none;
-        stroke: var(--chart-line);
-        stroke-width: 2.35;
-      }
-
-      .analysis-point {
-        fill: var(--chart-point-fill);
-        stroke: var(--chart-point-stroke);
-        stroke-width: 2;
-        transition: fill 160ms ease, stroke-width 160ms ease;
-      }
-
-      .analysis-point.active {
-        fill: color-mix(in srgb, var(--chart-point-fill) 72%, var(--chart-point-stroke) 28%);
-        stroke-width: 2.4;
-      }
-
-      .analysis-hit {
-        fill: transparent;
-        cursor: pointer;
-      }
-
-      .analysis-tooltip {
-        position: absolute;
-        left: 0;
-        top: 0;
-        transform: translate(-9999px, -9999px);
-        z-index: 3;
-        pointer-events: none;
-        padding: 7px 9px;
-        border: 1px solid var(--line);
-        background: color-mix(in srgb, var(--surface) 94%, transparent 6%);
-        color: var(--text);
-        font-family: "SFMono-Regular", Menlo, Consolas, Monaco, "Liberation Mono", monospace;
-        font-size: 12px;
-        line-height: 1.25;
-        white-space: nowrap;
-      }
-
-      .analysis-tooltip.visible {
-        transform: translate(0, 0);
-      }
-
-      .analysis-chart-note {
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.84rem;
-        line-height: 1.4;
         text-align: center;
       }
 
@@ -1351,35 +891,13 @@
           gap: 8px;
         }
 
-        .results-screen {
-          align-items: flex-start;
-        }
-
         .intro-fold {
           min-height: auto;
         }
 
-        .stats {
-          margin-top: clamp(10px, 1.8vh, 18px);
-          grid-template-columns: 1fr;
-        }
-
         .hero-wave {
-          bottom: clamp(34px, 7vh, 110px);
-          height: clamp(52%, 58%, 66%);
-        }
-
-        .story-facts {
-          grid-template-columns: repeat(2, minmax(0, max-content));
-        }
-
-        .story-media-row {
-          grid-template-columns: 1fr;
-        }
-
-        .story-media-row .story-media img {
-          height: auto;
-          max-height: 340px;
+          bottom: 0;
+          height: clamp(56%, 62%, 70%);
         }
 
         .pipeline-layout {
@@ -1407,9 +925,6 @@
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
-        .analysis-chart-grid {
-          grid-template-columns: 1fr;
-        }
       }
 
       @media (max-width: 780px) {
@@ -1436,6 +951,11 @@
           gap: 7px;
         }
 
+        .resource-row {
+          margin-top: 12px;
+          margin-bottom: 0;
+        }
+
         .resource-icon,
         .resource-icon svg,
         .resource-icon img {
@@ -1451,21 +971,12 @@
           padding-top: 22px;
         }
 
-        .story-facts {
-          grid-template-columns: 1fr;
-          justify-items: start;
-        }
-
         .citation-grid {
           grid-template-columns: 1fr;
         }
 
         .citation-card {
           min-height: 210px;
-        }
-
-        .analysis-chart-card {
-          padding: 9px 10px 9px;
         }
 
       }
@@ -1579,42 +1090,22 @@
               <p>
                 Tasks from real repositories, evaluated by executable tests.
               </p>
+              <section class="resource-row" id="resourceRow" data-reveal style="--delay: 260ms" aria-label="Project Links"></section>
             </div>
             <div class="hero-wave" aria-hidden="true">
               <svg viewBox="0 0 1200 340" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                   class="hero-wave-fill"
-                  d="M0 322 C160 316 320 304 500 286 C670 268 760 236 840 178 C915 122 990 86 1088 68 C1146 58 1182 52 1200 50 L1200 340 L0 340 Z"
+                  d="M0 228 C170 224 330 218 500 204 C660 192 760 168 840 134 C915 102 990 80 1088 64 C1146 54 1182 48 1200 46 L1200 340 L0 340 Z"
                 />
                 <path
                   class="hero-wave-shadow"
-                  d="M-10 322 C150 316 320 304 500 286 C670 268 760 236 840 178 C915 122 990 86 1088 68 C1146 58 1182 52 1210 50"
+                  d="M-10 228 C160 224 330 218 500 204 C660 192 760 168 840 134 C915 102 990 80 1088 64 C1146 54 1182 48 1210 46"
                 />
               </svg>
             </div>
           </section>
 
-          <section class="stats" data-reveal style="--delay: 200ms" aria-label="Leaderboard Snapshot">
-            <article class="stat-card">
-              <p class="stat-label">Best %Resolved (Full)</p>
-              <p class="stat-value" id="resolvedBest">--</p>
-              <p class="stat-sub" id="resolvedSub">Loading latest results...</p>
-            </article>
-
-            <article class="stat-card">
-              <p class="stat-label">Best %Passed (Full)</p>
-              <p class="stat-value" id="fullBest">--</p>
-              <p class="stat-sub" id="fullSub">Loading latest results...</p>
-            </article>
-
-            <article class="stat-card">
-              <p class="stat-label">Latest Update</p>
-              <p class="stat-value" id="latestDate">--</p>
-              <p class="stat-sub" id="latestSub">Reading local benchmark data...</p>
-            </article>
-          </section>
-
-          <section class="resource-row" id="resourceRow" data-reveal style="--delay: 260ms" aria-label="Project Links"></section>
         </section>
 
         <section class="screen more-content" id="more-content" aria-label="FeatureBench Overview">
@@ -1652,174 +1143,6 @@
           </article>
         </section>
 
-        <section class="screen results-screen" aria-label="Empirical Results">
-          <article class="story-panel results-panel no-divider" data-reveal style="--delay: 230ms">
-            <p class="story-kicker">Empirical Results</p>
-            <div class="results-body">
-              <h3>Frontier agents still face a large feature-development gap</h3>
-              <p>
-                In the paper baseline, Claude Opus 4.5 reaches 74.4% resolved on SWE-bench but only 11.0% on
-                FeatureBench Full, while GPT-5.1-Codex reaches 12.5%. The gap suggests current agents are still far from
-                stable real-world feature shipping.
-              </p>
-              <div class="story-facts" aria-label="Benchmark quick facts">
-                <div class="story-fact">
-                  <p class="fact-value">200</p>
-                  <p class="fact-label">Full tasks</p>
-                </div>
-                <div class="story-fact">
-                  <p class="fact-value">30</p>
-                  <p class="fact-label">Lite tasks</p>
-                </div>
-                <div class="story-fact">
-                  <p class="fact-value">3825</p>
-                  <p class="fact-label">Environments</p>
-                </div>
-                <div class="story-fact">
-                  <p class="fact-value">24</p>
-                  <p class="fact-label">Repositories</p>
-                </div>
-              </div>
-              <div class="paper-table-wrap" role="region" aria-label="Paper results table" tabindex="0">
-                <table class="paper-table">
-                  <thead>
-                    <tr>
-                      <th class="paper-col-stub" rowspan="2">Scaffold</th>
-                      <th class="paper-col-stub" rowspan="2">Model</th>
-                      <th class="paper-group-start paper-group-head" colspan="3">Lite</th>
-                      <th class="paper-group-start paper-group-head" colspan="3">Full</th>
-                    </tr>
-                    <tr>
-                      <th class="paper-metric paper-group-start">%Passed</th>
-                      <th class="paper-metric">%Resolved</th>
-                      <th class="paper-metric">Token I/O</th>
-                      <th class="paper-metric paper-group-start">%Passed</th>
-                      <th class="paper-metric">%Resolved</th>
-                      <th class="paper-metric">Token I/O</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>OpenHands</td>
-                      <td>Claude Opus 4.5</td>
-                      <td>67.18</td>
-                      <td>20.0</td>
-                      <td>8.8M / 29k</td>
-                      <td>45.53</td>
-                      <td>10.5</td>
-                      <td>8.1M / 29k</td>
-                    </tr>
-                    <tr>
-                      <td>Codex</td>
-                      <td>GPT-5.1-Codex (medium reasoning)</td>
-                      <td>60.22</td>
-                      <td>20.0</td>
-                      <td>6.6M / 39k</td>
-                      <td>41.66</td>
-                      <td>12.5</td>
-                      <td>6.3M / 39k</td>
-                    </tr>
-                    <tr>
-                      <td>Claude Code<sup>1</sup></td>
-                      <td>Claude Opus 4.5</td>
-                      <td>59.12</td>
-                      <td>20.0</td>
-                      <td>9.0M / 35k</td>
-                      <td>43.29</td>
-                      <td>11.0</td>
-                      <td>7.5M / 34k</td>
-                    </tr>
-                    <tr>
-                      <td>Gemini-CLI</td>
-                      <td>Gemini-3-Pro-Preview (low reasoning)</td>
-                      <td>43.38</td>
-                      <td>10.0</td>
-                      <td>2.6M / 13k</td>
-                      <td>32.43</td>
-                      <td>5.0</td>
-                      <td>2.5M / 12k</td>
-                    </tr>
-                    <tr>
-                      <td>OpenHands</td>
-                      <td>Gemini-3-Pro-Preview (low reasoning)</td>
-                      <td>45.14</td>
-                      <td>10.0</td>
-                      <td>6.0M / 41k</td>
-                      <td>30.08</td>
-                      <td>4.5</td>
-                      <td>6.2M / 40k</td>
-                    </tr>
-                    <tr>
-                      <td>OpenHands</td>
-                      <td>DeepSeek-V3.2</td>
-                      <td>35.94</td>
-                      <td>6.7</td>
-                      <td>3.1M / 24k</td>
-                      <td>26.30</td>
-                      <td>5.5</td>
-                      <td>3.1M / 23k</td>
-                    </tr>
-                    <tr>
-                      <td>OpenHands</td>
-                      <td>Qwen3-Coder-480B-A35B-Instruct</td>
-                      <td>38.31</td>
-                      <td>6.7</td>
-                      <td>2.6M / 16k</td>
-                      <td>24.55</td>
-                      <td>3.5</td>
-                      <td>2.0M / 14k</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <p class="paper-footnote"><sup>1</sup> Routing mode may route operations to different models (e.g., Claude Haiku), even if a specific model is selected.</p>
-            </div>
-          </article>
-        </section>
-
-        <section class="screen analysis-screen" aria-label="Complexity and Time Analysis">
-          <article class="story-panel analysis-panel no-divider" data-reveal style="--delay: 270ms">
-            <p class="story-kicker">Complexity & Time Analysis</p>
-            <div class="analysis-body">
-              <h3>Pass rate changes across code complexity bands and task creation periods</h3>
-              <p>
-                We analyze two empirical slices: pass rate versus pending implementation lines, and pass rate versus task creation time.
-              </p>
-              <div class="analysis-chart-grid" aria-label="Interactive pass-rate charts">
-                <figure class="analysis-chart-card">
-                  <figcaption class="analysis-chart-title">Pass Rate vs Lines</figcaption>
-                  <div class="analysis-chart-wrap">
-                    <svg
-                      class="analysis-chart-svg"
-                      id="passRateLinesChart"
-                      viewBox="0 0 700 360"
-                      role="img"
-                      aria-label="Pass rate by lines of pending implementation"
-                    ></svg>
-                    <div class="analysis-tooltip" id="passRateLinesTooltip" aria-live="polite"></div>
-                  </div>
-                  <p class="analysis-chart-note">Bins reflect ranges of pending implementation lines.</p>
-                </figure>
-
-                <figure class="analysis-chart-card">
-                  <figcaption class="analysis-chart-title">Pass Rate vs Create Time</figcaption>
-                  <div class="analysis-chart-wrap">
-                    <svg
-                      class="analysis-chart-svg"
-                      id="passRateCreateTimeChart"
-                      viewBox="0 0 700 360"
-                      role="img"
-                      aria-label="Pass rate by task creation period"
-                    ></svg>
-                    <div class="analysis-tooltip" id="passRateCreateTimeTooltip" aria-live="polite"></div>
-                  </div>
-                  <p class="analysis-chart-note">Quarterly cohorts from pre-2023 through 2025 Q4.</p>
-                </figure>
-              </div>
-            </div>
-          </article>
-        </section>
-
         <section class="screen citation-screen" aria-label="Citation">
           <article class="story-panel citation-panel no-divider" data-reveal style="--delay: 350ms">
             <p class="story-kicker">Citation</p>
@@ -1830,14 +1153,11 @@
                   <h4>BibTeX</h4>
                   <button class="citation-copy-btn" type="button" data-copy-target="cite-bibtex">Copy</button>
                 </div>
-                <pre class="citation-code" id="cite-bibtex">@misc{zhou2026featurebenchbenchmarkingagenticcoding,
+                <pre class="citation-code" id="cite-bibtex">@article{zhou2026featurebench,
   title={FeatureBench: Benchmarking Agentic Coding for Complex Feature Development},
-  author={Qixing Zhou and Jiacheng Zhang and Haiyang Wang and Rui Hao and Jiahe Wang and Minghao Han and Yuxue Yang and Shuzhe Wu and Feiyang Pan and Lue Fan and Dandan Tu and Zhaoxiang Zhang},
-  year={2026},
-  eprint={2602.10975},
-  archivePrefix={arXiv},
-  primaryClass={cs.SE},
-  url={https://arxiv.org/abs/2602.10975}
+  author={Zhou, Qixing and Zhang, Jiacheng and Wang, Haiyang and Hao, Rui and Wang, Jiahe and Han, Minghao and Yang, Yuxue and Wu, Shuzhe and Pan, Feiyang and Fan, Lue and others},
+  journal={arXiv preprint arXiv:2602.10975},
+  year={2026}
 }</pre>
               </section>
 
@@ -1846,7 +1166,7 @@
                   <h4>APA</h4>
                   <button class="citation-copy-btn" type="button" data-copy-target="cite-apa">Copy</button>
                 </div>
-                <pre class="citation-code" id="cite-apa"></pre>
+                <pre class="citation-code" id="cite-apa">Zhou, Q., Zhang, J., Wang, H., Hao, R., Wang, J., Han, M., Yang, Y., Wu, S., Pan, F., Fan, L., Tu, D., &amp; Zhang, Z. (2026). FeatureBench: Benchmarking agentic coding for complex feature development. arXiv. https://doi.org/10.48550/arXiv.2602.10975</pre>
               </section>
 
               <section class="citation-card" aria-label="MLA citation">
@@ -1854,7 +1174,7 @@
                   <h4>MLA</h4>
                   <button class="citation-copy-btn" type="button" data-copy-target="cite-mla">Copy</button>
                 </div>
-                <pre class="citation-code" id="cite-mla"></pre>
+                <pre class="citation-code" id="cite-mla">Zhou, Qixing, et al. “FeatureBench: Benchmarking Agentic Coding for Complex Feature Development.” arXiv, 2026, https://doi.org/10.48550/arXiv.2602.10975.</pre>
               </section>
             </div>
             <div class="visitor-counter-strip" aria-live="polite">
@@ -1900,68 +1220,6 @@
             stored = "light";
           }
           applyTheme(stored);
-        }
-
-        function formatPercent(value) {
-          const number = Number(value);
-          if (!Number.isFinite(number)) return "--";
-          return `${number.toFixed(2)}%`;
-        }
-
-        function formatDate(isoDate) {
-          if (!isoDate) return "--";
-          const date = new Date(`${isoDate}T00:00:00Z`);
-          if (Number.isNaN(date.getTime())) return isoDate;
-          return date.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "2-digit",
-            timeZone: "UTC",
-          });
-        }
-
-        function maxNumeric(rows, key) {
-          let best = null;
-          for (const row of rows) {
-            const value = Number(row?.[key]);
-            if (!Number.isFinite(value)) continue;
-            if (best === null || value > best) best = value;
-          }
-          return best;
-        }
-
-        async function loadSnapshot() {
-          try {
-            const [liteRes, fullRes] = await Promise.all([
-              fetch("./leaderboard/data/lite.json", { cache: "no-store" }),
-              fetch("./leaderboard/data/full.json", { cache: "no-store" }),
-            ]);
-            if (!liteRes.ok || !fullRes.ok) throw new Error("failed to fetch data");
-
-            const [liteRows, fullRows] = await Promise.all([liteRes.json(), fullRes.json()]);
-            const lite = Array.isArray(liteRows) ? liteRows : [];
-            const full = Array.isArray(fullRows) ? fullRows : [];
-
-            const fullResolvedBest = maxNumeric(full, "resolved");
-            const fullBest = maxNumeric(full, "passed");
-            const latestIso = [...lite, ...full]
-              .map((item) => String(item?.date || ""))
-              .filter(Boolean)
-              .sort()
-              .at(-1);
-
-            document.getElementById("resolvedBest").textContent = formatPercent(fullResolvedBest);
-            document.getElementById("fullBest").textContent = formatPercent(fullBest);
-            document.getElementById("latestDate").textContent = formatDate(latestIso);
-
-            document.getElementById("resolvedSub").textContent = `${full.length} runs in full split`;
-            document.getElementById("fullSub").textContent = `${full.length} runs in full split`;
-            document.getElementById("latestSub").textContent = "Auto-read from leaderboard data";
-          } catch {
-            document.getElementById("resolvedSub").textContent = "Unable to load full data";
-            document.getElementById("fullSub").textContent = "Unable to load full data";
-            document.getElementById("latestSub").textContent = "Serve via HTTP to load snapshot";
-          }
         }
 
         function iconMarkup(label) {
@@ -2211,271 +1469,6 @@
           });
         }
 
-        function initComplexityCharts() {
-          const linesRaw = [
-            [[0, 400], 40.18],
-            [[400, 800], 31.96],
-            [[800, 1200], 15.47],
-            [[1200, 1600], 14.61],
-            [[1600, 2000], 17.96],
-            [[2000, 2400], 16.2],
-            [[2400, 2800], 2.28],
-            [[3200, 3600], 10.19],
-            [[3600, 4000], 12.98],
-            [[4000, 4400], 1.19],
-          ];
-
-          const createTimeRaw = [
-            ["<2023", 45.72],
-            ["2023 Q1", 43.35],
-            ["2023 Q2", 34.16],
-            ["2023 Q3", 44.95],
-            ["2023 Q4", 40.2],
-            ["2024 Q1", 43.5],
-            ["2024 Q2", 47.36],
-            ["2024 Q3", 54.14],
-            ["2024 Q4", 40.38],
-            ["2025 Q1", 29.53],
-            ["2025 Q2", 48.01],
-            ["2025 Q3", 51.76],
-            ["2025 Q4", 65.92],
-          ];
-
-          const linesData = linesRaw.map(([range, value]) => ({
-            label: `${range[0]}-${range[1]}`,
-            value: Number(value),
-          }));
-
-          const createTimeData = createTimeRaw.map(([label, value]) => ({
-            label: String(label),
-            value: Number(value),
-          }));
-
-          renderPassRateChart({
-            svgId: "passRateLinesChart",
-            tooltipId: "passRateLinesTooltip",
-            data: linesData,
-          });
-
-          renderPassRateChart({
-            svgId: "passRateCreateTimeChart",
-            tooltipId: "passRateCreateTimeTooltip",
-            data: createTimeData,
-          });
-        }
-
-        function renderPassRateChart({ svgId, tooltipId, data }) {
-          const svg = document.getElementById(svgId);
-          const tooltip = document.getElementById(tooltipId);
-          if (!svg || !tooltip || !Array.isArray(data) || !data.length) return;
-
-          const NS = "http://www.w3.org/2000/svg";
-          const width = 700;
-          const height = 360;
-          const margin = { top: 16, right: 18, bottom: 92, left: 54 };
-          const innerW = width - margin.left - margin.right;
-          const innerH = height - margin.top - margin.bottom;
-
-          const values = data.map((item) => Number(item.value) || 0);
-          const maxVal = Math.max(...values, 0);
-          const stepY = maxVal > 60 ? 20 : 10;
-          const yMax = Math.max(stepY, Math.ceil((maxVal * 1.15) / stepY) * stepY);
-          const yTicks = Math.floor(yMax / stepY);
-
-          const band = innerW / data.length;
-          const barW = band * 0.62;
-          const labelAngle = data.length > 11 ? -30 : -24;
-          const pointRadius = 4.1;
-          const activePointRadius = 5.25;
-
-          function yScale(value) {
-            return margin.top + innerH - (value / yMax) * innerH;
-          }
-
-          function xCenter(index) {
-            return margin.left + band * index + band * 0.5;
-          }
-
-          function createSvg(tag, attrs = {}) {
-            const node = document.createElementNS(NS, tag);
-            for (const [key, value] of Object.entries(attrs)) {
-              node.setAttribute(key, String(value));
-            }
-            return node;
-          }
-
-          function showTooltip(text, clientX, clientY) {
-            tooltip.textContent = text;
-            tooltip.classList.add("visible");
-
-            const wrap = svg.parentElement;
-            if (!wrap) return;
-            const wrapRect = wrap.getBoundingClientRect();
-            const tipRect = tooltip.getBoundingClientRect();
-
-            let x = 10;
-            let y = 10;
-            if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
-              x = clientX - wrapRect.left + 12;
-              y = clientY - wrapRect.top - tipRect.height - 12;
-            }
-
-            if (y < 8) y = clientY - wrapRect.top + 12;
-            const maxX = Math.max(8, wrap.clientWidth - tipRect.width - 8);
-            const maxY = Math.max(8, wrap.clientHeight - tipRect.height - 8);
-            const clampedX = Math.max(8, Math.min(x, maxX));
-            const clampedY = Math.max(8, Math.min(y, maxY));
-            tooltip.style.left = `${clampedX}px`;
-            tooltip.style.top = `${clampedY}px`;
-          }
-
-          function hideTooltip() {
-            tooltip.classList.remove("visible");
-            tooltip.style.left = "0px";
-            tooltip.style.top = "0px";
-          }
-
-          svg.innerHTML = "";
-
-          for (let i = 0; i <= yTicks; i += 1) {
-            const value = i * stepY;
-            const y = yScale(value);
-            svg.appendChild(
-              createSvg("line", {
-                x1: margin.left,
-                y1: y,
-                x2: width - margin.right,
-                y2: y,
-                class: "analysis-grid-line",
-              })
-            );
-
-            const yText = createSvg("text", {
-              x: margin.left - 10,
-              y: y + 4,
-              "text-anchor": "end",
-              class: "analysis-axis-text",
-            });
-            yText.textContent = `${value.toFixed(0)}%`;
-            svg.appendChild(yText);
-          }
-
-          svg.appendChild(
-            createSvg("line", {
-              x1: margin.left,
-              y1: margin.top + innerH,
-              x2: width - margin.right,
-              y2: margin.top + innerH,
-              class: "analysis-axis",
-            })
-          );
-
-          svg.appendChild(
-            createSvg("line", {
-              x1: margin.left,
-              y1: margin.top,
-              x2: margin.left,
-              y2: margin.top + innerH,
-              class: "analysis-axis",
-            })
-          );
-
-          const bars = [];
-          const points = [];
-          const linePoints = [];
-
-          data.forEach((item, index) => {
-            const cx = xCenter(index);
-            const y = yScale(item.value);
-            const x = cx - barW / 2;
-
-            const bar = createSvg("rect", {
-              x,
-              y,
-              width: barW,
-              height: Math.max(0, margin.top + innerH - y),
-              class: "analysis-bar",
-            });
-            svg.appendChild(bar);
-            bars.push(bar);
-
-            const label = createSvg("text", {
-              x: cx,
-              y: margin.top + innerH + 15,
-              class: "analysis-axis-text analysis-axis-label",
-              transform: `rotate(${labelAngle} ${cx} ${margin.top + innerH + 15})`,
-            });
-            label.textContent = item.label;
-            svg.appendChild(label);
-
-            linePoints.push([cx, y]);
-          });
-
-          const linePath = createSvg("path", {
-            d: linePoints.map((point, index) => `${index ? "L" : "M"} ${point[0]} ${point[1]}`).join(" "),
-            class: "analysis-line",
-          });
-          svg.appendChild(linePath);
-
-          linePoints.forEach((point) => {
-            const node = createSvg("circle", {
-              cx: point[0],
-              cy: point[1],
-              r: pointRadius,
-              class: "analysis-point",
-            });
-            svg.appendChild(node);
-            points.push(node);
-          });
-
-          function setActive(index) {
-            bars.forEach((bar, i) => bar.classList.toggle("active", i === index));
-            points.forEach((point, i) => {
-              const active = i === index;
-              point.classList.toggle("active", active);
-              point.setAttribute("r", active ? String(activePointRadius) : String(pointRadius));
-            });
-          }
-
-          function clearActive() {
-            bars.forEach((bar) => bar.classList.remove("active"));
-            points.forEach((point) => {
-              point.classList.remove("active");
-              point.setAttribute("r", String(pointRadius));
-            });
-          }
-
-          data.forEach((item, index) => {
-            const hit = createSvg("rect", {
-              x: margin.left + band * index,
-              y: margin.top,
-              width: band,
-              height: innerH,
-              class: "analysis-hit",
-              "aria-label": `${item.label}: ${item.value.toFixed(2)} percent`,
-            });
-
-            const text = `${item.label}: ${item.value.toFixed(2)}%`;
-
-            hit.addEventListener("mouseenter", (event) => {
-              setActive(index);
-              showTooltip(text, event.clientX, event.clientY);
-            });
-
-            hit.addEventListener("mousemove", (event) => {
-              setActive(index);
-              showTooltip(text, event.clientX, event.clientY);
-            });
-
-            hit.addEventListener("mouseleave", () => {
-              clearActive();
-              hideTooltip();
-            });
-
-            svg.appendChild(hit);
-          });
-        }
-
         function initCitationCopy() {
           const buttons = Array.from(document.querySelectorAll(".citation-copy-btn"));
           if (!buttons.length) return;
@@ -2680,10 +1673,8 @@
         darkBtn.addEventListener("click", () => applyTheme("dark"));
 
         initScreenDots();
-        loadSnapshot();
         loadResources();
         initDatasetDonut();
-        initComplexityCharts();
         initCitationCopy();
       })();
     </script>
