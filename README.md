@@ -28,7 +28,7 @@ It provides a unified CLI to run inference, evaluation, and dataset generation.
 <!-- LEADERBOARD_START -->
 ## 🏆 Leaderboard
 
-[Full interactive leaderboard](https://libercoders.github.io/FeatureBench/leaderboard/) with tabs, filters, and sorting.
+[Full interactive leaderboard](https://libercoders.github.io/FeatureBench/leaderboard/) with tabs, filters, and sorting (Dataset V1.0).
 
 <details open>
 <summary><b>Lite split results, ranked by %PASSED</b></summary>
