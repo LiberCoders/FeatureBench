@@ -788,7 +788,7 @@ table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 1020px;
+  min-width: 1120px;
 }
 
 table[data-version="v1.1"] {
@@ -963,11 +963,6 @@ thead th.col-agent {
   font-weight: 800;
 }
 
-.col-org {
-  white-space: nowrap;
-  text-align: left;
-}
-
 .col-effort {
   width: 132px;
   min-width: 132px;
@@ -1045,16 +1040,6 @@ tbody td.pct {
   text-align: center;
   padding-left: 12px;
   padding-right: 6px;
-}
-
-.col-org {
-  width: 190px;
-  min-width: 190px;
-}
-
-thead th.col-org,
-tbody td.col-org {
-  text-align: left;
 }
 
 .empty-results {

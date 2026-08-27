@@ -86,7 +86,7 @@ function renderEmptyRow(tbody, version) {
   const tr = document.createElement("tr");
   const td = document.createElement("td");
   td.className = "empty-results";
-  td.colSpan = version === "v1.1" ? 9 : 7;
+  td.colSpan = version === "v1.1" ? 9 : 8;
   td.textContent = "No results available for this split.";
   tr.appendChild(td);
   tbody.appendChild(tr);
@@ -158,10 +158,15 @@ export function renderRows(tbody, rows, options = {}) {
 
       tr.append(tdRank, tdModel, tdAgent, tdEffort, tdPassed, tdResolved, tdAgentOrg, tdModelOrg, tdDate);
     } else {
-      const tdOrg = document.createElement("td");
-      tdOrg.className = "col-org";
-      tdOrg.textContent = textList(row.org);
-      tr.append(tdRank, tdModel, tdAgent, tdPassed, tdResolved, tdOrg, tdDate);
+      const tdAgentOrg = document.createElement("td");
+      tdAgentOrg.className = "col-agent-org";
+      tdAgentOrg.textContent = textList(row.agent_org ?? row.agentOrg);
+
+      const tdModelOrg = document.createElement("td");
+      tdModelOrg.className = "col-model-org";
+      tdModelOrg.textContent = textList(row.model_org ?? row.modelOrg);
+
+      tr.append(tdRank, tdModel, tdAgent, tdPassed, tdResolved, tdAgentOrg, tdModelOrg, tdDate);
     }
     tbody.appendChild(tr);
   }
