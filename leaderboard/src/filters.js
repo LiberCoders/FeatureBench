@@ -73,9 +73,14 @@ export function renderFiltersMenu(els, state, onApply) {
   all.input.indeterminate = !st.all && !st.none;
 }
 
-function ensureAllTagsSelected(state, split, allItems) {
-  if (!state.selectedTagsBySplit.has(split)) {
-    state.selectedTagsBySplit.set(split, new Set(allItems));
+function tagSelectionKey(version, split) {
+  return `${version}:${split}`;
+}
+
+function ensureAllTagsSelected(state, version, split, allItems) {
+  const key = tagSelectionKey(version, split);
+  if (!state.selectedTagsBySplit.has(key)) {
+    state.selectedTagsBySplit.set(key, new Set(allItems));
   }
 }
 
@@ -86,8 +91,8 @@ function computeAllTagsState(selected, allItems) {
   return { total, count, all: count === total, none: count === 0 };
 }
 
-export function buildTagsForSplit(state, split) {
-  const rows = state.leaderboardData?.[split] ?? [];
+export function buildTagsForSplit(state, version, split) {
+  const rows = state.leaderboardData?.[version]?.[split] ?? [];
   const out = [];
   for (const r of rows) {
     const vals = normalizeFilterArray(r?.filter_2);
@@ -96,11 +101,12 @@ export function buildTagsForSplit(state, split) {
   return Array.from(new Set(out)).sort((a, b) => a.localeCompare(b));
 }
 
-export function renderTagMenu(els, state, split, allItems, query, onApply) {
+export function renderTagMenu(els, state, version, split, allItems, query, onApply) {
   if (!els.tagsList || !els.tagsEmpty) return;
 
-  ensureAllTagsSelected(state, split, allItems);
-  const selected = state.selectedTagsBySplit.get(split);
+  const selectionKey = tagSelectionKey(version, split);
+  ensureAllTagsSelected(state, version, split, allItems);
+  const selected = state.selectedTagsBySplit.get(selectionKey);
 
   const q = (query || "").trim().toLowerCase();
   const filtered = q ? allItems.filter((t) => t.toLowerCase().includes(q)) : allItems;
@@ -125,14 +131,14 @@ export function renderTagMenu(els, state, split, allItems, query, onApply) {
 
   allInput.addEventListener("change", () => {
     if (allInput.checked) {
-      state.selectedTagsBySplit.set(split, new Set(allItems));
+      state.selectedTagsBySplit.set(selectionKey, new Set(allItems));
     } else {
-      state.selectedTagsBySplit.set(split, new Set());
+      state.selectedTagsBySplit.set(selectionKey, new Set());
     }
-    const nextSelected = state.selectedTagsBySplit.get(split);
+    const nextSelected = state.selectedTagsBySplit.get(selectionKey);
     selected.clear();
     for (const t of nextSelected) selected.add(t);
-    renderTagMenu(els, state, split, allItems, els.tagsSearch?.value || "", onApply);
+    renderTagMenu(els, state, version, split, allItems, els.tagsSearch?.value || "", onApply);
     onApply(false);
   });
 
@@ -173,10 +179,10 @@ export function rowMatchesSelectedFilters(state, row) {
   return false;
 }
 
-export function rowMatchesSelectedTags(state, split, row) {
-  const allItems = buildTagsForSplit(state, split);
-  ensureAllTagsSelected(state, split, allItems);
-  const selected = state.selectedTagsBySplit.get(split);
+export function rowMatchesSelectedTags(state, version, split, row) {
+  const allItems = buildTagsForSplit(state, version, split);
+  ensureAllTagsSelected(state, version, split, allItems);
+  const selected = state.selectedTagsBySplit.get(tagSelectionKey(version, split));
   if (!selected || selected.size === 0) return false;
   const rowTags = normalizeFilterArray(row?.filter_2);
   for (const t of selected) {
@@ -185,9 +191,11 @@ export function rowMatchesSelectedTags(state, split, row) {
   return false;
 }
 
-export function getFilteredRows(state, split, rows) {
+export function getFilteredRows(state, version, split, rows) {
   const input = Array.isArray(rows) ? rows : [];
-  return input.filter((r) => rowMatchesSelectedFilters(state, r) && rowMatchesSelectedTags(state, split, r));
+  return input.filter(
+    (row) => rowMatchesSelectedFilters(state, row) && rowMatchesSelectedTags(state, version, split, row),
+  );
 }
 
 export function initDropdowns(els, state, onApply) {
@@ -219,16 +227,16 @@ export function initDropdowns(els, state, onApply) {
     setMenuOpen(els.tagsBtn, els.tagsMenu, open);
 
     if (open) {
-      const split = onApply(true);
-      const tags = buildTagsForSplit(state, split);
-      renderTagMenu(els, state, split, tags, els.tagsSearch?.value || "", onApply);
+      const { version, split } = onApply(true);
+      const tags = buildTagsForSplit(state, version, split);
+      renderTagMenu(els, state, version, split, tags, els.tagsSearch?.value || "", onApply);
       els.tagsSearch?.focus();
     }
   });
 
   els.tagsSearch?.addEventListener("input", () => {
-    const split = onApply(true);
-    const tags = buildTagsForSplit(state, split);
-    renderTagMenu(els, state, split, tags, els.tagsSearch.value, onApply);
+    const { version, split } = onApply(true);
+    const tags = buildTagsForSplit(state, version, split);
+    renderTagMenu(els, state, version, split, tags, els.tagsSearch.value, onApply);
   });
 }

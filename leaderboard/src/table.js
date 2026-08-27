@@ -48,9 +48,59 @@ function parseAgentLabel(rawAgent) {
   return { text, used };
 }
 
-export function renderRows(tbody, rows) {
+function textList(value) {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  const normalized = values.map((item) => safeText(item).trim()).filter((item) => item && item !== "-");
+  return normalized.length ? normalized.join(" · ") : "-";
+}
+
+function createEffortCell(row, rowLabel, onEffortChange) {
+  const td = document.createElement("td");
+  td.className = "col-effort";
+  const options = Array.isArray(row.__effortOptions) ? row.__effortOptions : [];
+  const current = safeText(row.effort);
+
+  if (options.length <= 1) {
+    td.textContent = current;
+    return td;
+  }
+
+  const select = document.createElement("select");
+  select.className = "effort-select";
+  select.setAttribute("aria-label", `Effort for ${rowLabel}`);
+  for (const effort of options) {
+    const option = document.createElement("option");
+    option.value = effort;
+    option.textContent = effort;
+    option.selected = effort === current;
+    select.appendChild(option);
+  }
+  select.addEventListener("change", () => {
+    onEffortChange?.(row.__effortSelectionKey, select.value);
+  });
+  td.appendChild(select);
+  return td;
+}
+
+function renderEmptyRow(tbody, version) {
+  const tr = document.createElement("tr");
+  const td = document.createElement("td");
+  td.className = "empty-results";
+  td.colSpan = version === "v1.1" ? 9 : 7;
+  td.textContent = "No results available for this split.";
+  tr.appendChild(td);
+  tbody.appendChild(tr);
+}
+
+export function renderRows(tbody, rows, options = {}) {
   tbody.textContent = "";
   const notesUsed = new Set();
+  const version = options.version === "v1.1" ? "v1.1" : "v1.0";
+
+  if (!rows.length) {
+    renderEmptyRow(tbody, version);
+    return notesUsed;
+  }
 
   for (const [index, row] of rows.entries()) {
     const tr = document.createElement("tr");
@@ -92,65 +142,27 @@ export function renderRows(tbody, rows) {
     tdResolved.className = "num pct score";
     tdResolved.textContent = formatPercent(row.resolved);
 
-    const tdOrg = document.createElement("td");
-    tdOrg.className = "col-org";
-
-    const orgValue = row.org;
-    const orgPaths = Array.isArray(orgValue) ? orgValue : orgValue ? [orgValue] : [];
-
-    if (orgPaths.length === 0) {
-      tdOrg.textContent = "-";
-    } else {
-      const wrap = document.createElement("div");
-      wrap.className = "org-logos";
-      for (const p of orgPaths) {
-        const src = p ? String(p) : "";
-        if (!src) continue;
-        const img = document.createElement("img");
-        img.className = "org-logo";
-        img.loading = "lazy";
-        img.decoding = "async";
-        img.src = src;
-        img.alt = "Org logo";
-        img.addEventListener("error", () => {
-          img.remove();
-        });
-        wrap.appendChild(img);
-      }
-      if (wrap.childElementCount === 0) {
-        tdOrg.textContent = "-";
-      } else {
-        tdOrg.appendChild(wrap);
-      }
-    }
-
     const tdDate = document.createElement("td");
     tdDate.className = "col-date";
     tdDate.textContent = safeText(row.date);
 
-    const tdSite = document.createElement("td");
-    tdSite.className = "site col-site";
+    if (version === "v1.1") {
+      const tdEffort = createEffortCell(row, rowLabel, options.onEffortChange);
+      const tdAgentOrg = document.createElement("td");
+      tdAgentOrg.className = "col-agent-org";
+      tdAgentOrg.textContent = textList(row.agent_org ?? row.agentOrg);
 
-    const siteUrl = row.siteUrl ? String(row.siteUrl) : "";
-    if (siteUrl) {
-      const a = document.createElement("a");
-      a.href = siteUrl;
-      a.target = "_blank";
-      a.rel = "noreferrer";
-      a.setAttribute("aria-label", `Open link for ${rowLabel}`);
-      a.title = "Open";
-      a.innerHTML =
-        '<svg class="site-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-        '<path d="M14 3h7v7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
-        '<path d="M21 3l-9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
-        '<path d="M10 7H7a4 4 0 0 0-4 4v6a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />' +
-        "</svg>";
-      tdSite.appendChild(a);
+      const tdModelOrg = document.createElement("td");
+      tdModelOrg.className = "col-model-org";
+      tdModelOrg.textContent = textList(row.model_org ?? row.modelOrg);
+
+      tr.append(tdRank, tdModel, tdAgent, tdEffort, tdPassed, tdResolved, tdAgentOrg, tdModelOrg, tdDate);
     } else {
-      tdSite.textContent = "-";
+      const tdOrg = document.createElement("td");
+      tdOrg.className = "col-org";
+      tdOrg.textContent = textList(row.org);
+      tr.append(tdRank, tdModel, tdAgent, tdPassed, tdResolved, tdOrg, tdDate);
     }
-
-    tr.append(tdRank, tdModel, tdAgent, tdPassed, tdResolved, tdOrg, tdDate, tdSite);
     tbody.appendChild(tr);
   }
 

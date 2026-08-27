@@ -1,5 +1,5 @@
 export const state = {
-  /** @type {Record<string, Array<any>> | null} */
+  /** @type {Record<string, Record<string, Array<any>>> | null} */
   leaderboardData: null,
 
   /** @type {{ allFilters: string[], allTags: string[] } | null} */
@@ -10,6 +10,15 @@ export const state = {
 
   /** @type {Map<string, Set<string>>} */
   selectedTagsBySplit: new Map(),
+
+  /** @type {Map<string, string>} */
+  selectedEfforts: new Map(),
+
+  /** @type {Set<string>} */
+  availableVersions: new Set(),
+
+  /** @type {string} */
+  activeVersion: "v1.0",
 
   /** @type {Set<string> | null} */
   selectedFilters: null,

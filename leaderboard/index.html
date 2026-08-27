@@ -128,6 +128,7 @@
               class="tab dataset-version-tab"
               type="button"
               role="tab"
+              data-version="v1.1"
               aria-selected="false"
               aria-disabled="true"
               aria-controls="panel"
@@ -140,6 +141,7 @@
               class="tab dataset-version-tab"
               type="button"
               role="tab"
+              data-version="v1.0"
               aria-selected="true"
               aria-controls="panel"
             >
@@ -230,9 +232,9 @@
       <div class="table-shell" id="tableShell">
         <section class="card" id="panel" role="tabpanel" aria-labelledby="tab-lite">
           <div class="table-wrap">
-            <table aria-label="FeatureBench leaderboard table">
+            <table id="leaderboardTable" data-version="v1.0" aria-label="FeatureBench leaderboard table">
               <thead>
-                <tr>
+                <tr data-version-head="v1.0">
                   <th class="col-rank">Rank</th>
                   <th class="col-model" style="text-align: left">Model</th>
                   <th class="col-agent" style="text-align: left">Scaffold</th>
@@ -285,7 +287,62 @@
                       </button>
                     </span>
                   </th>
-                  <th class="col-site">Site</th>
+                </tr>
+                <tr data-version-head="v1.1" hidden>
+                  <th class="col-rank">Rank</th>
+                  <th class="col-model" style="text-align: left">Model</th>
+                  <th class="col-agent" style="text-align: left">Scaffold</th>
+                  <th class="col-effort">Effort</th>
+                  <th class="num pct">
+                    <span class="th-inner">
+                      %Passed
+                      <button
+                        class="sort-btn"
+                        type="button"
+                        aria-label="Sort by %Passed"
+                        aria-pressed="false"
+                        data-sort="passed"
+                        data-dir="desc"
+                        title="Sort"
+                      >
+                        ▾
+                      </button>
+                    </span>
+                  </th>
+                  <th class="num pct">
+                    <span class="th-inner">
+                      %Resolved
+                      <button
+                        class="sort-btn"
+                        type="button"
+                        aria-label="Sort by %Resolved"
+                        aria-pressed="false"
+                        data-sort="resolved"
+                        data-dir="desc"
+                        title="Sort"
+                      >
+                        ▾
+                      </button>
+                    </span>
+                  </th>
+                  <th class="col-agent-org">Agent Org</th>
+                  <th class="col-model-org">Model Org</th>
+                  <th class="col-date">
+                    <span class="th-inner">
+                      Date
+                      <button
+                        class="sort-btn"
+                        type="button"
+                        aria-label="Sort by Date"
+                        aria-pressed="false"
+                        data-sort="date"
+                        data-dir="desc"
+                        title="Sort"
+                      >
+                        ▾
+                      </button>
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody id="tbody"></tbody>

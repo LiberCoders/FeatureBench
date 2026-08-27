@@ -1,8 +1,9 @@
-import { SPLITS } from "./config.js";
+import { DATA_VERSIONS, SPLITS } from "./config.js";
 
 export const els = {
   topBadges: /** @type {HTMLElement | null} */ (document.getElementById("topBadges")),
   tbody: /** @type {HTMLElement} */ (document.getElementById("tbody")),
+  table: /** @type {HTMLTableElement | null} */ (document.getElementById("leaderboardTable")),
   panel: /** @type {HTMLElement} */ (document.getElementById("panel")),
   tableFootnotes: /** @type {HTMLElement | null} */ (document.getElementById("tableFootnotes")),
   tableFootnotesToggle: /** @type {HTMLButtonElement | null} */ (document.getElementById("tableFootnotesToggle")),
@@ -23,4 +24,10 @@ export const els = {
   tagsEmpty: document.getElementById("tagsEmpty"),
 
   tabs: new Map(SPLITS.map((s) => [s, document.querySelector(`.tab[data-split="${s}"]`)])),
+  versionTabs: new Map(
+    DATA_VERSIONS.map((version) => [version, document.querySelector(`.dataset-version-tab[data-version="${version}"]`)]),
+  ),
+  versionHeaders: new Map(
+    DATA_VERSIONS.map((version) => [version, document.querySelector(`[data-version-head="${version}"]`)]),
+  ),
 };

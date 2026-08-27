@@ -5,11 +5,10 @@
     "passed": 47.76,
     "resolved": 13.3,
     "org": [
-      "./logos/openhands.png",
-      "./logos/mimo.png"
+      "OpenHands",
+      "Mimo"
     ],
     "date": "2026-05-19",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -27,11 +26,10 @@
     "passed": 49.4,
     "resolved": 20,
     "org": [
-      "./logos/openhands.png",
-      "./logos/moonshot.png"
+      "OpenHands",
+      "Moonshot"
     ],
     "date": "2026-05-18",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -49,11 +47,10 @@
     "passed": 44.16,
     "resolved": 13.3,
     "org": [
-      "./logos/openhands.png",
-      "./logos/zhipu.png"
+      "OpenHands",
+      "Zhipu"
     ],
     "date": "2026-05-18",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -71,11 +68,10 @@
     "passed": 59.57,
     "resolved": 26.7,
     "org": [
-      "./logos/openhands.png",
-      "./logos/deepseek.png"
+      "OpenHands",
+      "DeepSeek"
     ],
     "date": "2026-05-17",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -93,11 +89,10 @@
     "passed": 69.53,
     "resolved": 20,
     "org": [
-      "./logos/openhands.png",
-      "./logos/anthropic.png"
+      "OpenHands",
+      "Anthropic"
     ],
     "date": "2026-05-15",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -115,11 +110,10 @@
     "passed": 78.16,
     "resolved": 46.7,
     "org": [
-      "./logos/openhands.png",
-      "./logos/anthropic.png"
+      "OpenHands",
+      "Anthropic"
     ],
     "date": "2026-05-15",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -137,11 +131,10 @@
     "passed": 69.84,
     "resolved": 26.7,
     "org": [
-      "./logos/openhands.png",
-      "./logos/openai.png"
+      "OpenHands",
+      "OpenAI"
     ],
     "date": "2026-05-14",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -159,11 +152,10 @@
     "passed": 66.17,
     "resolved": 23.3,
     "org": [
-      "./logos/openhands.png",
-      "./logos/openai.png"
+      "OpenHands",
+      "OpenAI"
     ],
     "date": "2026-05-14",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -181,11 +173,10 @@
     "passed": 41.9,
     "resolved": 16.7,
     "org": [
-      "./logos/openhands.png",
-      "./logos/deepseek.png"
+      "OpenHands",
+      "DeepSeek"
     ],
     "date": "2026-05-11",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -201,12 +192,11 @@
     "agent": "Mini-SWE-Agent",
     "model": "MiniMax M2.1",
     "passed": 41.9,
-    "resolved": 10.0,
+    "resolved": 10,
     "org": [
-      "./logos/minimax.png"
+      "MiniMax"
     ],
     "date": "2026-02-14",
-    "siteUrl": "https://www.minimaxi.com/",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -223,10 +213,9 @@
     "passed": 41.2,
     "resolved": 6.7,
     "org": [
-      "./logos/zhipu.png"
+      "Zhipu"
     ],
     "date": "2026-02-14",
-    "siteUrl": "https://www.zhipuai.cn/en",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -243,10 +232,9 @@
     "passed": 59.12,
     "resolved": 20,
     "org": [
-      "./logos/anthropic.png"
+      "Anthropic"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://www.anthropic.com/",
     "filter_1": [
       "Close Scaffold",
       "Close Weights"
@@ -263,11 +251,10 @@
     "passed": 23.03,
     "resolved": 3.3,
     "org": [
-      "./logos/openhands.png",
-      "./logos/qwen.png"
+      "OpenHands",
+      "Qwen"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -285,11 +272,10 @@
     "passed": 35.94,
     "resolved": 6.7,
     "org": [
-      "./logos/openhands.png",
-      "./logos/deepseek.png"
+      "OpenHands",
+      "DeepSeek"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -305,13 +291,12 @@
     "agent": "OpenHands",
     "model": "Qwen3.5-27B",
     "passed": 34.8,
-    "resolved": 10.0,
+    "resolved": 10,
     "org": [
-      "./logos/openhands.png",
-      "./logos/qwen.png"
+      "OpenHands",
+      "Qwen"
     ],
     "date": "2026-06-05",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -329,11 +314,10 @@
     "passed": 38.31,
     "resolved": 6.7,
     "org": [
-      "./logos/openhands.png",
-      "./logos/qwen.png"
+      "OpenHands",
+      "Qwen"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -351,11 +335,10 @@
     "passed": 67.18,
     "resolved": 20,
     "org": [
-      "./logos/openhands.png",
-      "./logos/anthropic.png"
+      "OpenHands",
+      "Anthropic"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -373,11 +356,10 @@
     "passed": 45.14,
     "resolved": 10,
     "org": [
-      "./logos/openhands.png",
-      "./logos/gemini.png"
+      "OpenHands",
+      "Google"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -395,10 +377,9 @@
     "passed": 43.38,
     "resolved": 10,
     "org": [
-      "./logos/gemini.png"
+      "Google"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://gemini.google.com/app",
     "filter_1": [
       "Close Scaffold",
       "Close Weights"
@@ -415,10 +396,9 @@
     "passed": 60.22,
     "resolved": 20,
     "org": [
-      "./logos/openai.png"
+      "OpenAI"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://chatgpt.com/",
     "filter_1": [
       "Close Scaffold",
       "Close Weights"

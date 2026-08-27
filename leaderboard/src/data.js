@@ -1,17 +1,23 @@
-import { DATA_URLS, OPTIONS_URL, SPLITS, TOP_BADGES_URL } from "./config.js";
+import { DATA_URLS, DATA_VERSIONS, OPTIONS_URL, SPLITS, TOP_BADGES_URL } from "./config.js";
 
 export async function loadData() {
-  const pairs = await Promise.all(
-    SPLITS.map(async (split) => {
-      const url = DATA_URLS[split];
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
-      const json = await res.json();
-      if (!Array.isArray(json)) throw new Error(`Invalid JSON for ${url}: expected an array`);
-      return [split, json];
+  const versions = await Promise.all(
+    DATA_VERSIONS.map(async (version) => {
+      const pairs = await Promise.all(
+        SPLITS.map(async (split) => {
+          const url = DATA_URLS[version]?.[split];
+          if (!url) throw new Error(`Missing data URL for ${version}/${split}`);
+          const res = await fetch(url, { cache: "no-store" });
+          if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
+          const json = await res.json();
+          if (!Array.isArray(json)) throw new Error(`Invalid JSON for ${url}: expected an array`);
+          return [split, json];
+        }),
+      );
+      return [version, Object.fromEntries(pairs)];
     }),
   );
-  return Object.fromEntries(pairs);
+  return Object.fromEntries(versions);
 }
 
 export async function loadOptions() {

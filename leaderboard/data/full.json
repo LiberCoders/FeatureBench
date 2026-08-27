@@ -5,10 +5,9 @@
     "passed": 43.29,
     "resolved": 11,
     "org": [
-      "./logos/anthropic.png"
+      "Anthropic"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://www.anthropic.com/",
     "filter_1": [
       "Close Scaffold",
       "Close Weights"
@@ -25,11 +24,10 @@
     "passed": 17.52,
     "resolved": 1,
     "org": [
-      "./logos/openhands.png",
-      "./logos/qwen.png"
+      "OpenHands",
+      "Qwen"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -47,11 +45,10 @@
     "passed": 26.3,
     "resolved": 5.5,
     "org": [
-      "./logos/openhands.png",
-      "./logos/deepseek.png"
+      "OpenHands",
+      "DeepSeek"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -69,11 +66,10 @@
     "passed": 24.55,
     "resolved": 3.5,
     "org": [
-      "./logos/openhands.png",
-      "./logos/qwen.png"
+      "OpenHands",
+      "Qwen"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -91,11 +87,10 @@
     "passed": 45.53,
     "resolved": 10.5,
     "org": [
-      "./logos/openhands.png",
-      "./logos/anthropic.png"
+      "OpenHands",
+      "Anthropic"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -113,11 +108,10 @@
     "passed": 30.08,
     "resolved": 4.5,
     "org": [
-      "./logos/openhands.png",
-      "./logos/gemini.png"
+      "OpenHands",
+      "Google"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://github.com/OpenHands/OpenHands",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -135,10 +129,9 @@
     "passed": 32.43,
     "resolved": 5,
     "org": [
-      "./logos/gemini.png"
+      "Google"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://gemini.google.com/app",
     "filter_1": [
       "Close Scaffold",
       "Close Weights"
@@ -155,10 +148,9 @@
     "passed": 41.66,
     "resolved": 12.5,
     "org": [
-      "./logos/openai.png"
+      "OpenAI"
     ],
     "date": "2026-01-21",
-    "siteUrl": "https://chatgpt.com/",
     "filter_1": [
       "Close Scaffold",
       "Close Weights"
