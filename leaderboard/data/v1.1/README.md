@@ -2,7 +2,7 @@
 
 `lite.json`, `full.json`, and `fast.json` contain one JSON object per evaluated effort. The `effort` value is free text; the frontend does not enforce a fixed list.
 
-Rows with the same exact `agent` and `model` values are displayed as one leaderboard row. If that group contains more than one distinct `effort`, the Effort cell becomes a dropdown and the selected record controls the scores and date shown in the row.
+Rows with the same exact `agent` and `model` values are displayed as one leaderboard row. If that group contains more than one distinct `effort`, the Effort cell becomes a dropdown and the selected record controls the scores shown in the row. `model_release` is the model's first public release date, not the evaluation or submission date.
 
 Effort options follow their first appearance in the JSON file, and the first effort listed for an Agent+Model group is selected by default. Selecting another effort re-sorts and re-ranks the leaderboard using that effort's scores.
 
@@ -12,36 +12,36 @@ Example only (the numbers below are not benchmark results):
 [
   {
     "agent": "Codex",
-    "model": "GPT-5.6",
+    "model": "Example Model",
     "effort": "low",
     "passed": 62.3,
     "resolved": 31.5,
-    "agent_org": "OpenAI",
-    "model_org": "OpenAI",
-    "date": "2026-08-27",
+    "harness_org": "OpenAI",
+    "model_org": "Example Labs",
+    "model_release": "2026-01-01",
     "filter_1": ["Close Scaffold", "Close Weights"],
     "filter_2": [
-      "Model: GPT-5.6",
+      "Model: Example Model",
       "Scaffold: Codex",
-      "Agent Org: OpenAI",
-      "Model Org: OpenAI"
+      "Harness Org: OpenAI",
+      "Model Org: Example Labs"
     ]
   },
   {
     "agent": "Codex",
-    "model": "GPT-5.6",
+    "model": "Example Model",
     "effort": "xhigh",
     "passed": 71.8,
     "resolved": 42.0,
-    "agent_org": "OpenAI",
-    "model_org": "OpenAI",
-    "date": "2026-08-27",
+    "harness_org": "OpenAI",
+    "model_org": "Example Labs",
+    "model_release": "2026-01-01",
     "filter_1": ["Close Scaffold", "Close Weights"],
     "filter_2": [
-      "Model: GPT-5.6",
+      "Model: Example Model",
       "Scaffold: Codex",
-      "Agent Org: OpenAI",
-      "Model Org: OpenAI"
+      "Harness Org: OpenAI",
+      "Model Org: Example Labs"
     ]
   }
 ]

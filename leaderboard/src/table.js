@@ -142,31 +142,31 @@ export function renderRows(tbody, rows, options = {}) {
     tdResolved.className = "num pct score";
     tdResolved.textContent = formatPercent(row.resolved);
 
-    const tdDate = document.createElement("td");
-    tdDate.className = "col-date";
-    tdDate.textContent = safeText(row.date);
+    const tdModelRelease = document.createElement("td");
+    tdModelRelease.className = "col-model-release";
+    tdModelRelease.textContent = safeText(row.model_release ?? row.modelRelease);
 
     if (version === "v1.1") {
       const tdEffort = createEffortCell(row, rowLabel, options.onEffortChange);
-      const tdAgentOrg = document.createElement("td");
-      tdAgentOrg.className = "col-agent-org";
-      tdAgentOrg.textContent = textList(row.agent_org ?? row.agentOrg);
+      const tdHarnessOrg = document.createElement("td");
+      tdHarnessOrg.className = "col-harness-org";
+      tdHarnessOrg.textContent = textList(row.harness_org ?? row.harnessOrg);
 
       const tdModelOrg = document.createElement("td");
       tdModelOrg.className = "col-model-org";
       tdModelOrg.textContent = textList(row.model_org ?? row.modelOrg);
 
-      tr.append(tdRank, tdModel, tdAgent, tdEffort, tdPassed, tdResolved, tdAgentOrg, tdModelOrg, tdDate);
+      tr.append(tdRank, tdModel, tdAgent, tdEffort, tdPassed, tdResolved, tdHarnessOrg, tdModelOrg, tdModelRelease);
     } else {
-      const tdAgentOrg = document.createElement("td");
-      tdAgentOrg.className = "col-agent-org";
-      tdAgentOrg.textContent = textList(row.agent_org ?? row.agentOrg);
+      const tdHarnessOrg = document.createElement("td");
+      tdHarnessOrg.className = "col-harness-org";
+      tdHarnessOrg.textContent = textList(row.harness_org ?? row.harnessOrg);
 
       const tdModelOrg = document.createElement("td");
       tdModelOrg.className = "col-model-org";
       tdModelOrg.textContent = textList(row.model_org ?? row.modelOrg);
 
-      tr.append(tdRank, tdModel, tdAgent, tdPassed, tdResolved, tdAgentOrg, tdModelOrg, tdDate);
+      tr.append(tdRank, tdModel, tdAgent, tdPassed, tdResolved, tdHarnessOrg, tdModelOrg, tdModelRelease);
     }
     tbody.appendChild(tr);
   }

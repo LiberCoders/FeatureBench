@@ -5,7 +5,7 @@ export const state = {
   /** @type {{ allFilters: string[], allTags: string[] } | null} */
   optionsConfig: null,
 
-  /** @type {{ key: 'passed' | 'resolved' | 'date', dir: 'asc' | 'desc' }} */
+  /** @type {{ key: 'passed' | 'resolved' | 'model_release', dir: 'asc' | 'desc' }} */
   sortState: { key: "passed", dir: "desc" },
 
   /** @type {Map<string, Set<string>>} */

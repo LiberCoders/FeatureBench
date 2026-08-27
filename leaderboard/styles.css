@@ -788,11 +788,11 @@ table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  min-width: 1120px;
+  min-width: 1200px;
 }
 
 table[data-version="v1.1"] {
-  min-width: 1280px;
+  min-width: 1320px;
 }
 
 thead th {
@@ -866,6 +866,8 @@ tbody tr:hover td {
 }
 
 .col-model {
+  width: 290px;
+  min-width: 270px;
   font-weight: 500;
   white-space: nowrap;
   text-align: left;
@@ -886,7 +888,8 @@ tbody td.col-rank {
 }
 
 .col-agent {
-  min-width: 210px;
+  width: 180px;
+  min-width: 170px;
   white-space: nowrap;
   text-align: left;
   font-weight: 500;
@@ -964,8 +967,8 @@ thead th.col-agent {
 }
 
 .col-effort {
-  width: 132px;
-  min-width: 132px;
+  width: 112px;
+  min-width: 112px;
   white-space: nowrap;
   text-align: center;
 }
@@ -990,32 +993,32 @@ thead th.col-agent {
   outline-offset: 2px;
 }
 
-.col-agent-org,
+.col-harness-org,
 .col-model-org {
-  width: 142px;
-  min-width: 142px;
+  width: 140px;
+  min-width: 140px;
   white-space: nowrap;
   text-align: left;
 }
 
-thead th.col-agent-org,
-tbody td.col-agent-org,
+thead th.col-harness-org,
+tbody td.col-harness-org,
 thead th.col-model-org,
 tbody td.col-model-org {
   text-align: left;
 }
 
-.col-date {
-  width: 118px;
-  min-width: 118px;
+.col-model-release {
+  width: 150px;
+  min-width: 150px;
   white-space: nowrap;
 }
 
-thead th.col-date,
-tbody td.col-date {
+thead th.col-model-release,
+tbody td.col-model-release {
   text-align: center;
-  padding-left: 14px;
-  padding-right: 6px;
+  padding-left: 10px;
+  padding-right: 10px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1026,8 +1029,8 @@ tbody td.col-date {
 }
 
 .pct {
-  width: 64px;
-  min-width: 64px;
+  width: 78px;
+  min-width: 78px;
 }
 
 .score {

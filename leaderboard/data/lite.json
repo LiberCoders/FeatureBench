@@ -4,9 +4,9 @@
     "model": "Mimo-V2.5-Pro",
     "passed": 47.76,
     "resolved": 13.3,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "Mimo",
-    "date": "2026-05-19",
+    "model_release": "2026-04-23",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -14,8 +14,8 @@
     "filter_2": [
       "Model: Mimo-V2.5-Pro",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: Mimo"
+      "Harness Org: OpenHands",
+      "Model Org: Mimo"
     ]
   },
   {
@@ -23,9 +23,9 @@
     "model": "Kimi-2.6",
     "passed": 49.4,
     "resolved": 20,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "Moonshot",
-    "date": "2026-05-18",
+    "model_release": "2026-04-20",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -33,8 +33,8 @@
     "filter_2": [
       "Model: Kimi-2.6",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: Moonshot"
+      "Harness Org: OpenHands",
+      "Model Org: Moonshot"
     ]
   },
   {
@@ -42,9 +42,9 @@
     "model": "GLM-5.1",
     "passed": 44.16,
     "resolved": 13.3,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "Zhipu",
-    "date": "2026-05-18",
+    "model_release": "2026-04-07",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -52,8 +52,8 @@
     "filter_2": [
       "Model: GLM-5.1",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: Zhipu"
+      "Harness Org: OpenHands",
+      "Model Org: Zhipu"
     ]
   },
   {
@@ -61,9 +61,9 @@
     "model": "DeepSeek-V4-Pro",
     "passed": 59.57,
     "resolved": 26.7,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "DeepSeek",
-    "date": "2026-05-17",
+    "model_release": "2026-04-24",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -71,8 +71,8 @@
     "filter_2": [
       "Model: DeepSeek-V4-Pro",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: DeepSeek"
+      "Harness Org: OpenHands",
+      "Model Org: DeepSeek"
     ]
   },
   {
@@ -80,9 +80,9 @@
     "model": "Claude Opus 4.6",
     "passed": 69.53,
     "resolved": 20,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "Anthropic",
-    "date": "2026-05-15",
+    "model_release": "2026-02-05",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -90,8 +90,8 @@
     "filter_2": [
       "Model: Claude Opus 4.6",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: Anthropic"
+      "Harness Org: OpenHands",
+      "Model Org: Anthropic"
     ]
   },
   {
@@ -99,9 +99,9 @@
     "model": "Claude Opus 4.7",
     "passed": 78.16,
     "resolved": 46.7,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "Anthropic",
-    "date": "2026-05-15",
+    "model_release": "2026-04-16",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -109,8 +109,8 @@
     "filter_2": [
       "Model: Claude Opus 4.7",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: Anthropic"
+      "Harness Org: OpenHands",
+      "Model Org: Anthropic"
     ]
   },
   {
@@ -118,9 +118,9 @@
     "model": "GPT-5.5",
     "passed": 69.84,
     "resolved": 26.7,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "OpenAI",
-    "date": "2026-05-14",
+    "model_release": "2026-04-23",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -128,8 +128,8 @@
     "filter_2": [
       "Model: GPT-5.5",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: OpenAI"
+      "Harness Org: OpenHands",
+      "Model Org: OpenAI"
     ]
   },
   {
@@ -137,9 +137,9 @@
     "model": "GPT-5.4",
     "passed": 66.17,
     "resolved": 23.3,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "OpenAI",
-    "date": "2026-05-14",
+    "model_release": "2026-03-05",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -147,8 +147,8 @@
     "filter_2": [
       "Model: GPT-5.4",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: OpenAI"
+      "Harness Org: OpenHands",
+      "Model Org: OpenAI"
     ]
   },
   {
@@ -156,9 +156,9 @@
     "model": "DeepSeek-V4-Flash",
     "passed": 41.9,
     "resolved": 16.7,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "DeepSeek",
-    "date": "2026-05-11",
+    "model_release": "2026-04-24",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -166,8 +166,8 @@
     "filter_2": [
       "Model: DeepSeek-V4-Flash",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: DeepSeek"
+      "Harness Org: OpenHands",
+      "Model Org: DeepSeek"
     ]
   },
   {
@@ -175,9 +175,9 @@
     "model": "MiniMax M2.1",
     "passed": 41.9,
     "resolved": 10,
-    "agent_org": "-",
+    "harness_org": "-",
     "model_org": "MiniMax",
-    "date": "2026-02-14",
+    "model_release": "2025-12-23",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -185,7 +185,7 @@
     "filter_2": [
       "Model: MiniMax M2.1",
       "Scaffold: Mini-SWE-Agent",
-      "Org: MiniMax"
+      "Model Org: MiniMax"
     ]
   },
   {
@@ -193,9 +193,9 @@
     "model": "GLM 4.7",
     "passed": 41.2,
     "resolved": 6.7,
-    "agent_org": "-",
+    "harness_org": "-",
     "model_org": "Zhipu",
-    "date": "2026-02-14",
+    "model_release": "2025-12-22",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -203,7 +203,7 @@
     "filter_2": [
       "Model: GLM 4.7",
       "Scaffold: Mini-SWE-Agent",
-      "Org: Zhipu"
+      "Model Org: Zhipu"
     ]
   },
   {
@@ -211,9 +211,9 @@
     "model": "Claude Opus 4.5",
     "passed": 59.12,
     "resolved": 20,
-    "agent_org": "Anthropic",
+    "harness_org": "Anthropic",
     "model_org": "Anthropic",
-    "date": "2026-01-21",
+    "model_release": "2025-11-24",
     "filter_1": [
       "Close Scaffold",
       "Close Weights"
@@ -221,7 +221,8 @@
     "filter_2": [
       "Model: Claude Opus 4.5",
       "Scaffold: Claude Code",
-      "Org: Anthropic"
+      "Harness Org: Anthropic",
+      "Model Org: Anthropic"
     ]
   },
   {
@@ -229,9 +230,9 @@
     "model": "Qwen3-Coder-30B-A3B-Instruct",
     "passed": 23.03,
     "resolved": 3.3,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "Qwen",
-    "date": "2026-01-21",
+    "model_release": "2025-07-31",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -239,8 +240,8 @@
     "filter_2": [
       "Model: Qwen3-Coder-30B-A3B-Instruct",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: Qwen"
+      "Harness Org: OpenHands",
+      "Model Org: Qwen"
     ]
   },
   {
@@ -248,9 +249,9 @@
     "model": "DeepSeek V3.2",
     "passed": 35.94,
     "resolved": 6.7,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "DeepSeek",
-    "date": "2026-01-21",
+    "model_release": "2025-12-01",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -258,8 +259,8 @@
     "filter_2": [
       "Model: DeepSeek V3.2",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: DeepSeek"
+      "Harness Org: OpenHands",
+      "Model Org: DeepSeek"
     ]
   },
   {
@@ -267,9 +268,9 @@
     "model": "Qwen3.5-27B",
     "passed": 34.8,
     "resolved": 10,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "Qwen",
-    "date": "2026-06-05",
+    "model_release": "2026-02-24",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -277,8 +278,8 @@
     "filter_2": [
       "Model: Qwen3.5-27B",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: Qwen"
+      "Harness Org: OpenHands",
+      "Model Org: Qwen"
     ]
   },
   {
@@ -286,9 +287,9 @@
     "model": "Qwen3-Coder-480B-A35B-Instruct",
     "passed": 38.31,
     "resolved": 6.7,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "Qwen",
-    "date": "2026-01-21",
+    "model_release": "2025-07-22",
     "filter_1": [
       "Open Scaffold",
       "Open Weights"
@@ -296,8 +297,8 @@
     "filter_2": [
       "Model: Qwen3-Coder-480B-A35B-Instruct",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: Qwen"
+      "Harness Org: OpenHands",
+      "Model Org: Qwen"
     ]
   },
   {
@@ -305,9 +306,9 @@
     "model": "Claude Opus 4.5",
     "passed": 67.18,
     "resolved": 20,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "Anthropic",
-    "date": "2026-01-21",
+    "model_release": "2025-11-24",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -315,8 +316,8 @@
     "filter_2": [
       "Model: Claude Opus 4.5",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: Anthropic"
+      "Harness Org: OpenHands",
+      "Model Org: Anthropic"
     ]
   },
   {
@@ -324,9 +325,9 @@
     "model": "Gemini-3-Pro-Preview",
     "passed": 45.14,
     "resolved": 10,
-    "agent_org": "OpenHands",
+    "harness_org": "OpenHands",
     "model_org": "Google",
-    "date": "2026-01-21",
+    "model_release": "2025-11-18",
     "filter_1": [
       "Open Scaffold",
       "Close Weights"
@@ -334,8 +335,8 @@
     "filter_2": [
       "Model: Gemini-3-Pro-Preview",
       "Scaffold: OpenHands",
-      "Org: OpenHands",
-      "Org: Google"
+      "Harness Org: OpenHands",
+      "Model Org: Google"
     ]
   },
   {
@@ -343,9 +344,9 @@
     "model": "Gemini-3-Pro-Preview",
     "passed": 43.38,
     "resolved": 10,
-    "agent_org": "Google",
+    "harness_org": "Google",
     "model_org": "Google",
-    "date": "2026-01-21",
+    "model_release": "2025-11-18",
     "filter_1": [
       "Close Scaffold",
       "Close Weights"
@@ -353,7 +354,8 @@
     "filter_2": [
       "Model: Gemini-3-Pro-Preview",
       "Scaffold: Gemini-CLI",
-      "Org: Google"
+      "Harness Org: Google",
+      "Model Org: Google"
     ]
   },
   {
@@ -361,9 +363,9 @@
     "model": "GPT-5.1-Codex",
     "passed": 60.22,
     "resolved": 20,
-    "agent_org": "OpenAI",
+    "harness_org": "OpenAI",
     "model_org": "OpenAI",
-    "date": "2026-01-21",
+    "model_release": "2025-11-13",
     "filter_1": [
       "Close Scaffold",
       "Close Weights"
@@ -371,7 +373,8 @@
     "filter_2": [
       "Model: GPT-5.1-Codex",
       "Scaffold: Codex",
-      "Org: OpenAI"
+      "Harness Org: OpenAI",
+      "Model Org: OpenAI"
     ]
   }
 ]

@@ -3,9 +3,9 @@ import { parseDateValue } from "./utils.js";
 export function compareBy(key, dir) {
   const sign = dir === "asc" ? 1 : -1;
   return (a, b) => {
-    if (key === "date") {
-      const av = parseDateValue(a.date);
-      const bv = parseDateValue(b.date);
+    if (key === "model_release") {
+      const av = parseDateValue(a.model_release ?? a.modelRelease);
+      const bv = parseDateValue(b.model_release ?? b.modelRelease);
       if (av === null && bv === null) return 0;
       if (av === null) return 1;
       if (bv === null) return -1;
@@ -42,7 +42,7 @@ export function initSort(sortButtons, state, onApply) {
   for (const btn of sortButtons) {
     btn.addEventListener("click", () => {
       const key = btn.dataset.sort;
-      if (key !== "passed" && key !== "resolved" && key !== "date") return;
+      if (key !== "passed" && key !== "resolved" && key !== "model_release") return;
       if (state.sortState.key === key) {
         state.sortState.dir = state.sortState.dir === "desc" ? "asc" : "desc";
       } else {
