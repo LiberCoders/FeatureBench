@@ -41,6 +41,10 @@ class BaseAgent(ABC):
         self.env_vars = env_vars or {}
         self.logger = logger or logging.getLogger(__name__)
         self._kwargs = kwargs
+        # Agent adapters may populate this with their native terminal status.
+        # It deliberately remains optional because not every supported agent
+        # exposes a structured status artifact.
+        self.agent_exit_status: Optional[str] = None
     
     @property
     @abstractmethod
@@ -354,6 +358,7 @@ class BaseAgent(ABC):
         Returns:
             True if agent completed successfully
         """
+        self.agent_exit_status = None
         self.logger.info(f"Running {self.name} agent...")
         
         with open(log_file, "a", encoding="utf-8") as f:
@@ -385,16 +390,23 @@ class BaseAgent(ABC):
                 log_file=log_file,
                 timeout=timeout
             )
-            
+
             success_run = exit_code == 0
+            timed_out = not success_run and self._infer_log_has_timeout_marker(log_file)
             success_post_run = self.post_run_hook(container, log_file)
+
+            # A host-side timeout may kill the agent before it can persist a
+            # native terminal status. Preserve the actual reason for stopping
+            # instead of reporting an unknown/generic failure.
+            if timed_out:
+                self.agent_exit_status = "TimeExceeded"
 
             if success_run and success_post_run:
                 self.logger.info(f"{self.name} agent completed successfully")
                 return True
 
             if not success_run:
-                if self._force_timeout_enabled() and self._infer_log_has_timeout_marker(log_file):
+                if self._force_timeout_enabled() and timed_out:
                     post_run_state = "passed" if success_post_run else "failed"
                     self.logger.warning(
                         f"{self.name} run hit timeout marker (post-run hook {post_run_state}); "

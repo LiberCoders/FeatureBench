@@ -4,6 +4,7 @@ mini-swe-agent implementation.
 This agent runs the external `mini` CLI in the container.
 """
 
+import json
 import shlex
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -76,7 +77,7 @@ set -e
 echo "Installing mini-swe-agent..."
 
 apt-get update
-apt-get install -y python3 python3-pip python3-venv
+apt-get install -y passwd python3 python3-pip python3-venv util-linux
 
 CACHE_ROOT="${{AGENT_DOWNLOAD_CACHE:-/download}}"
 mkdir -p "$CACHE_ROOT" "$CACHE_ROOT/pip"
@@ -98,8 +99,72 @@ echo "mini-swe-agent installation complete"
         self.cm.exec_command(container, "mkdir -p /agent-logs", log_file=log_file)
         return True
 
+    def pre_run_setup(self, container, instance, log_file: Path) -> bool:
+        """Isolate agent-issued shell commands from controller dependencies."""
+        controller_dir = "/opt/featurebench-controller"
+        environment_source = (
+            Path(__file__).parent.parent / "environments" / "mini_swe.py"
+        )
+        environment_target = f"{controller_dir}/featurebench_mini_swe_environment.py"
+
+        try:
+            exit_code, output = self.cm.exec_command(
+                container,
+                "set -e\n"
+                "getent group fbagent >/dev/null || groupadd --system fbagent\n"
+                "id -u fbagent >/dev/null 2>&1 || "
+                "useradd --system --gid fbagent --home-dir /home/fbagent "
+                "--create-home --shell /bin/bash fbagent\n"
+                f"install -d -o root -g root -m 700 {controller_dir} "
+                "/agent-logs\n",
+                log_file=log_file,
+            )
+            if exit_code != 0:
+                raise RuntimeError(
+                    f"Failed to create restricted mini-swe-agent user: {output}"
+                )
+
+            self.cm.copy_to_container(
+                container,
+                environment_source,
+                environment_target,
+            )
+            exit_code, output = self.cm.exec_command(
+                container,
+                "set -e\n"
+                f"chown root:root {environment_target}\n"
+                f"chmod 600 {environment_target}\n"
+                "chown -R fbagent:fbagent /testbed\n"
+                "chmod 700 /opt/mini-swe-agent-venv\n"
+                f"chmod 700 {controller_dir} /installed-agent /agent-logs\n"
+                "setpriv --reuid=fbagent --regid=fbagent --init-groups "
+                "--no-new-privs /bin/bash -c "
+                "'test -r /testbed && test -w /testbed && "
+                "test ! -r /opt/mini-swe-agent-venv/pyvenv.cfg && "
+                "test ! -r /installed-agent/setup-env.sh'",
+                log_file=log_file,
+            )
+            if exit_code != 0:
+                raise RuntimeError(
+                    f"Failed to enforce mini-swe-agent filesystem isolation: {output}"
+                )
+        except Exception as e:
+            self.logger.error(f"Failed to prepare mini-swe-agent isolation: {e}")
+            # Isolation is a security boundary. Do not let the runner continue
+            # with root-level tool execution if setup fails.
+            raise
+
+        self.logger.info(
+            "mini-swe-agent tool commands will run as restricted user fbagent"
+        )
+        return True
+
     def post_run_hook(self, container, log_file) -> bool:
-        """Persist mini-swe-agent CLI output (best-effort)."""
+        """Persist artifacts and accept only an explicit agent submission."""
+        return self._collect_run_artifacts(container, log_file)
+
+    def _collect_run_artifacts(self, container, log_file: Path) -> bool:
+        """Copy run artifacts and validate mini-swe-agent's terminal status."""
         log_dir = Path(log_file).parent
         try:
             self.cm.copy_from_container(
@@ -107,50 +172,67 @@ echo "mini-swe-agent installation complete"
                 "/agent-logs/mini_swe_agent_output.log",
                 log_dir / "mini_swe_agent_output.log",
             )
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.warning(f"Failed to collect mini-swe-agent output: {e}")
+
+        trajectory_path = log_dir / "traj.json"
         try:
             self.cm.copy_from_container(
                 container,
                 "/root/.config/mini-swe-agent/last_mini_run.traj.json",
-                log_dir / "traj.json",
+                trajectory_path,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.error(f"Failed to collect mini-swe-agent trajectory: {e}")
+            return False
+
+        try:
+            trajectory = json.loads(trajectory_path.read_text(encoding="utf-8"))
+            exit_status = trajectory.get("info", {}).get("exit_status")
+        except (OSError, UnicodeError, json.JSONDecodeError, AttributeError) as e:
+            self.logger.error(f"Failed to read mini-swe-agent exit status: {e}")
+            return False
+
+        if not isinstance(exit_status, str) or not exit_status.strip():
+            self.logger.error("mini-swe-agent trajectory has no exit_status")
+            return False
+
+        self.agent_exit_status = exit_status.strip()
+        if self.agent_exit_status != "Submitted":
+            self.logger.warning(
+                f"mini-swe-agent exited without submission: {self.agent_exit_status}"
+            )
+            return False
+
+        self.logger.info("mini-swe-agent exit status: Submitted")
         return True
 
     def failure_hook(self, container, log_file: Path) -> None:
         """Collect mini-swe-agent output on failures (best-effort)."""
-        log_dir = Path(log_file).parent
-        try:
-            self.cm.copy_from_container(
-                container,
-                "/agent-logs/mini_swe_agent_output.log",
-                log_dir / "mini_swe_agent_output.log",
-            )
-        except Exception:
-            pass
-        try:
-            self.cm.copy_from_container(
-                container,
-                "/root/.config/mini-swe-agent/last_mini_run.traj.json",
-                log_dir / "traj.json",
-            )
-        except Exception:
-            pass
+        trajectory_path = Path(log_file).parent / "traj.json"
+        if not trajectory_path.exists():
+            self._collect_run_artifacts(container, log_file)
 
     def get_run_command(self, instruction: str) -> str:
         """Get the command to run mini-swe-agent."""
         escaped_instruction = shlex.quote(instruction)
         model_name = self._get_model_name()
+        cost_limit = self._kwargs.get("cost_limit")
+        cost_limit_arg = ""
+        if cost_limit is not None:
+            cost_limit_arg = f"--cost-limit {shlex.quote(str(cost_limit))} "
         return (
             "set -o pipefail; "
             f'"$MINI_SWE_AGENT_PYTHON" -I - -m {shlex.quote(model_name)} -t {escaped_instruction} -y --exit-immediately '
+            f"{cost_limit_arg}"
+            "--environment-class "
+            "featurebench_mini_swe_environment.RestrictedLocalEnvironment "
             "<<'PY' | tee /agent-logs/mini_swe_agent_output.log\n"
             "import runpy\n"
             "import sys\n"
             "\n"
             "sys.path = [p for p in sys.path if p and not p.startswith('/testbed')]\n"
+            "sys.path.insert(0, '/opt/featurebench-controller')\n"
             "sys.argv = ['minisweagent.run.mini', *sys.argv[1:]]\n"
             "runpy.run_module('minisweagent.run.mini', run_name='__main__')\n"
             "PY"

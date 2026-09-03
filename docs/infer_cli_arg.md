@@ -160,6 +160,13 @@ flags can override metadata (see the argument list below).
   Default: no override (OpenHands default applies).  
   Resume mode: ignored (uses metadata).
 
+### mini-swe-agent Only
+
+- `--cost-limit`
+  Per-task cost limit in USD, passed to mini-swe-agent.
+  Set to `0` to disable the limit. If omitted, mini-swe-agent's upstream default applies.
+  Resume mode: ignored (uses metadata).
+
 ## Section 4: Output Directory Structure
 
 ```

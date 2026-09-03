@@ -13,6 +13,7 @@ from typing import Any
 import pandas as pd
 from docker.models.containers import Container
 
+from featurebench.environment_fixes import apply_environment_fixes
 from featurebench.harness.constants import (
     APPLY_PATCH_FAIL,
     APPLY_PATCH_PASS,
@@ -55,9 +56,11 @@ def run_instance_level1(
     1. Activate conda environment
     2. Restore project from /root/my_repo/
     3. Apply patch (for masking) and directly delete F2P test files
-    4. Reinitialize git
-    5. Apply agent's patch
-    6. Delete any generated F2P files, restore F2P test, and run tests
+    4. Apply repository-specific environment fixes
+    5. Reinitialize git
+    6. Apply agent's patch
+    7. Delete any generated F2P files and restore the F2P test
+    8. Run tests
 
     Args:
         instance: Instance data (from HuggingFace)
@@ -177,8 +180,20 @@ def run_instance_level1(
             else:
                 logger.warning("No FAIL_TO_PASS tests found in instance, skipping test file deletion")
 
-        # Step 3: Reinitialize git repository
-        logger.info("Step 3: Reinitializing git repository")
+        # Step 3: Apply the same repository-specific cleanup used during
+        # inference. Running it before Git initialization keeps the cleanup out
+        # of the candidate patch while making Oracle validation representative.
+        logger.info("Step 3: Applying repository-specific environment fixes")
+        if not apply_environment_fixes(
+            str(repo_name),
+            lambda command: exec_run_with_timeout(container, command, timeout=120),
+            logger,
+        ):
+            results["error"] = "Repository-specific environment fix failed"
+            return results
+
+        # Step 4: Reinitialize git repository
+        logger.info("Step 4: Reinitializing git repository")
         git_cmds = [
             "cd /testbed && rm -rf .git",
             "cd /testbed && git init",
@@ -194,8 +209,8 @@ def run_instance_level1(
                 logger.warning(f"Git command failed: {cmd}")
                 logger.warning(f"Output: {output.decode(UTF8, errors='replace')}")
 
-        # Step 4: Apply agent's patch
-        logger.info("Step 4: Applying agent patch")
+        # Step 5: Apply agent's patch
+        logger.info("Step 5: Applying agent patch")
         patch_content = pred[KEY_PREDICTION]
 
         if not patch_content or patch_content.strip() == "":
@@ -231,8 +246,8 @@ def run_instance_level1(
         logger.info(f"{APPLY_PATCH_PASS}")
         results["patch_applied"] = True
 
-        # Step 5: Prepare for testing - delete generated F2P files and restore F2P test
-        logger.info("Step 5: Preparing for testing - cleaning up and restoring F2P test")
+        # Step 6: Prepare for testing - delete generated F2P files and restore F2P test
+        logger.info("Step 6: Preparing for testing - cleaning up and restoring F2P test")
 
         fail_to_pass = instance.get('FAIL_TO_PASS', [])
         if not fail_to_pass:
@@ -268,8 +283,8 @@ def run_instance_level1(
         else:
             logger.warning("No test_patch available to restore F2P test file")
 
-        # Step 6: Run tests
-        logger.info("Step 6: Running tests")
+        # Step 7: Run tests
+        logger.info("Step 7: Running tests")
 
         # Get test configuration from repo_settings
         repo_settings = parse_repo_settings(instance)
@@ -589,4 +604,3 @@ def run_instance_level2(
         logger.error(traceback.format_exc())
         results["error"] = str(e)
         return results
-

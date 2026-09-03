@@ -165,6 +165,8 @@ class InferConfig:
     gpu_ids: Optional[str] = None  # Comma-separated GPU IDs (e.g., "0,1,2,3"), None means all
     # OpenHands only: max step/iteration limit. None means "do not override" (OpenHands default applies).
     max_iters: Optional[int] = None
+    # mini-swe-agent only: per-task cost limit in USD. 0 disables the limit.
+    cost_limit: Optional[float] = None
     split: Optional[str] = None  # HuggingFace dataset split name (e.g., "lite", "full")
     # If True, remove the "## Interface Descriptions" section from the task prompt.
     without_interface_descriptions: bool = False
@@ -204,6 +206,7 @@ class InferConfig:
             "runtime_proxy": self.runtime_proxy,
             "gpu_ids": self.gpu_ids,
             "max_iters": self.max_iters,
+            "cost_limit": self.cost_limit,
             "split": self.split,
             "without_interface_descriptions": self.without_interface_descriptions,
             "white_box": self.white_box,
@@ -230,6 +233,7 @@ class InferResult:
     metadata: Dict[str, Any]
     success: bool = True
     error: Optional[str] = None
+    agent_exit_status: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for output.jsonl."""
@@ -241,7 +245,8 @@ class InferResult:
             "model": self.model,
             "task_metadata": self.metadata,
             "success": self.success,
-            "error": self.error
+            "error": self.error,
+            "agent_exit_status": self.agent_exit_status,
         }
     
     def to_jsonl(self) -> str:
@@ -266,6 +271,7 @@ class RunMetadata:
     runtime_proxy: Optional[bool] = None
     gpu_ids: Optional[str] = None
     max_iters: Optional[int] = None
+    cost_limit: Optional[float] = None
     openhands_reasoning_effort: Optional[str] = None
     codex_reasoning_effort: Optional[str] = None
     split: Optional[str] = None  # HuggingFace dataset split name
@@ -299,6 +305,7 @@ class RunMetadata:
             "runtime_proxy": self.runtime_proxy,
             "gpu_ids": self.gpu_ids,
             "max_iters": self.max_iters,
+            "cost_limit": self.cost_limit,
             "openhands_reasoning_effort": self.openhands_reasoning_effort,
             "codex_reasoning_effort": self.codex_reasoning_effort,
             "split": self.split,

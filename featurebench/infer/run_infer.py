@@ -34,6 +34,7 @@ from featurebench.infer.agents import get_agent
 from featurebench.infer.config import DatasetLoader, InferConfigLoader
 from featurebench.infer.container import ContainerManager
 from featurebench.infer.models import InferConfig, InferResult, RunMetadata, TaskInstance, TaskPaths
+from featurebench.infer.network import AgentNetworkIsolation
 from featurebench.infer.output import OutputManager
 from featurebench.infer.runtime import RuntimeHandler
 from featurebench.infer.gpu_scheduler import GpuLease, GpuScheduler, detect_host_gpu_ids, parse_gpu_id_list
@@ -103,6 +104,28 @@ def cleanup_task_logger(task_logger: logging.Logger) -> None:
     for handler in task_logger.handlers[:]:
         handler.close()
         task_logger.removeHandler(handler)
+
+
+def _restore_mini_swe_workspace_ownership(
+    agent_name: str,
+    container_manager: ContainerManager,
+    container: Container,
+    log_file: Path,
+) -> None:
+    """Return MiniSweAgent's task workspace to the root-owned runtime."""
+    if agent_name != "mini_swe_agent":
+        return
+
+    exit_code, output = container_manager.exec_command(
+        container,
+        "chown -R root:root /testbed",
+        log_file=log_file,
+    )
+    if exit_code != 0:
+        detail = output.strip() if output else "unknown error"
+        raise RuntimeError(
+            f"Failed to restore /testbed ownership after mini-swe-agent: {detail}"
+        )
 
 
 def _strip_interface_descriptions(problem_statement: str) -> str:
@@ -462,6 +485,8 @@ class InferenceRunner:
         self._cleanup_lock = threading.RLock()
         self._cleanup_in_progress = False
         self._cleanup_interrupt_notice_printed = False
+        self._agent_network: Optional[AgentNetworkIsolation] = None
+        self._agent_network_lock = threading.Lock()
         self._atexit_cleanup = self._cleanup_active_containers_at_exit
         atexit.register(self._atexit_cleanup)
 
@@ -631,6 +656,33 @@ class InferenceRunner:
 
     def _cleanup_active_containers_at_exit(self) -> None:
         self._cleanup_active_containers("process exit")
+        self._close_agent_network()
+
+    def _start_agent_network(self) -> None:
+        with self._agent_network_lock:
+            if self._agent_network is not None:
+                return
+            upstream_proxy_port = (
+                self.config.proxy_port
+                if self.config.proxy_port is not None and self.config.runtime_proxy
+                else None
+            )
+            agent_network = AgentNetworkIsolation(
+                self.config.agent,
+                self.config.model,
+                self.agent_env_vars,
+                upstream_proxy_port=upstream_proxy_port,
+                logger=logger,
+            )
+            agent_network.start()
+            self._agent_network = agent_network
+
+    def _close_agent_network(self) -> None:
+        with self._agent_network_lock:
+            agent_network = self._agent_network
+            self._agent_network = None
+        if agent_network is not None:
+            agent_network.close()
 
     def _mark_task_started(self, task_id: str, attempt: int) -> None:
         """Record task start for live running-task display."""
@@ -819,14 +871,17 @@ class InferenceRunner:
             task_logger.info(f"Creating container {container_name}...")
 
             # Mount cache volume
-            volumes = None
+            volumes = {}
             if self.cache_dir:
                 try:
                     self.cache_dir.mkdir(parents=True, exist_ok=True)
                 except Exception:
                     pass
                 # Bind host cache directory to /download inside container
-                volumes = {str(self.cache_dir): {"bind": "/download", "mode": "rw"}}
+                volumes[str(self.cache_dir)] = {"bind": "/download", "mode": "rw"}
+            if self._agent_network is None:
+                raise RuntimeError("Agent network isolation is not initialized")
+            volumes.update(self._agent_network.docker_volume())
             
             container = cm.create_container(
                 image_name=image_name,
@@ -837,7 +892,7 @@ class InferenceRunner:
                 proxy_port=self.config.proxy_port,
                 gpu_ids=task_gpu_ids,
                 docker_runtime_config=docker_runtime_config,
-                volumes=volumes
+                volumes=volumes or None
             )
             self._register_container(container)
             
@@ -861,6 +916,7 @@ class InferenceRunner:
                 logger=task_logger,
                 model=self.config.model,
                 version=self.config.version,
+                cost_limit=self.config.cost_limit,
             )
             
             if not agent.install(container, log_file):
@@ -871,6 +927,22 @@ class InferenceRunner:
             task_logger.info("Running pre-run setup...")
             if not agent.pre_run_setup(container, instance, log_file):
                 task_logger.warning("Pre-run setup returned False (non-fatal)")
+
+            # Remove package-manager caches only after all trusted setup and
+            # agent installation steps have completed. Mounted caches are
+            # preserved to avoid deleting user-configured shared data.
+            if not runtime_handler.clear_package_caches(container, log_file):
+                result.error = "Package cache cleanup failed"
+                return result
+
+            # Agent installation may use the public network.  From this point
+            # onward the task container can reach only the configured model API
+            # through FeatureBench's allow-listing proxy.
+            if self._agent_network is None or not self._agent_network.isolate(
+                container, cm, log_file
+            ):
+                result.error = "Agent network isolation failed"
+                return result
             
             # Run agent
             instruction = instance.problem_statement
@@ -886,12 +958,31 @@ class InferenceRunner:
                 log_file,
                 timeout=self.config.timeout
             )
+            result.agent_exit_status = agent.agent_exit_status
+
+            # MiniSweAgent gives /testbed to its unprivileged task user.  The
+            # runtime collects the resulting Git patch as root after the agent
+            # has stopped, so return the workspace to root first.
+            _restore_mini_swe_workspace_ownership(
+                agent.name,
+                cm,
+                container,
+                log_file,
+            )
             
             # if not agent_success, raise an exception and try to save patch
             if not agent_success:
-                result.error = "Agent did not complete successfully"
+                if (
+                    result.agent_exit_status
+                    and result.agent_exit_status != "Submitted"
+                ):
+                    result.error = (
+                        f"Agent exited with status: {result.agent_exit_status}"
+                    )
+                else:
+                    result.error = "Agent did not complete successfully"
                 task_logger.warning(
-                    f"{self.config.agent} did not complete successfully; attempting to generate patch"
+                    f"{result.error}; attempting to generate patch"
                 )
                 patch = runtime_handler.complete_runtime(container, instance, log_file)
 
@@ -905,7 +996,7 @@ class InferenceRunner:
                     task_logger.warning(
                         f"Saved patch for failed run"
                     )
-                raise RuntimeError(f"Agent did not complete successfully")
+                raise RuntimeError(result.error)
             
             # Complete runtime and get patch
             patch = runtime_handler.complete_runtime(container, instance, log_file)
@@ -1017,6 +1108,7 @@ class InferenceRunner:
                 logger=task_logger,
                 model=self.config.model,
                 version=self.config.version,
+                cost_limit=self.config.cost_limit,
             )
 
             agent.install(container, warmup_log)
@@ -1088,6 +1180,7 @@ class InferenceRunner:
             runtime_proxy=self.config.runtime_proxy,
             gpu_ids=self.config.gpu_ids,
             max_iters=effective_max_iters,
+            cost_limit=self.config.cost_limit,
             openhands_reasoning_effort=openhands_reasoning_effort,
             codex_reasoning_effort=codex_reasoning_effort,
             split=self.config.split,
@@ -1131,6 +1224,11 @@ class InferenceRunner:
             self.console.print(f"[white]Levels:[/] [green]all (lv1, lv2)[/]")
         self.console.print(f"[white]Concurrent:[/] [green]{self.config.n_concurrent}[/]")
         self.console.print(f"[white]Attempts:[/] [green]{self.config.n_attempts}[/]")
+        if self.config.agent == "mini_swe_agent" and self.config.cost_limit is not None:
+            cost_limit_display = (
+                "disabled" if self.config.cost_limit == 0 else f"${self.config.cost_limit:g}"
+            )
+            self.console.print(f"[white]Cost limit:[/] [green]{cost_limit_display}[/]")
         if getattr(self.config, "force_timeout", False):
             self.console.print("[white]Force timeout skip:[/] [yellow]enabled[/]")
         if getattr(self.config, "without_interface_descriptions", False):
@@ -1282,6 +1380,12 @@ class InferenceRunner:
             if total_tasks == 0:
                 self.console.print("[bold green]All tasks already completed![/]")
                 return 0
+
+            self._start_agent_network()
+            self.console.print(
+                "[bold cyan]Agent network isolation enabled[/]: model API only"
+            )
+            self.console.print()
             
             # Process tasks with rich progress bar + live running-task list
             progress = Progress(
@@ -1387,6 +1491,10 @@ class InferenceRunner:
         finally:
             # Stop output manager
             self.output_manager.stop()
+
+            # All task containers have been removed by their worker finally
+            # blocks, so the shared internal network can now be removed too.
+            self._close_agent_network()
             
             # Update end time
             self.output_manager.update_metadata_end_time()
@@ -1653,6 +1761,17 @@ def parse_args() -> argparse.Namespace:
             "In --resume mode, this argument is ignored (uses run_metadata.json)."
         )
     )
+
+    parser.add_argument(
+        "--cost-limit",
+        type=float,
+        default=None,
+        help=(
+            "mini-swe-agent only: per-task cost limit in USD. "
+            "Set to 0 to disable the limit. If omitted, mini-swe-agent's upstream default applies. "
+            "In --resume mode, this argument is ignored (uses run_metadata.json)."
+        ),
+    )
     
     parser.add_argument(
         "--proxy-port",
@@ -1747,6 +1866,8 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
         warnings.append(f"--output-dir (using '{resume_dir}')")
     if args.max_iters is not None:
         warnings.append(f"--max-iters (using '{metadata.get('max_iters')}' from metadata)")
+    if args.cost_limit is not None:
+        warnings.append(f"--cost-limit (using '{metadata.get('cost_limit')}' from metadata)")
     if getattr(args, "without", False):
         warnings.append(
             "--without (using 'without_interface_descriptions' from metadata)"
@@ -1832,6 +1953,9 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
     # Determine max_iters: always use metadata in resume mode.
     max_iters = metadata.get('max_iters')
 
+    # Determine mini-swe-agent cost limit: always use metadata in resume mode.
+    cost_limit = metadata.get("cost_limit")
+
     # Determine without_interface_descriptions: always use metadata in resume mode.
     without_interface_descriptions = bool(metadata.get("without_interface_descriptions"))
 
@@ -1875,6 +1999,7 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
         runtime_proxy=runtime_proxy,
         gpu_ids=gpu_ids,
         max_iters=max_iters,
+        cost_limit=cost_limit,
         split=metadata.get('split'),  # Use split from metadata
         without_interface_descriptions=without_interface_descriptions,
         white_box=white_box,
@@ -1920,6 +2045,15 @@ def main() -> int:
         if getattr(args, "session_cache", False) and args.agent != "openhands":
             console.print("[bold red]Error: --session-cache is only supported for --agent openhands[/]")
             sys.exit(1)
+        if args.cost_limit is not None:
+            if args.agent != "mini_swe_agent":
+                console.print(
+                    "[bold red]Error: --cost-limit is only supported for --agent mini_swe_agent[/]"
+                )
+                sys.exit(1)
+            if args.cost_limit < 0:
+                console.print("[bold red]Error: --cost-limit must be greater than or equal to 0[/]")
+                sys.exit(1)
         
         # Create new config
         config = InferConfig(
@@ -1951,6 +2085,7 @@ def main() -> int:
             ),
             gpu_ids=args.gpu_ids,
             max_iters=args.max_iters,
+            cost_limit=args.cost_limit,
             split=args.split if args.split is not None else "full",
             without_interface_descriptions=bool(getattr(args, "without", False)),
             white_box=bool(getattr(args, "white", False)),

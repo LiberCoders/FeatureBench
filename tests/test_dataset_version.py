@@ -139,6 +139,7 @@ def test_inference_runner_resolves_revision_from_config(tmp_path) -> None:
         model="provider/model",
         output_dir=tmp_path / "runs",
         split="lite",
+        cost_limit=0,
     )
 
     runner = run_infer.InferenceRunner(config, config_path=config_path)
@@ -149,6 +150,7 @@ def test_inference_runner_resolves_revision_from_config(tmp_path) -> None:
         (runner.output_dir / "run_metadata.json").read_text(encoding="utf-8")
     )
     assert saved_metadata["dataset_revision"] == "v1.0"
+    assert saved_metadata["cost_limit"] == 0
     run_infer.atexit.unregister(runner._atexit_cleanup)
 
 
@@ -210,3 +212,4 @@ def test_legacy_run_metadata_resumes_against_v10(tmp_path) -> None:
     metadata = RunMetadata.load(metadata_path)
 
     assert metadata.dataset_revision == "v1.0"
+    assert metadata.cost_limit is None

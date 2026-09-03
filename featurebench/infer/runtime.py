@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 
 from docker.models.containers import Container
 
+from featurebench.environment_fixes import apply_environment_fixes
 from featurebench.infer.container import ContainerManager
 from featurebench.infer.models import TaskInstance
 
@@ -43,7 +44,7 @@ class RuntimeHandler:
         Initialize the runtime environment before agent execution.
         
         Based on swe-infer's initialize_runtime implementation:
-        - Level 1: Activate env, restore project, apply patch, delete F2P tests, init git
+        - Level 1: Restore and mask the project, apply environment fixes, init git
         - Level 2: Activate env, clean /testbed, init git
         
         Args:
@@ -159,11 +160,16 @@ class RuntimeHandler:
                 # Apply patch
                 exit_code, output = self.cm.exec_command(
                     container,
-                    "cd /testbed && git apply --whitespace=fix /tmp/mask.patch",
+                    "cd /testbed; "
+                    "git apply --whitespace=fix /tmp/mask.patch; "
+                    "status=$?; "
+                    "rm -f -- /tmp/mask.patch; "
+                    'exit "$status"',
                     log_file=log_file
                 )
                 if exit_code != 0:
-                    self.logger.warning(f"Failed to apply patch: {output}")
+                    self.logger.error(f"Failed to apply patch: {output}")
+                    return False
                 else:
                     self.logger.info("Successfully applied patch for masking")
             finally:
@@ -199,8 +205,34 @@ class RuntimeHandler:
             else:
                 self.logger.warning("No FAIL_TO_PASS tests found")
         
-        # Step 4: Re-initialize git repository
-        self.logger.info("Step 4: Re-initializing git repository")
+        # Step 4: Apply repository-specific environment fixes. This must happen
+        # before Git is reinitialized so cleanup is part of the task baseline,
+        # not part of the patch later attributed to the agent.
+        self.logger.info("Step 4: Applying repository-specific environment fixes")
+        repo_settings = instance.get_repo_settings()
+        repository = str(
+            repo_settings.get("repository") or instance.metadata.get("repo") or ""
+        )
+        if not apply_environment_fixes(
+            repository,
+            lambda command: self.cm.exec_command(
+                container,
+                command,
+                log_file=log_file,
+            ),
+            self.logger,
+        ):
+            return False
+
+        # Step 5: Remove bytecode copied from the pristine image. These caches
+        # may still contain implementations that were removed by mask.patch,
+        # so they must not be visible to the agent or included in its baseline.
+        self.logger.info("Step 5: Removing stale Python bytecode")
+        if not self._clear_python_bytecode(container, log_file):
+            return False
+
+        # Step 6: Re-initialize git repository
+        self.logger.info("Step 6: Re-initializing git repository")
         return self._init_git_repo(container, log_file)
     
     def _initialize_level2(
@@ -260,6 +292,107 @@ class RuntimeHandler:
                 return False
         
         self.logger.info(f"Initial commit hash: {output.strip()}")
+        return True
+
+    def _clear_python_bytecode(
+        self,
+        container: Container,
+        log_file: Path,
+    ) -> bool:
+        """Remove Python bytecode that may predate the task's mask patch."""
+        command = r"""
+        set -e
+        cd /testbed || exit 1
+        find . -type d -name __pycache__ -prune -exec rm -rf -- {} +
+        find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+        """
+        exit_code, output = self.cm.exec_command(
+            container,
+            command,
+            log_file=log_file,
+        )
+        if exit_code != 0:
+            self.logger.error(f"Failed to remove stale Python bytecode: {output}")
+            return False
+
+        self.logger.info("Successfully removed stale Python bytecode")
+        return True
+
+    def clear_package_caches(self, container: Container, log_file: Path) -> bool:
+        """Remove package-manager caches before the agent can inspect the container.
+
+        Cache paths backed by Docker mounts are preserved so a task can never
+        erase a user-configured shared host-side download cache.
+        """
+        self.logger.info("Clearing package-manager caches before agent execution")
+        command = r"""
+        shopt -s nullglob
+
+        cache_paths=(
+            /download
+            /opt/miniconda3/pkgs
+            /opt/conda/pkgs
+            /root/.cache/pip
+            /root/.cache/uv
+            /root/.conda/pkgs
+        )
+        cache_paths+=(/home/*/.cache/pip /home/*/.cache/uv /home/*/.conda/pkgs)
+
+        is_on_non_root_mount() {
+            local target="$1"
+            awk -v target="$target" '
+                {
+                    mountpoint = $5
+                    prefix = mountpoint "/"
+                    if (mountpoint != "/" && target == mountpoint) {
+                        found = 1
+                    }
+                    if (mountpoint != "/" && index(target, prefix) == 1) {
+                        found = 1
+                    }
+                }
+                END { exit(found ? 0 : 1) }
+            ' /proc/self/mountinfo
+        }
+
+        for cache_path in "${cache_paths[@]}"; do
+            [ -e "$cache_path" ] || continue
+            cache_path="$(readlink -f -- "$cache_path")"
+
+            if is_on_non_root_mount "$cache_path"; then
+                echo "Skipping mounted package cache: $cache_path"
+                continue
+            fi
+
+            size_kb="$(du -sk "$cache_path" 2>/dev/null | awk '{print $1}')"
+            find "$cache_path" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+            echo "Cleared package cache: $cache_path (${size_kb:-unknown} KB)"
+        done
+
+        temp_paths=(/tmp/pip-* /tmp/uv-*)
+        for temp_path in "${temp_paths[@]}"; do
+            [ -e "$temp_path" ] || continue
+            temp_path="$(readlink -f -- "$temp_path")"
+
+            if is_on_non_root_mount "$temp_path"; then
+                echo "Skipping mounted package temporary path: $temp_path"
+                continue
+            fi
+
+            rm -rf -- "$temp_path"
+            echo "Cleared package temporary path: $temp_path"
+        done
+        """
+        exit_code, output = self.cm.exec_command(
+            container,
+            command,
+            log_file=log_file,
+        )
+        if exit_code != 0:
+            self.logger.error(f"Failed to clear package caches: {output}")
+            return False
+
+        self.logger.info("Successfully cleared package-manager caches")
         return True
     
     def complete_runtime(

@@ -68,10 +68,11 @@ How infer reads `config.toml`:
 
 ```toml
 [infer]
-download_cache_dir = "/abs/path/to/FeatureBench/download_cache"
+# Optional shared install cache. Leave unset for leakage-resistant evaluations.
+# download_cache_dir = "/abs/path/to/FeatureBench/download_cache"
 ```
 
-- `download_cache_dir`: host-side cache directory that will be mounted into the container at `/download`.
+- `download_cache_dir`: optional host-side cache directory mounted into the container at `/download`. It is disabled by default because the agent can read shared cache contents during inference.
   - Purpose: speed up agent installs/downloads (e.g. npm cache).
   - Empty means no mount (each container downloads on its own; usually slower).
 

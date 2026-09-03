@@ -52,7 +52,8 @@ base_url = "http://localhost:8080/v1"                # vLLM server URL
 # Optional: Host cache directory for agent downloads; will be mounted to /download inside containers
 # Set to empty to disable cache mount (each container will re-download/install)
 # Use an absolute path here
-download_cache_dir="/path/to/FeatureBench/download_cache"
+# Optional shared install cache. Leave unset for leakage-resistant evaluations.
+# download_cache_dir="/path/to/FeatureBench/download_cache"
 
 # OpenHands Agent Configuration
 [infer_config.openhands]
