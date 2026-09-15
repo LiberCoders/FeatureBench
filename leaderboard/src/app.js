@@ -63,6 +63,7 @@ function updateFootnotes(notesUsed) {
 
 function updateTableSchema(version) {
   if (els.table) els.table.dataset.version = version;
+  if (els.evaluationSettings) els.evaluationSettings.hidden = version !== "v1.1";
   for (const [headerVersion, header] of els.versionHeaders) {
     if (header) header.hidden = headerVersion !== version;
   }

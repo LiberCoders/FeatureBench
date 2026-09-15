@@ -768,6 +768,14 @@ html:not([data-theme="dark"]) .theme-icon-moon {
   min-height: 0;
 }
 
+.evaluation-settings {
+  flex: 0 0 auto;
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .table-wrap {
   overflow-x: auto;
   overflow-y: auto;
@@ -792,7 +800,8 @@ table {
 }
 
 table[data-version="v1.1"] {
-  min-width: 1320px;
+  min-width: 1040px;
+  table-layout: fixed;
 }
 
 thead th {
@@ -1047,6 +1056,61 @@ tbody td.pct {
   text-align: center;
   padding-left: 12px;
   padding-right: 6px;
+}
+
+/* V1.1 has one more column than V1.0, so give each field an explicit share
+   instead of letting the browser stretch short columns and force overflow. */
+table[data-version="v1.1"] thead th,
+table[data-version="v1.1"] tbody td {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+table[data-version="v1.1"] .col-rank {
+  width: 5%;
+  min-width: 0;
+}
+
+table[data-version="v1.1"] .col-model {
+  width: 22%;
+  min-width: 0;
+}
+
+table[data-version="v1.1"] .col-agent {
+  width: 14%;
+  min-width: 0;
+}
+
+table[data-version="v1.1"] .col-effort {
+  width: 7%;
+  min-width: 0;
+}
+
+table[data-version="v1.1"] .pct {
+  width: 9%;
+  min-width: 0;
+  max-width: none;
+}
+
+table[data-version="v1.1"] .pct:nth-child(6) {
+  width: 10%;
+}
+
+table[data-version="v1.1"] .col-harness-org {
+  width: 11%;
+  min-width: 0;
+  max-width: none;
+}
+
+table[data-version="v1.1"] .col-model-org {
+  width: 10%;
+  min-width: 0;
+  max-width: none;
+}
+
+table[data-version="v1.1"] .col-model-release {
+  width: 12%;
+  min-width: 0;
 }
 
 .empty-results {

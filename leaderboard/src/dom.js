@@ -5,6 +5,7 @@ export const els = {
   tbody: /** @type {HTMLElement} */ (document.getElementById("tbody")),
   table: /** @type {HTMLTableElement | null} */ (document.getElementById("leaderboardTable")),
   panel: /** @type {HTMLElement} */ (document.getElementById("panel")),
+  evaluationSettings: /** @type {HTMLElement | null} */ (document.getElementById("evaluationSettings")),
   tableFootnotes: /** @type {HTMLElement | null} */ (document.getElementById("tableFootnotes")),
   tableFootnotesToggle: /** @type {HTMLButtonElement | null} */ (document.getElementById("tableFootnotesToggle")),
   tableFootnotesContent: /** @type {HTMLElement | null} */ (document.getElementById("tableFootnotesContent")),

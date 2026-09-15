@@ -1,11 +1,11 @@
 [
   {
-    "agent": "OpenHands",
+    "agent": "Mini-SWE-Agent",
     "model": "Qwen3.5-27B",
-    "effort": "default",
+    "effort": "-",
     "passed": 37.93,
     "resolved": 3,
-    "harness_org": "OpenHands",
+    "harness_org": "-",
     "model_org": "Qwen",
     "model_release": "2026-02-24",
     "filter_1": [
@@ -14,18 +14,17 @@
     ],
     "filter_2": [
       "Model: Qwen3.5-27B",
-      "Scaffold: OpenHands",
-      "Harness Org: OpenHands",
+      "Scaffold: Mini-SWE-Agent",
       "Model Org: Qwen"
     ]
   },
   {
-    "agent": "OpenHands",
+    "agent": "Mini-SWE-Agent",
     "model": "Qwen3.6-27B",
-    "effort": "default",
+    "effort": "-",
     "passed": 38.99,
     "resolved": 4,
-    "harness_org": "OpenHands",
+    "harness_org": "-",
     "model_org": "Qwen",
     "model_release": "2026-04-21",
     "filter_1": [
@@ -34,18 +33,17 @@
     ],
     "filter_2": [
       "Model: Qwen3.6-27B",
-      "Scaffold: OpenHands",
-      "Harness Org: OpenHands",
+      "Scaffold: Mini-SWE-Agent",
       "Model Org: Qwen"
     ]
   },
   {
-    "agent": "OpenHands",
+    "agent": "Mini-SWE-Agent",
     "model": "Qwen3.8-27B",
-    "effort": "default",
+    "effort": "xhigh",
     "passed": 19.63,
     "resolved": 6,
-    "harness_org": "OpenHands",
+    "harness_org": "-",
     "model_org": "Qwen",
     "model_release": "2026-08-14",
     "filter_1": [
@@ -54,18 +52,17 @@
     ],
     "filter_2": [
       "Model: Qwen3.8-27B",
-      "Scaffold: OpenHands",
-      "Harness Org: OpenHands",
+      "Scaffold: Mini-SWE-Agent",
       "Model Org: Qwen"
     ]
   },
   {
-    "agent": "OpenHands",
+    "agent": "Mini-SWE-Agent",
     "model": "GPT-5.6 Sol",
-    "effort": "default",
+    "effort": "medium",
     "passed": 49.8,
     "resolved": 12,
-    "harness_org": "OpenHands",
+    "harness_org": "-",
     "model_org": "OpenAI",
     "model_release": "2026-07-09",
     "filter_1": [
@@ -74,18 +71,17 @@
     ],
     "filter_2": [
       "Model: GPT-5.6 Sol",
-      "Scaffold: OpenHands",
-      "Harness Org: OpenHands",
+      "Scaffold: Mini-SWE-Agent",
       "Model Org: OpenAI"
     ]
   },
   {
-    "agent": "OpenHands",
+    "agent": "Mini-SWE-Agent",
     "model": "Claude Opus 5",
-    "effort": "default",
+    "effort": "high",
     "passed": 67.2,
     "resolved": 40,
-    "harness_org": "OpenHands",
+    "harness_org": "-",
     "model_org": "Anthropic",
     "model_release": "2026-07-24",
     "filter_1": [
@@ -94,18 +90,17 @@
     ],
     "filter_2": [
       "Model: Claude Opus 5",
-      "Scaffold: OpenHands",
-      "Harness Org: OpenHands",
+      "Scaffold: Mini-SWE-Agent",
       "Model Org: Anthropic"
     ]
   },
   {
-    "agent": "OpenHands",
+    "agent": "Mini-SWE-Agent",
     "model": "DeepSeek-V4-Pro",
-    "effort": "default",
+    "effort": "high",
     "passed": 38.9,
     "resolved": 11,
-    "harness_org": "OpenHands",
+    "harness_org": "-",
     "model_org": "DeepSeek",
     "model_release": "2026-04-24",
     "filter_1": [
@@ -114,18 +109,17 @@
     ],
     "filter_2": [
       "Model: DeepSeek-V4-Pro",
-      "Scaffold: OpenHands",
-      "Harness Org: OpenHands",
+      "Scaffold: Mini-SWE-Agent",
       "Model Org: DeepSeek"
     ]
   },
   {
-    "agent": "OpenHands",
+    "agent": "Mini-SWE-Agent",
     "model": "GLM-5.3",
-    "effort": "default",
+    "effort": "max",
     "passed": 46.34,
     "resolved": 12,
-    "harness_org": "OpenHands",
+    "harness_org": "-",
     "model_org": "Zhipu",
     "model_release": "2026-08-14",
     "filter_1": [
@@ -134,18 +128,17 @@
     ],
     "filter_2": [
       "Model: GLM-5.3",
-      "Scaffold: OpenHands",
-      "Harness Org: OpenHands",
+      "Scaffold: Mini-SWE-Agent",
       "Model Org: Zhipu"
     ]
   },
   {
-    "agent": "OpenHands",
+    "agent": "Mini-SWE-Agent",
     "model": "Kimi K3",
-    "effort": "default",
+    "effort": "max",
     "passed": 22.9,
     "resolved": 7,
-    "harness_org": "OpenHands",
+    "harness_org": "-",
     "model_org": "Moonshot",
     "model_release": "2026-07-16",
     "filter_1": [
@@ -154,8 +147,7 @@
     ],
     "filter_2": [
       "Model: Kimi K3",
-      "Scaffold: OpenHands",
-      "Harness Org: OpenHands",
+      "Scaffold: Mini-SWE-Agent",
       "Model Org: Moonshot"
     ]
   }
