@@ -1,1 +1,162 @@
-[]
+[
+  {
+    "agent": "OpenHands",
+    "model": "Qwen3.5-27B",
+    "effort": "default",
+    "passed": 37.93,
+    "resolved": 3,
+    "harness_org": "OpenHands",
+    "model_org": "Qwen",
+    "model_release": "2026-02-24",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: Qwen3.5-27B",
+      "Scaffold: OpenHands",
+      "Harness Org: OpenHands",
+      "Model Org: Qwen"
+    ]
+  },
+  {
+    "agent": "OpenHands",
+    "model": "Qwen3.6-27B",
+    "effort": "default",
+    "passed": 38.99,
+    "resolved": 4,
+    "harness_org": "OpenHands",
+    "model_org": "Qwen",
+    "model_release": "2026-04-21",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: Qwen3.6-27B",
+      "Scaffold: OpenHands",
+      "Harness Org: OpenHands",
+      "Model Org: Qwen"
+    ]
+  },
+  {
+    "agent": "OpenHands",
+    "model": "Qwen3.8-27B",
+    "effort": "default",
+    "passed": 19.63,
+    "resolved": 6,
+    "harness_org": "OpenHands",
+    "model_org": "Qwen",
+    "model_release": "2026-08-14",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: Qwen3.8-27B",
+      "Scaffold: OpenHands",
+      "Harness Org: OpenHands",
+      "Model Org: Qwen"
+    ]
+  },
+  {
+    "agent": "OpenHands",
+    "model": "GPT-5.6 Sol",
+    "effort": "default",
+    "passed": 49.8,
+    "resolved": 12,
+    "harness_org": "OpenHands",
+    "model_org": "OpenAI",
+    "model_release": "2026-07-09",
+    "filter_1": [
+      "Open Scaffold",
+      "Close Weights"
+    ],
+    "filter_2": [
+      "Model: GPT-5.6 Sol",
+      "Scaffold: OpenHands",
+      "Harness Org: OpenHands",
+      "Model Org: OpenAI"
+    ]
+  },
+  {
+    "agent": "OpenHands",
+    "model": "Claude Opus 5",
+    "effort": "default",
+    "passed": 67.2,
+    "resolved": 40,
+    "harness_org": "OpenHands",
+    "model_org": "Anthropic",
+    "model_release": "2026-07-24",
+    "filter_1": [
+      "Open Scaffold",
+      "Close Weights"
+    ],
+    "filter_2": [
+      "Model: Claude Opus 5",
+      "Scaffold: OpenHands",
+      "Harness Org: OpenHands",
+      "Model Org: Anthropic"
+    ]
+  },
+  {
+    "agent": "OpenHands",
+    "model": "DeepSeek-V4-Pro",
+    "effort": "default",
+    "passed": 38.9,
+    "resolved": 11,
+    "harness_org": "OpenHands",
+    "model_org": "DeepSeek",
+    "model_release": "2026-04-24",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: DeepSeek-V4-Pro",
+      "Scaffold: OpenHands",
+      "Harness Org: OpenHands",
+      "Model Org: DeepSeek"
+    ]
+  },
+  {
+    "agent": "OpenHands",
+    "model": "GLM-5.3",
+    "effort": "default",
+    "passed": 46.34,
+    "resolved": 12,
+    "harness_org": "OpenHands",
+    "model_org": "Zhipu",
+    "model_release": "2026-08-14",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: GLM-5.3",
+      "Scaffold: OpenHands",
+      "Harness Org: OpenHands",
+      "Model Org: Zhipu"
+    ]
+  },
+  {
+    "agent": "OpenHands",
+    "model": "Kimi K3",
+    "effort": "default",
+    "passed": 22.9,
+    "resolved": 7,
+    "harness_org": "OpenHands",
+    "model_org": "Moonshot",
+    "model_release": "2026-07-16",
+    "filter_1": [
+      "Open Scaffold",
+      "Open Weights"
+    ],
+    "filter_2": [
+      "Model: Kimi K3",
+      "Scaffold: OpenHands",
+      "Harness Org: OpenHands",
+      "Model Org: Moonshot"
+    ]
+  }
+]
