@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import os
 
-
 DEFAULT_IMAGE_PREFIX = "docker.io"
-DEFAULT_IMAGE_NAMESPACE = "libercoders"
 IMAGE_PREFIX_ENV_VAR = "FEATUREBENCH_IMAGE_PREFIX"
 
 
@@ -56,11 +54,3 @@ def canonical_docker_hub_image_name(raw: str) -> str | None:
         return image_name
 
     return None
-
-
-def build_legacy_instance_image_name(raw: str) -> str:
-    """Build the legacy instance image reference and apply the prefix override."""
-    image_name = (raw or "").strip().lower()
-    if not image_name:
-        return ""
-    return normalize_image_name(f"{DEFAULT_IMAGE_NAMESPACE}/{image_name}")

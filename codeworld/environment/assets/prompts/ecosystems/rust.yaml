@@ -1,0 +1,20 @@
+module: rust
+match:
+  languages: [rust]
+  package_managers: [cargo]
+dockerfile_guidance:
+  - >-
+    The selected primary-language base may not preinstall Rust. When selected_base.capabilities has neither
+    cargo nor rustup, install a repository-compatible Rust compiler and Cargo in the Dockerfile before invoking
+    maturin, cargo, or another native build backend; use the repository's rust-version/toolchain evidence and
+    fail during build rather than allowing a build backend to wait for or bootstrap a toolchain implicitly.
+  - >-
+    Use the committed Cargo lock semantics, fetch and compile test dependencies during build, and retain
+    the target/cache material required for offline execution.
+runner_guidance:
+  - >-
+    Prefer structured Cargo/libtest data when the pinned toolchain provides it. Where stable libtest has no
+    structured interface, its version-stable terse listing/execution stream is the explicitly permitted
+    machine-oriented fallback: parse it fail-closed, qualify IDs by package and test target, and never infer
+    per-test outcomes from the aggregate process status. Pass multiple requested filters through a fixed bounded
+    invocation strategy.

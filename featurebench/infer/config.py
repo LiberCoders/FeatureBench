@@ -5,16 +5,17 @@ Configuration loader for the inference module.
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import toml
 from huggingface_hub import HfApi
 
+from featurebench.utils.identifiers import normalize_instance_id
 
 DEFAULT_DATASET_REVISION = "v1.1"
 
 
-def configure_hf_access(env_vars: Dict[str, Any]) -> Tuple[Union[str, bool, None], Optional[str]]:
+def configure_hf_access(env_vars: dict[str, Any]) -> tuple[str | bool | None, str | None]:
     """Apply configured Hub access settings and return normalized values."""
     configured_endpoint = str(env_vars.get("HF_ENDPOINT") or "").strip()
     endpoint = configured_endpoint or str(os.environ.get("HF_ENDPOINT") or "").strip()
@@ -28,7 +29,7 @@ def configure_hf_access(env_vars: Dict[str, Any]) -> Tuple[Union[str, bool, None
 
     if "HF_TOKEN" in env_vars:
         configured_token = str(env_vars.get("HF_TOKEN") or "").strip()
-        token: Union[str, bool, None] = configured_token or False
+        token: str | bool | None = configured_token or False
     else:
         token = str(os.environ.get("HF_TOKEN") or "").strip() or None
 
@@ -38,8 +39,8 @@ def configure_hf_access(env_vars: Dict[str, Any]) -> Tuple[Union[str, bool, None
 def resolve_hf_dataset_revision(
     dataset: str,
     revision: str,
-    token: Union[str, bool, None],
-    endpoint: Optional[str],
+    token: str | bool | None,
+    endpoint: str | None,
 ) -> str:
     """Resolve a Hub dataset revision to its immutable commit SHA."""
     try:
@@ -55,9 +56,7 @@ def resolve_hf_dataset_revision(
 
     resolved_revision = str(info.sha or "").strip()
     if not resolved_revision:
-        raise RuntimeError(
-            f"Hugging Face returned no commit SHA for '{dataset}' at '{revision}'"
-        )
+        raise RuntimeError(f"Hugging Face returned no commit SHA for '{dataset}' at '{revision}'")
     return resolved_revision
 
 
@@ -78,55 +77,51 @@ def verify_loaded_dataset_revision(dataset: Any, resolved_revision: str) -> None
 
 class InferConfigLoader:
     """Load and manage inference configuration."""
-    
-    def __init__(self, config_path: Optional[Path] = None):
+
+    def __init__(self, config_path: Path | None = None):
         """
         Initialize the config loader.
-        
+
         Args:
-            config_path: Path to the config file. If None, searches for config.toml
-                        in the project root.
+            config_path: Path to the config file. If None, uses config.toml in
+                        the current working directory.
         """
-        if config_path is None:
-            # Search for config.toml in project root
-            current_dir = Path(__file__).parent
-            while current_dir != current_dir.parent:
-                config_file = current_dir / "config.toml"
-                if config_file.exists():
-                    config_path = config_file
-                    break
-                current_dir = current_dir.parent
-        
-        if config_path is None or not config_path.exists():
+        resolved_path = (
+            Path(config_path).expanduser()
+            if config_path is not None
+            else Path.cwd() / "config.toml"
+        )
+        if not resolved_path.is_file():
             raise FileNotFoundError(
-                "config.toml not found. Please create a config.toml file in the project root."
+                f"config.toml not found: {resolved_path}. "
+                "Create it in the current working directory or pass --config-path."
             )
-        
-        self.config_path = config_path
-        self._config = toml.load(config_path)
+
+        self.config_path = resolved_path
+        self._config = toml.load(resolved_path)
 
     @property
-    def raw_config(self) -> Dict[str, Any]:
+    def raw_config(self) -> dict[str, Any]:
         """Return the raw parsed config.toml dictionary."""
         return self._config
-    
+
     @property
-    def env_vars(self) -> Dict[str, str]:
+    def env_vars(self) -> dict[str, str]:
         """Get global environment variables."""
         return self._config.get("env_vars", {})
-    
+
     @property
-    def llm_config(self) -> Dict[str, Any]:
+    def llm_config(self) -> dict[str, Any]:
         """Get global LLM configuration."""
         return self._config.get("llm_config", {})
-    
-    def get_agent_config(self, agent_name: str) -> Dict[str, Any]:
+
+    def get_agent_config(self, agent_name: str) -> dict[str, Any]:
         """
         Get configuration for a specific agent.
-        
+
         Args:
             agent_name: Name of the agent (e.g., "claude_code", "openhands")
-            
+
         Returns:
             Agent configuration dictionary
         """
@@ -134,7 +129,7 @@ class InferConfigLoader:
         agent_config = infer_config.get(agent_name, {})
         return agent_config
 
-    def get_cache_dir(self) -> Optional[Path]:
+    def get_cache_dir(self) -> Path | None:
         """Get host cache directory for downloads (mounted to /download)."""
         cache_cfg = self._config.get("infer", {}) or {}
         path = cache_cfg.get("download_cache_dir")
@@ -148,20 +143,20 @@ class InferConfigLoader:
         revision = str(dataset_cfg.get("revision") or "").strip()
         return revision or DEFAULT_DATASET_REVISION
 
-    def get_agent_env_vars(self, agent_name: str) -> Dict[str, str]:
+    def get_agent_env_vars(self, agent_name: str) -> dict[str, str]:
         """
         Get environment variables for a specific agent.
         Merges global env_vars with agent-specific ones.
-        
+
         Args:
             agent_name: Name of the agent
-            
+
         Returns:
             Merged environment variables dictionary
         """
         # Start with global env vars
         env_vars = dict(self.env_vars)
-        
+
         # Merge agent-specific config
         agent_config = self.get_agent_config(agent_name)
         for key, value in agent_config.items():
@@ -174,10 +169,10 @@ class InferConfigLoader:
             env_vars[key] = str(value)
 
         self._apply_agent_defaults_and_validate(agent_name, env_vars)
-        
+
         return env_vars
 
-    def _apply_agent_defaults_and_validate(self, agent_name: str, env_vars: Dict[str, str]) -> None:
+    def _apply_agent_defaults_and_validate(self, agent_name: str, env_vars: dict[str, str]) -> None:
         """Apply minimal defaults and validate enum-like agent options.
 
         Intentionally selective: we only validate a small set of known fields to
@@ -185,8 +180,6 @@ class InferConfigLoader:
         """
         if agent_name != "codex":
             return
-
-        allowed_reasoning_effort = {"low", "medium", "high"}
 
         # Default: if left empty/unset, use "medium".
         raw = env_vars.get("CODEX_REASONING_EFFORT") or env_vars.get("MODEL_REASONING_EFFORT")
@@ -196,14 +189,14 @@ class InferConfigLoader:
 
         value = str(raw).strip().lower()
         env_vars["CODEX_REASONING_EFFORT"] = value
-    
-    def get_llm_by_name(self, llm_name: str) -> Optional[Dict[str, Any]]:
+
+    def get_llm_by_name(self, llm_name: str) -> dict[str, Any] | None:
         """
         Get LLM configuration by name.
-        
+
         Args:
             llm_name: Name of the LLM configuration
-            
+
         Returns:
             LLM configuration dictionary or None if not found
         """
@@ -213,32 +206,32 @@ class InferConfigLoader:
 
 class DatasetLoader:
     """Load dataset from HuggingFace."""
-    
+
     def __init__(self, config_loader: InferConfigLoader):
         """
         Initialize the dataset loader.
-        
+
         Args:
             config_loader: Configuration loader instance
         """
         self.config = config_loader
         self._setup_hf_env()
-    
+
     def _setup_hf_env(self) -> None:
         """Set up HuggingFace environment variables."""
         configure_hf_access(self.config.env_vars)
-    
+
     def load_dataset(
         self,
         dataset: str,
-        split: Optional[str] = None,
-        levels: Optional[List[int]] = None,
-        task_ids: Optional[List[str]] = None,
-        revision: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        split: str | None = None,
+        levels: list[int] | None = None,
+        task_ids: list[str] | None = None,
+        revision: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Load dataset from HuggingFace.
-        
+
         Args:
             dataset: HuggingFace dataset repo name (e.g., "LiberCoders/FeatureBench"). Required.
             split: HuggingFace split name (e.g., "lite", "full"). Required.
@@ -247,7 +240,7 @@ class DatasetLoader:
             task_ids: Specific task IDs to filter. If None, loads all tasks.
             revision: Hugging Face dataset revision (tag, branch, or commit SHA).
                       If omitted, uses ``[dataset].revision`` or ``v1.1``.
-            
+
         Returns:
             List of task instances as dictionaries
         """
@@ -259,64 +252,76 @@ class DatasetLoader:
         logging.getLogger("requests").setLevel(logging.WARNING)
         logging.getLogger("huggingface_hub").setLevel(logging.WARNING)
         logging.getLogger("filelock").setLevel(logging.WARNING)
-        
+
         from datasets import load_dataset
-        
+
         env_vars = self.config.env_vars
         hf_token, hf_endpoint = configure_hf_access(env_vars)
         dataset_revision = str(revision or "").strip() or self.config.get_dataset_revision()
 
         dataset_name = str(dataset or "").strip()
         if not dataset_name:
-            raise ValueError("dataset parameter is required. Please specify --dataset (e.g., 'LiberCoders/FeatureBench')")
-        
+            raise ValueError(
+                "dataset parameter is required. Please specify --dataset (e.g., 'LiberCoders/FeatureBench')"
+            )
+
         if split is None:
-            raise ValueError("split parameter is required. Please specify --split (e.g., 'lite', 'full')")
-        
+            raise ValueError(
+                "split parameter is required. Please specify --split (e.g., 'lite', 'full')"
+            )
+
+        resolved_revision = resolve_hf_dataset_revision(
+            dataset_name,
+            dataset_revision,
+            hf_token,
+            hf_endpoint,
+        )
+        dataset = load_dataset(
+            dataset_name,
+            split=split,
+            token=hf_token,
+            revision=resolved_revision,
+        )
+        verify_loaded_dataset_revision(dataset, resolved_revision)
+
         all_instances = []
-        
-        try:
-            resolved_revision = resolve_hf_dataset_revision(
-                dataset_name,
-                dataset_revision,
-                hf_token,
-                hf_endpoint,
+        seen_instance_ids: set[str] = set()
+        for item in dataset:
+            item_dict = dict(item)
+
+            instance_id = item_dict.get("instance_id", "")
+            instance_id = normalize_instance_id(
+                instance_id,
+                field="dataset field 'instance_id'",
             )
-            dataset = load_dataset(
-                dataset_name,
-                split=split,
-                token=hf_token,
-                revision=resolved_revision,
-            )
-            verify_loaded_dataset_revision(dataset, resolved_revision)
-            
-            for item in dataset:
-                item_dict = dict(item)
-                
-                # Determine level from instance_id's last segment (e.g., "xxx.lv1" -> level 1)
-                instance_id = item_dict.get("instance_id", "")
-                last_segment = instance_id.split(".")[-1] if instance_id else ""
-                if last_segment == "lv1":
-                    level = 1
-                elif last_segment == "lv2":
-                    level = 2
-                else:
-                    # raise error if level is not 1 or 2
-                    raise RuntimeError(f"Unknown level: {last_segment} in instance_id: {instance_id}")
-                
-                item_dict["level"] = level
-                
-                # Filter by levels if specified
-                if levels is not None and level not in levels:
-                    continue
-                
-                # Filter by task_ids if specified
-                if task_ids is not None and instance_id not in task_ids:
-                    continue
-                
-                all_instances.append(item_dict)
-                    
-        except Exception as e:
-            print(f"Warning: Failed to load split '{split}': {e}")
-        
+            if instance_id in seen_instance_ids:
+                raise ValueError(f"dataset contains duplicate instance_id: {instance_id}")
+            seen_instance_ids.add(instance_id)
+            item_dict["instance_id"] = instance_id
+
+            last_segment = instance_id.split(".")[-1] if instance_id else ""
+            if last_segment == "lv1":
+                level = 1
+            elif last_segment == "lv2":
+                level = 2
+            else:
+                raise RuntimeError(f"Unknown level: {last_segment} in instance_id: {instance_id}")
+
+            item_dict["level"] = level
+            if levels is not None and level not in levels:
+                continue
+            if task_ids is not None and instance_id not in task_ids:
+                continue
+            all_instances.append(item_dict)
+
+        if task_ids is not None:
+            requested_ids = set(task_ids)
+            selected_ids = {item["instance_id"] for item in all_instances}
+            missing_ids = requested_ids - selected_ids
+            if missing_ids:
+                missing = ", ".join(sorted(missing_ids))
+                raise ValueError(
+                    f"requested task IDs were not found in the selected dataset and levels: {missing}"
+                )
+
         return all_instances

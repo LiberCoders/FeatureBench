@@ -21,25 +21,35 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
 
 import docker
 from docker.models.containers import Container
 from rich.console import Console, Group
 from rich.live import Live
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from rich.table import Table
 
 from featurebench.infer.agents import get_agent
 from featurebench.infer.config import DatasetLoader, InferConfigLoader
 from featurebench.infer.container import ContainerManager
+from featurebench.infer.gpu_scheduler import (
+    GpuLease,
+    GpuScheduler,
+    detect_host_gpu_ids,
+    parse_gpu_id_list,
+)
 from featurebench.infer.models import InferConfig, InferResult, RunMetadata, TaskInstance, TaskPaths
 from featurebench.infer.network import AgentNetworkIsolation
 from featurebench.infer.output import OutputManager
 from featurebench.infer.runtime import RuntimeHandler
-from featurebench.infer.gpu_scheduler import GpuLease, GpuScheduler, detect_host_gpu_ids, parse_gpu_id_list
 from featurebench.utils.docker_images import normalize_image_name
-
 
 # Configure console logging - minimal output to terminal
 console = Console()
@@ -56,11 +66,11 @@ def setup_console_logging():
     root_logger = logging.getLogger()
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-    
+
     # Set up a minimal console handler that only shows WARNING and above
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.WARNING)
-    console_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+    console_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
     root_logger.addHandler(console_handler)
     root_logger.setLevel(logging.DEBUG)
 
@@ -68,11 +78,11 @@ def setup_console_logging():
 def create_task_file_logger(log_file: Path, task_id: str) -> logging.Logger:
     """
     Create a dedicated file logger for a specific task.
-    
+
     Args:
         log_file: Path to the log file (run.log)
         task_id: Task ID for logger naming
-        
+
     Returns:
         Logger instance that writes to the file
     """
@@ -80,22 +90,21 @@ def create_task_file_logger(log_file: Path, task_id: str) -> logging.Logger:
     logger_name = f"task_{task_id.replace('/', '_').replace('.', '_')}"
     task_logger = logging.getLogger(logger_name)
     task_logger.setLevel(logging.DEBUG)
-    
+
     # Remove any existing handlers
     task_logger.handlers.clear()
-    
+
     # Create file handler
-    file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
+    file_handler = logging.FileHandler(log_file, mode="w", encoding="utf-8")
     file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    ))
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    )
     task_logger.addHandler(file_handler)
-    
+
     # Prevent propagation to root logger (avoid terminal output)
     task_logger.propagate = False
-    
+
     return task_logger
 
 
@@ -123,9 +132,7 @@ def _restore_mini_swe_workspace_ownership(
     )
     if exit_code != 0:
         detail = output.strip() if output else "unknown error"
-        raise RuntimeError(
-            f"Failed to restore /testbed ownership after mini-swe-agent: {detail}"
-        )
+        raise RuntimeError(f"Failed to restore /testbed ownership after mini-swe-agent: {detail}")
 
 
 def _strip_interface_descriptions(problem_statement: str) -> str:
@@ -166,11 +173,11 @@ def _normalize_f2p_test_path(test_path: str) -> str:
     return f"/testbed/{raw.lstrip('/')}"
 
 
-def _load_force_rerun_ids(raw_values: Optional[List[str]]) -> List[str]:
+def _load_force_rerun_ids(raw_values: list[str] | None) -> list[str]:
     if not raw_values:
         return []
 
-    ids: List[str] = []
+    ids: list[str] = []
     for value in raw_values:
         if not value:
             continue
@@ -180,9 +187,8 @@ def _load_force_rerun_ids(raw_values: Optional[List[str]]) -> List[str]:
         if candidate.endswith(".txt"):
             path = Path(candidate)
             if not path.exists():
-                logger.warning(f"--force-rerun file not found: {path}")
-                continue
-            with open(path, "r", encoding="utf-8") as f:
+                raise FileNotFoundError(f"--force-rerun file not found: {path}")
+            with open(path, encoding="utf-8") as f:
                 for line in f:
                     task_id = line.strip()
                     if task_id:
@@ -195,7 +201,7 @@ def _load_force_rerun_ids(raw_values: Optional[List[str]]) -> List[str]:
     return deduped
 
 
-def _validate_json_object_arg(value: Optional[str], flag_name: str) -> Optional[str]:
+def _validate_json_object_arg(value: str | None, flag_name: str) -> str | None:
     if value is None:
         return None
     raw = str(value).strip()
@@ -212,7 +218,7 @@ def _validate_json_object_arg(value: Optional[str], flag_name: str) -> Optional[
     return json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
 
 
-def _get_primary_f2p_test_path(instance: TaskInstance) -> Optional[str]:
+def _get_primary_f2p_test_path(instance: TaskInstance) -> str | None:
     """Pick a single representative FAIL_TO_PASS test file path for white-box messaging."""
     f2p = instance.fail_to_pass
     if not f2p:
@@ -294,16 +300,16 @@ class RunningTasksView:
 
 class InferenceRunner:
     """Main inference runner class."""
-    
+
     def __init__(
         self,
         config: InferConfig,
-        resume_dir: Optional[Path] = None,
-        config_path: Optional[Path] = None,
+        resume_dir: Path | None = None,
+        config_path: Path | None = None,
     ):
         """
         Initialize the inference runner.
-        
+
         Args:
             config: Inference configuration
             resume_dir: Optional path to resume from a previous run
@@ -311,14 +317,14 @@ class InferenceRunner:
         self.config = config
         self.console = Console()
         self.resume_mode = resume_dir is not None
-        
+
         # Load configuration
         self.config_loader = InferConfigLoader(config_path=config_path)
         configured_revision = self.config_loader.get_dataset_revision()
         requested_revision = str(self.config.dataset_revision or "").strip()
         self.config.dataset_revision = requested_revision or configured_revision
         self.cache_dir = self.config_loader.get_cache_dir()
-        
+
         # Set output directory
         if resume_dir:
             # Resume mode: use existing directory
@@ -329,10 +335,10 @@ class InferenceRunner:
             self.run_timestamp = datetime.now().strftime("%Y-%m-%d__%H-%M-%S")
             self.output_dir = config.output_dir / self.run_timestamp
             self.output_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Initialize output manager (uses its own logger)
         self.output_manager = OutputManager(self.output_dir)
-        
+
         # Get agent environment variables
         self.agent_env_vars = self.config_loader.get_agent_env_vars(config.agent)
         if self.cache_dir:
@@ -363,7 +369,7 @@ class InferenceRunner:
             "mini_swe_agent": "MINI_SWE_AGENT_VERSION",
         }
 
-        def _apply_override(flag_name: str, value: Optional[str], key_map: Dict[str, str]) -> None:
+        def _apply_override(flag_name: str, value: str | None, key_map: dict[str, str]) -> None:
             if value is None:
                 return
             raw = str(value).strip()
@@ -405,22 +411,12 @@ class InferenceRunner:
         else:
             self.agent_env_vars.pop("FB_FORCE_TIMEOUT", None)
 
-        # Resume mode: metadata is the source of truth for reproducibility.
+        # Resume mode: the already validated resume configuration is authoritative.
         # Non-resume: config/env wins; CLI only fills when config has no setting.
         if self.resume_mode:
-            metadata: Dict[str, Any] = {}
-            metadata_path = self.output_dir / "run_metadata.json"
-            try:
-                if metadata_path.exists():
-                    with open(metadata_path, "r", encoding="utf-8") as f:
-                        metadata = json.load(f)
-            except Exception:
-                # Best-effort only; resume should still work.
-                metadata = {}
-
             if config.agent == "openhands":
                 # Native tool calling in resume mode strictly follows metadata.
-                native_tool_calling = metadata.get("native_tool_calling")
+                native_tool_calling = config.native_tool_calling
                 if native_tool_calling is True:
                     self.agent_env_vars["LLM_NATIVE_TOOL_CALLING"] = "true"
                 elif native_tool_calling is False:
@@ -428,19 +424,19 @@ class InferenceRunner:
                 else:
                     self.agent_env_vars.pop("LLM_NATIVE_TOOL_CALLING", None)
 
-                send_reasoning = bool(metadata.get("send_reasoning_content"))
+                send_reasoning = config.send_reasoning_content
                 if send_reasoning:
                     self.agent_env_vars["LLM_SEND_REASONING_CONTENT"] = "true"
                 else:
                     self.agent_env_vars.pop("LLM_SEND_REASONING_CONTENT", None)
 
-                recorded = metadata.get("openhands_reasoning_effort")
+                recorded = config.openhands_reasoning_effort
                 if recorded is not None and str(recorded).strip():
                     self.agent_env_vars["LLM_REASONING_EFFORT"] = str(recorded).strip()
                 else:
                     self.agent_env_vars.pop("LLM_REASONING_EFFORT", None)
 
-                recorded = metadata.get("litellm_extra_body")
+                recorded = config.litellm_extra_body
                 if recorded is not None and str(recorded).strip():
                     self.agent_env_vars["LLM_LITELLM_EXTRA_BODY"] = str(recorded).strip()
                 else:
@@ -454,7 +450,7 @@ class InferenceRunner:
                     self.agent_env_vars.pop("OPENHANDS_MAX_ITERATIONS", None)
 
             if config.agent == "codex":
-                recorded = metadata.get("codex_reasoning_effort")
+                recorded = config.codex_reasoning_effort
                 if recorded is not None and str(recorded).strip():
                     self.agent_env_vars["CODEX_REASONING_EFFORT"] = str(recorded).strip()
                 else:
@@ -465,27 +461,27 @@ class InferenceRunner:
                 has_env_setting = bool(self.agent_env_vars.get("OPENHANDS_MAX_ITERATIONS"))
                 if not has_env_setting:
                     self.agent_env_vars["OPENHANDS_MAX_ITERATIONS"] = str(config.max_iters)
-        
+
         # Load completed tasks for resume functionality
-        self._completed_tasks: Set[Tuple[str, int]] = set()
+        self._completed_tasks: set[tuple[str, int]] = set()
         if self.resume_mode:
             self._completed_tasks = self.output_manager.load_completed_tasks()
-        self._force_rerun_ids: Set[str] = set(self.config.force_rerun_ids or [])
+        self._force_rerun_ids: set[str] = set(self.config.force_rerun_ids or [])
 
         # Optional GPU scheduler (initialized in run() after dataset is loaded)
-        self._gpu_scheduler: Optional[GpuScheduler] = None
+        self._gpu_scheduler: GpuScheduler | None = None
         # Track currently running tasks for live terminal display.
         self._running_tasks_lock = threading.Lock()
-        self._running_tasks: Dict[Tuple[str, int], datetime] = {}
+        self._running_tasks: dict[tuple[str, int], datetime] = {}
         # Track containers created by this runner so Ctrl+C/process-exit cleanup
         # even when worker threads are interrupted before their own finally block.
         self._active_containers_lock = threading.RLock()
-        self._active_containers: Dict[str, Container] = {}
+        self._active_containers: dict[str, Container] = {}
         self._shutdown_requested = threading.Event()
         self._cleanup_lock = threading.RLock()
         self._cleanup_in_progress = False
         self._cleanup_interrupt_notice_printed = False
-        self._agent_network: Optional[AgentNetworkIsolation] = None
+        self._agent_network: AgentNetworkIsolation | None = None
         self._agent_network_lock = threading.Lock()
         self._atexit_cleanup = self._cleanup_active_containers_at_exit
         atexit.register(self._atexit_cleanup)
@@ -502,17 +498,14 @@ class InferenceRunner:
         """Build a unique backend session id for one OpenHands task attempt."""
         safe_task_id = re.sub(r"[^A-Za-z0-9_.-]+", "-", task_id).strip("-")
         safe_task_id = safe_task_id[:160] or "task"
-        return (
-            f"fb-{self.run_timestamp}-{safe_task_id}-attempt-{attempt}-"
-            f"{uuid.uuid4().hex[:12]}"
-        )
+        return f"fb-{self.run_timestamp}-{safe_task_id}-attempt-{attempt}-{uuid.uuid4().hex[:12]}"
 
     def _container_labels(
         self,
         task_id: str,
         attempt: int,
         purpose: str = "task",
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         return {
             FEATUREBENCH_RUN_LABEL: self.run_timestamp,
             FEATUREBENCH_KIND_LABEL: "infer",
@@ -535,7 +528,7 @@ class InferenceRunner:
         with self._active_containers_lock:
             self._active_containers.pop(container_id, None)
 
-    def _ignore_interrupt_during_cleanup(self, signum, frame) -> None:
+    def _ignore_interrupt_during_cleanup(self, _signum, _frame) -> None:
         self._shutdown_requested.set()
         if not self._cleanup_interrupt_notice_printed:
             self._cleanup_interrupt_notice_printed = True
@@ -639,9 +632,7 @@ class InferenceRunner:
             removed += self._cleanup_labeled_containers()
             if removed:
                 try:
-                    self.console.print(
-                        f"[yellow]Removed {removed} FeatureBench container(s).[/]"
-                    )
+                    self.console.print(f"[yellow]Removed {removed} FeatureBench container(s).[/]")
                 except Exception:
                     pass
             return removed
@@ -694,7 +685,7 @@ class InferenceRunner:
         with self._running_tasks_lock:
             self._running_tasks.pop((task_id, attempt), None)
 
-    def _snapshot_running_tasks(self) -> List[Tuple[str, int, datetime]]:
+    def _snapshot_running_tasks(self) -> list[tuple[str, int, datetime]]:
         """Get running tasks sorted by launch time."""
         with self._running_tasks_lock:
             items = list(self._running_tasks.items())
@@ -725,20 +716,20 @@ class InferenceRunner:
             elapsed = self._format_elapsed((now - started_at).total_seconds())
             table.add_row(indexed_label, elapsed)
         return table
-    
-    def _load_dataset(self) -> List[TaskInstance]:
+
+    def _load_dataset(self) -> list[TaskInstance]:
         """Load dataset from HuggingFace."""
         self.console.print("[bold blue]Loading dataset from HuggingFace...[/]")
-        
+
         dataset_loader = DatasetLoader(self.config_loader)
-        
+
         # Parse levels (None means all levels)
         levels = self.config.level if self.config.level else None
 
         task_ids = self.config.task_ids
         if task_ids is not None and self.config.force_rerun_ids:
             task_ids = list(dict.fromkeys(list(task_ids) + list(self.config.force_rerun_ids)))
-        
+
         # Load data with split parameter
         raw_data = dataset_loader.load_dataset(
             dataset=self.config.dataset,
@@ -747,58 +738,54 @@ class InferenceRunner:
             task_ids=task_ids,
             revision=self.config.dataset_revision,
         )
-        
+
         # Convert to TaskInstance objects
         instances = [TaskInstance.from_dict(item) for item in raw_data]
-        
+
         self.console.print(f"[green]Loaded {len(instances)} task instances[/]")
         return instances
 
     def _get_image_name(self, instance: TaskInstance) -> str:
         """Get Docker image name for an instance."""
         return normalize_image_name(instance.image_name)
-    
-    def _process_single_task(
-        self,
-        instance: TaskInstance,
-        attempt: int
-    ) -> InferResult:
+
+    def _process_single_task(self, instance: TaskInstance, attempt: int) -> InferResult:
         """
         Process a single task instance.
-        
+
         Args:
             instance: Task instance
             attempt: Attempt number (1-based)
-            
+
         Returns:
             InferResult with the outcome
         """
         task_id = instance.instance_id
-        
+
         # Create task paths
         task_paths = TaskPaths(self.output_dir, task_id, attempt)
         task_paths.ensure_dirs()
-        
+
         # Get log file paths
         log_file = task_paths.infer_log_path
         run_log_file = task_paths.run_log_path
-        
+
         # Create dedicated file logger for this task
         task_logger = create_task_file_logger(run_log_file, f"{task_id}-{attempt}")
         task_logger.info(f"Processing {task_id} (attempt {attempt}/{self.config.n_attempts})")
-        
+
         # Initialize infer log file
         with open(log_file, "w", encoding="utf-8") as f:
-            f.write(f"FeatureBench Inference Log\n")
+            f.write("FeatureBench Inference Log\n")
             f.write(f"Instance: {task_id}\n")
             f.write(f"Attempt: {attempt}/{self.config.n_attempts}\n")
             f.write(f"Agent: {self.config.agent}\n")
             f.write(f"Model: {self.config.model}\n")
             f.write(f"Start Time: {datetime.now().isoformat()}\n")
             f.write("=" * 60 + "\n\n")
-        
+
         container = None
-        gpu_lease: Optional[GpuLease] = None
+        gpu_lease: GpuLease | None = None
         result = InferResult(
             instance_id=task_id,
             model_patch="",
@@ -806,12 +793,12 @@ class InferenceRunner:
             model=self.config.model,
             n_attempt=attempt,
             metadata=instance.metadata,
-            success=False
+            success=False,
         )
 
         # Start live timing once task setup is complete.
         self._mark_task_started(task_id, attempt)
-        
+
         try:
             if self._shutdown_requested.is_set():
                 result.error = "Interrupted before container creation"
@@ -819,14 +806,16 @@ class InferenceRunner:
 
             # Get Docker image
             image_name = self._get_image_name(instance)
-            
+
             # Get docker runtime config from repo_settings
             docker_runtime_config = instance.get_docker_runtime_config()
-            task_logger.info(f"Docker runtime config: need_gpu={docker_runtime_config.get('need_gpu')}, "
-                           f"shm_size={docker_runtime_config.get('shm_size')}, "
-                           f"number_once={docker_runtime_config.get('number_once')}, "
-                           f"env_vars={list(docker_runtime_config.get('env_vars', {}).keys())}, "
-                           f"env_exports={len(docker_runtime_config.get('env_exports', []))} items")
+            task_logger.info(
+                f"Docker runtime config: need_gpu={docker_runtime_config.get('need_gpu')}, "
+                f"shm_size={docker_runtime_config.get('shm_size')}, "
+                f"number_once={docker_runtime_config.get('number_once')}, "
+                f"env_vars={list(docker_runtime_config.get('env_vars', {}).keys())}, "
+                f"env_exports={len(docker_runtime_config.get('env_exports', []))} items"
+            )
 
             # Allocate GPUs for this task if needed.
             task_gpu_ids = self.config.gpu_ids
@@ -840,23 +829,18 @@ class InferenceRunner:
                     f"GPU scheduling: allocated {requested} GPU(s): {task_gpu_ids} "
                     f"(pool={','.join(self._gpu_scheduler.gpu_pool)})"
                 )
-            
+
             task_agent_env_vars = dict(self.agent_env_vars)
             container_extra_env = None
-            if (
-                self.config.agent == "openhands"
-                and getattr(self.config, "session_cache", False)
-            ):
+            if self.config.agent == "openhands" and getattr(self.config, "session_cache", False):
                 session_id = self._build_session_id(task_id, attempt)
                 task_agent_env_vars["LLM_SESSION_ID"] = session_id
                 container_extra_env = {"LLM_SESSION_ID": session_id}
-                task_logger.info(
-                    f"OpenHands session cache enabled: session_id={session_id}"
-                )
+                task_logger.info(f"OpenHands session cache enabled: session_id={session_id}")
 
             # Create container manager with task-specific logger/env.
             cm = ContainerManager(task_logger, task_agent_env_vars)
-            
+
             # Pull image if needed
             task_logger.info(f"Ensuring image {image_name} is available...")
             cm.pull_image(image_name)
@@ -864,7 +848,7 @@ class InferenceRunner:
             if self._shutdown_requested.is_set():
                 result.error = "Interrupted before container creation"
                 return result
-            
+
             # Create container with timestamp to avoid name conflicts
             container_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
             container_name = f"fb-infer-{task_id.replace('/', '-').replace('.', '-')}-attempt-{attempt}-{container_timestamp}"
@@ -882,7 +866,7 @@ class InferenceRunner:
             if self._agent_network is None:
                 raise RuntimeError("Agent network isolation is not initialized")
             volumes.update(self._agent_network.docker_volume())
-            
+
             container = cm.create_container(
                 image_name=image_name,
                 container_name=container_name,
@@ -892,13 +876,13 @@ class InferenceRunner:
                 proxy_port=self.config.proxy_port,
                 gpu_ids=task_gpu_ids,
                 docker_runtime_config=docker_runtime_config,
-                volumes=volumes or None
+                volumes=volumes or None,
             )
             self._register_container(container)
-            
+
             # Initialize runtime with task-specific logger
             runtime_handler = RuntimeHandler(cm, task_logger)
-            
+
             if not runtime_handler.initialize_runtime(
                 container,
                 instance,
@@ -907,7 +891,7 @@ class InferenceRunner:
             ):
                 result.error = "Runtime initialization failed"
                 return result
-            
+
             # Create and install agent with task-specific logger
             agent = get_agent(
                 self.config.agent,
@@ -918,11 +902,11 @@ class InferenceRunner:
                 version=self.config.version,
                 cost_limit=self.config.cost_limit,
             )
-            
+
             if not agent.install(container, log_file):
                 result.error = "Agent installation failed"
                 return result
-            
+
             # Pre-run setup hook (for custom container processing)
             task_logger.info("Running pre-run setup...")
             if not agent.pre_run_setup(container, instance, log_file):
@@ -943,7 +927,7 @@ class InferenceRunner:
             ):
                 result.error = "Agent network isolation failed"
                 return result
-            
+
             # Run agent
             instruction = instance.problem_statement
             if getattr(self.config, "white_box", False):
@@ -952,12 +936,7 @@ class InferenceRunner:
                     instruction = _inject_white_box_note(instruction, f2p_path)
             if getattr(self.config, "without_interface_descriptions", False):
                 instruction = _strip_interface_descriptions(instruction)
-            agent_success = agent.run(
-                container,
-                instruction,
-                log_file,
-                timeout=self.config.timeout
-            )
+            agent_success = agent.run(container, instruction, log_file, timeout=self.config.timeout)
             result.agent_exit_status = agent.agent_exit_status
 
             # MiniSweAgent gives /testbed to its unprivileged task user.  The
@@ -969,21 +948,14 @@ class InferenceRunner:
                 container,
                 log_file,
             )
-            
+
             # if not agent_success, raise an exception and try to save patch
             if not agent_success:
-                if (
-                    result.agent_exit_status
-                    and result.agent_exit_status != "Submitted"
-                ):
-                    result.error = (
-                        f"Agent exited with status: {result.agent_exit_status}"
-                    )
+                if result.agent_exit_status and result.agent_exit_status != "Submitted":
+                    result.error = f"Agent exited with status: {result.agent_exit_status}"
                 else:
                     result.error = "Agent did not complete successfully"
-                task_logger.warning(
-                    f"{result.error}; attempting to generate patch"
-                )
+                task_logger.warning(f"{result.error}; attempting to generate patch")
                 patch = runtime_handler.complete_runtime(container, instance, log_file)
 
                 if patch is None:
@@ -993,14 +965,12 @@ class InferenceRunner:
                 else:
                     result.model_patch = patch
                     self.output_manager.save_patch(task_paths, patch)
-                    task_logger.warning(
-                        f"Saved patch for failed run"
-                    )
+                    task_logger.warning("Saved patch for failed run")
                 raise RuntimeError(result.error)
-            
+
             # Complete runtime and get patch
             patch = runtime_handler.complete_runtime(container, instance, log_file)
-            
+
             if patch is None:
                 result.error = "Failed to generate patch"
             else:
@@ -1011,14 +981,14 @@ class InferenceRunner:
                 self.output_manager.save_patch(task_paths, patch)
 
                 task_logger.info(f"Successfully processed {task_id} (patch: {len(patch)} chars)")
-            
+
         except Exception as e:
             task_logger.error(f"Error processing {task_id}: {e}")
             result.error = str(e)
-            
+
             with open(log_file, "a", encoding="utf-8") as f:
                 f.write(f"\n\nFATAL ERROR: {e}\n")
-        
+
         finally:
             # Remove from live running-task display as soon as task completes.
             self._mark_task_finished(task_id, attempt)
@@ -1038,14 +1008,14 @@ class InferenceRunner:
                     self._gpu_scheduler.release(gpu_lease)
                 except Exception as e:
                     task_logger.warning(f"Error releasing GPU lease: {e}")
-            
+
             # Write end time to log
             with open(log_file, "a", encoding="utf-8") as f:
                 f.write(f"\n\nEnd Time: {datetime.now().isoformat()}\n")
-            
+
             # Clean up task logger
             cleanup_task_logger(task_logger)
-        
+
         return result
 
     def _warmup_cache(self, instance: TaskInstance) -> None:
@@ -1058,7 +1028,7 @@ class InferenceRunner:
         task_logger.info(f"Warmup cache using image {image_name}")
 
         container = None
-        gpu_lease: Optional[GpuLease] = None
+        gpu_lease: GpuLease | None = None
         try:
             if self._shutdown_requested.is_set():
                 return
@@ -1097,7 +1067,7 @@ class InferenceRunner:
                 proxy_port=self.config.proxy_port,
                 gpu_ids=task_gpu_ids,
                 docker_runtime_config=docker_runtime_config,
-                volumes=volumes
+                volumes=volumes,
             )
             self._register_container(container)
 
@@ -1128,11 +1098,14 @@ class InferenceRunner:
                 except Exception as e:
                     task_logger.warning(f"Error releasing warmup GPU lease: {e}")
 
-    
-    def _save_run_metadata(self, task_ids: List[str]) -> None:
+    def _save_run_metadata(self, task_ids: list[str]) -> None:
         """Save run metadata."""
+        dataset_revision = str(self.config.dataset_revision or "").strip()
+        if not dataset_revision:
+            raise RuntimeError("inference dataset_revision was not resolved")
+
         # Persist the *effective* max iters used for OpenHands.
-        effective_max_iters: Optional[int] = None
+        effective_max_iters: int | None = None
         if self.config.agent == "openhands":
             raw = self.agent_env_vars.get("OPENHANDS_MAX_ITERATIONS")
             if raw is not None and str(raw).strip():
@@ -1142,11 +1115,11 @@ class InferenceRunner:
                     effective_max_iters = None
 
         # Persist the *effective* reasoning effort used by the agent (if any).
-        openhands_reasoning_effort: Optional[str] = None
-        codex_reasoning_effort: Optional[str] = None
-        native_tool_calling: Optional[bool] = None
+        openhands_reasoning_effort: str | None = None
+        codex_reasoning_effort: str | None = None
+        native_tool_calling: bool | None = None
         send_reasoning_content = False
-        litellm_extra_body: Optional[str] = None
+        litellm_extra_body: str | None = None
         if self.config.agent == "openhands":
             raw = self.agent_env_vars.get("LLM_REASONING_EFFORT")
             if raw is not None and str(raw).strip():
@@ -1169,7 +1142,7 @@ class InferenceRunner:
             agent=self.config.agent,
             model=self.config.model,
             dataset=self.config.dataset,
-            dataset_revision=self.config.dataset_revision,
+            dataset_revision=dataset_revision,
             n_concurrent=self.config.n_concurrent,
             n_attempts=self.config.n_attempts,
             task_ids=task_ids,
@@ -1192,12 +1165,11 @@ class InferenceRunner:
             litellm_extra_body=litellm_extra_body,
             session_cache=bool(getattr(self.config, "session_cache", False)),
             force_timeout=getattr(self.config, "force_timeout", False),
-            api_key=self.config.api_key,
             base_url=self.config.base_url,
             version=self.config.version,
         )
         self.output_manager.save_metadata(metadata)
-    
+
     def run(self) -> int:
         """Run the inference pipeline."""
         # Print startup banner to console
@@ -1211,7 +1183,7 @@ class InferenceRunner:
         self.console.print(f"[white]Model:[/] [green]{self.config.model}[/]")
         self.console.print(f"[white]Dataset version:[/] [green]{self.config.dataset_revision}[/]")
         if self.config.api_key is not None and str(self.config.api_key).strip():
-            self.console.print(f"[white]API key:[/] [green]{self.config.api_key}[/]")
+            self.console.print("[white]API key:[/] [green]configured[/]")
         if self.config.base_url is not None and str(self.config.base_url).strip():
             self.console.print(f"[white]Base URL:[/] [green]{self.config.base_url}[/]")
         if self.config.version is not None and str(self.config.version).strip():
@@ -1221,7 +1193,7 @@ class InferenceRunner:
         if self.config.level:
             self.console.print(f"[white]Levels:[/] [green]{self.config.level}[/]")
         else:
-            self.console.print(f"[white]Levels:[/] [green]all (lv1, lv2)[/]")
+            self.console.print("[white]Levels:[/] [green]all (lv1, lv2)[/]")
         self.console.print(f"[white]Concurrent:[/] [green]{self.config.n_concurrent}[/]")
         self.console.print(f"[white]Attempts:[/] [green]{self.config.n_attempts}[/]")
         if self.config.agent == "mini_swe_agent" and self.config.cost_limit is not None:
@@ -1260,7 +1232,9 @@ class InferenceRunner:
             if effective is not None and str(effective).strip():
                 self.console.print(f"[white]Max iters:[/] [green]{effective}[/]")
             # Only show reasoning_effort when the effective model looks like an OpenAI gpt/o-series model.
-            model_lower = str(self.config.model).strip().lower() if self.config.model is not None else ""
+            model_lower = (
+                str(self.config.model).strip().lower() if self.config.model is not None else ""
+            )
             model_tail = model_lower.split("/", 1)[-1]
             # Treat all gpt-series models as eligible for displaying reasoning_effort.
             is_gpt_series = ("gpt" in model_tail) or model_tail.startswith("gpt")
@@ -1273,32 +1247,38 @@ class InferenceRunner:
         if self.config.agent == "codex":
             reasoning_effort = self.agent_env_vars.get("CODEX_REASONING_EFFORT")
             if reasoning_effort is not None and str(reasoning_effort).strip():
-                self.console.print(f"[white]Reasoning effort:[/] [green]{str(reasoning_effort).strip()}[/]")
+                self.console.print(
+                    f"[white]Reasoning effort:[/] [green]{str(reasoning_effort).strip()}[/]"
+                )
         if self.config.gpu_ids:
             self.console.print(f"[white]GPUs:[/] [green]{self.config.gpu_ids}[/]")
         else:
-            self.console.print(f"[white]GPUs:[/] [green]all available[/]")
+            self.console.print("[white]GPUs:[/] [green]all available[/]")
         self.console.print(f"[white]Output:[/] [green]{self.output_dir}[/]")
         if self.resume_mode:
-            self.console.print(f"[white]Completed:[/] [yellow]{len(self._completed_tasks)} tasks already done[/]")
+            self.console.print(
+                f"[white]Completed:[/] [yellow]{len(self._completed_tasks)} tasks already done[/]"
+            )
         self.console.print("[bold cyan]" + "=" * 60 + "[/]")
         self.console.print()
-        
+
         # Load dataset
         instances = self._load_dataset()
-        
+
         if not instances:
             self.console.print("[bold red]No task instances to process[/]")
-            return 0
+            return 1
 
         # Initialize GPU scheduler (best-effort) if there are any GPU tasks.
         try:
-            need_gpu_any = any(inst.get_docker_runtime_config().get("need_gpu") for inst in instances)
+            need_gpu_any = any(
+                inst.get_docker_runtime_config().get("need_gpu") for inst in instances
+            )
         except Exception:
             need_gpu_any = False
 
         if need_gpu_any:
-            gpu_pool: Optional[List[str]] = None
+            gpu_pool: list[str] | None = None
             if self.config.gpu_ids:
                 gpu_pool = parse_gpu_id_list(self.config.gpu_ids)
             else:
@@ -1337,25 +1317,24 @@ class InferenceRunner:
                 self._warmup_cache(instances[0])
             except KeyboardInterrupt:
                 self._shutdown_requested.set()
-                self.console.print("[bold yellow]Interrupted during cache warmup; cleaning containers...[/]")
+                self.console.print(
+                    "[bold yellow]Interrupted during cache warmup; cleaning containers...[/]"
+                )
                 self._cleanup_active_containers("keyboard interrupt")
                 return 130
             except Exception as e:
                 self.console.print(f"[bold yellow]Cache warmup failed (continuing): {e}[/]")
-        
+
         # Save run metadata (only in non-resume mode, or update in resume mode)
         task_ids = [inst.instance_id for inst in instances]
         if not self.resume_mode:
             self._save_run_metadata(task_ids)
-        
-        # Start output manager
-        self.output_manager.start()
-        
+
         # Track success/failure counts
         success_count = 0
         failure_count = 0
         skipped_count = 0
-        
+
         try:
             # Build task list: (instance, attempt) pairs, filtering completed tasks
             all_tasks = []
@@ -1364,29 +1343,32 @@ class InferenceRunner:
                 for attempt in range(1, self.config.n_attempts + 1):
                     all_tasks.append((instance, attempt))
                     task_key = (instance.instance_id, attempt)
-                    if task_key not in self._completed_tasks or instance.instance_id in self._force_rerun_ids:
+                    if (
+                        task_key not in self._completed_tasks
+                        or instance.instance_id in self._force_rerun_ids
+                    ):
                         tasks.append((instance, attempt))
                     else:
                         skipped_count += 1
-            
+
             total_all_tasks = len(all_tasks)
             total_tasks = len(tasks)
-            
+
             if self.resume_mode and skipped_count > 0:
-                self.console.print(f"[bold blue]Total tasks: {total_all_tasks} (skipping {skipped_count} completed)[/]")
+                self.console.print(
+                    f"[bold blue]Total tasks: {total_all_tasks} (skipping {skipped_count} completed)[/]"
+                )
             self.console.print(f"[bold blue]Tasks to process: {total_tasks}[/]")
             self.console.print()
-            
+
             if total_tasks == 0:
                 self.console.print("[bold green]All tasks already completed![/]")
                 return 0
 
             self._start_agent_network()
-            self.console.print(
-                "[bold cyan]Agent network isolation enabled[/]: model API only"
-            )
+            self.console.print("[bold cyan]Agent network isolation enabled[/]: model API only")
             self.console.print()
-            
+
             # Process tasks with rich progress bar + live running-task list
             progress = Progress(
                 SpinnerColumn(),
@@ -1415,17 +1397,14 @@ class InferenceRunner:
                     for instance, attempt in tasks:
                         result = self._process_single_task(instance, attempt)
                         self.output_manager.write_result(result)
-                        
+
                         if result.success:
                             success_count += 1
                         else:
                             failure_count += 1
-                        
+
                         progress.update(
-                            task_progress, 
-                            advance=1,
-                            success=success_count,
-                            failure=failure_count
+                            task_progress, advance=1, success=success_count, failure=failure_count
                         )
                 else:
                     # Parallel processing
@@ -1438,23 +1417,14 @@ class InferenceRunner:
                                 break
                             future = executor.submit(self._process_single_task, inst, att)
                             future_to_task[future] = (inst.instance_id, att)
-                        
+
                         # Process results as they complete
                         for future in as_completed(future_to_task):
                             task_id, attempt = future_to_task[future]
                             try:
                                 result = future.result()
-                                self.output_manager.write_result(result)
-                                
-                                if result.success:
-                                    success_count += 1
-                                else:
-                                    failure_count += 1
-                                    
                             except Exception as e:
-                                failure_count += 1
-                                # Write error result
-                                error_result = InferResult(
+                                result = InferResult(
                                     instance_id=task_id,
                                     model_patch="",
                                     agent=self.config.agent,
@@ -1462,15 +1432,20 @@ class InferenceRunner:
                                     n_attempt=attempt,
                                     metadata={},
                                     success=False,
-                                    error=str(e)
+                                    error=str(e),
                                 )
-                                self.output_manager.write_result(error_result)
-                            
+
+                            self.output_manager.write_result(result)
+                            if result.success:
+                                success_count += 1
+                            else:
+                                failure_count += 1
+
                             progress.update(
                                 task_progress,
                                 advance=1,
                                 success=success_count,
-                                failure=failure_count
+                                failure=failure_count,
                             )
                     except KeyboardInterrupt:
                         self._shutdown_requested.set()
@@ -1487,35 +1462,50 @@ class InferenceRunner:
             self.console.print("[bold yellow]Interrupted; cleaning FeatureBench containers...[/]")
             self._cleanup_active_containers("keyboard interrupt")
             return 130
-        
-        finally:
-            # Stop output manager
-            self.output_manager.stop()
 
+        finally:
             # All task containers have been removed by their worker finally
             # blocks, so the shared internal network can now be removed too.
             self._close_agent_network()
-            
+
             # Update end time
             self.output_manager.update_metadata_end_time()
-        
+
         # Print completion banner
         self.console.print()
         self.console.print("[bold cyan]" + "=" * 60 + "[/]")
         self.console.print("[bold cyan]Inference Complete[/]")
         self.console.print(f"[green]Success: {success_count}[/] | [red]Failure: {failure_count}[/]")
-        self.console.print(f"[white]Results saved to:[/] [green]{self.output_dir / 'output.jsonl'}[/]")
-        self.console.print(f"[white]Run summary:[/] [green]{self.output_manager.run_summary_path}[/]")
+        self.console.print(
+            f"[white]Results saved to:[/] [green]{self.output_dir / 'output.jsonl'}[/]"
+        )
+        self.console.print(
+            f"[white]Run summary:[/] [green]{self.output_manager.run_summary_path}[/]"
+        )
         self.console.print("[bold cyan]" + "=" * 60 + "[/]")
         self.console.print()
         return 0
+
+
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed
+
+
+def _port(value: str) -> int:
+    parsed = int(value)
+    if not 1 <= parsed <= 65535:
+        raise argparse.ArgumentTypeError("must be between 1 and 65535")
+    return parsed
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="Run agents on FeatureBench instances",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     # Track whether certain args were explicitly provided on CLI.
@@ -1525,22 +1515,22 @@ def parse_args() -> argparse.Namespace:
     split_provided = "--split" in argv
     dataset_provided = "--dataset" in argv
     dataset_version_provided = any(
-        value == "--data-version" or value.startswith("--data-version=")
-        for value in argv
+        value == "--data-version" or value.startswith("--data-version=") for value in argv
     )
-    
+
     parser.add_argument(
         "--config-path",
         type=str,
         default=None,
         help=(
             "Path to inference config.toml. "
-            "If not provided, uses default discovery (searching upward from featurebench/infer)."
+            "If not provided, uses config.toml in the current working directory."
         ),
     )
 
     parser.add_argument(
-        "--agent", "-a",
+        "--agent",
+        "-a",
         type=str,
         default=None,
         choices=[
@@ -1550,35 +1540,36 @@ def parse_args() -> argparse.Namespace:
             "codex",
             "mini_swe_agent",
         ],
-        help="Agent to use for inference (required unless --resume is used)"
+        help="Agent to use for inference (required unless --resume is used)",
     )
-    
+
     parser.add_argument(
-        "--model", "-m",
+        "--model",
+        "-m",
         type=str,
         default=None,
-        help="Model name (e.g., claude-sonnet-4-20250514, gpt-4o) (required unless --resume is used)"
+        help="Model name (e.g., claude-sonnet-4-20250514, gpt-4o) (required unless --resume is used)",
     )
 
     parser.add_argument(
         "--api-key",
         type=str,
         default=None,
-        help="Override agent API key (takes precedence over config)"
+        help="Override agent API key (takes precedence over config)",
     )
 
     parser.add_argument(
         "--base-url",
         type=str,
         default=None,
-        help="Override agent base URL (takes precedence over config)"
+        help="Override agent base URL (takes precedence over config)",
     )
 
     parser.add_argument(
         "--version",
         type=str,
         default=None,
-        help="Override agent version (takes precedence over config)"
+        help="Override agent version (takes precedence over config)",
     )
 
     parser.add_argument(
@@ -1601,30 +1592,31 @@ def parse_args() -> argparse.Namespace:
             "Overrides [dataset].revision from config.toml; default: v1.1"
         ),
     )
-    
+
     parser.add_argument(
         "--n-concurrent",
-        type=int,
+        type=_positive_int,
         default=None,
         help=(
             "Number of concurrent tasks (default: 1). "
             "In --resume mode, this overrides the value stored in run_metadata.json when explicitly provided."
-        )
+        ),
     )
-    
+
     parser.add_argument(
         "--n-attempts",
-        type=int,
+        type=_positive_int,
         default=1,
-        help="Number of attempts per task (default: 1)"
+        help="Number of attempts per task (default: 1)",
     )
-    
+
     parser.add_argument(
-        "--task-id", "-t",
+        "--task-id",
+        "-t",
         type=str,
         nargs="+",
         default=None,
-        help="Specific task IDs to process (default: all)"
+        help="Specific task IDs to process (default: all)",
     )
 
     parser.add_argument(
@@ -1637,16 +1629,16 @@ def parse_args() -> argparse.Namespace:
             "These tasks are processed even if already completed."
         ),
     )
-    
+
     parser.add_argument(
         "--level",
         type=int,
         nargs="+",
         default=None,
         choices=[1, 2],
-        help="Task levels to filter (1=lv1, 2=lv2). Level is determined by instance_id suffix. Default: all"
+        help="Task levels to filter (1=lv1, 2=lv2). Level is determined by instance_id suffix. Default: all",
     )
-    
+
     parser.add_argument(
         "--split",
         type=str,
@@ -1654,21 +1646,18 @@ def parse_args() -> argparse.Namespace:
         help=(
             "HuggingFace dataset split name (e.g., 'lite', 'full'). "
             "Default: 'full' (only applies when not using --resume)"
-        )
+        ),
     )
-    
+
     parser.add_argument(
-        "--output-dir", "-o",
-        type=str,
-        default="runs",
-        help="Output directory (default: runs)"
+        "--output-dir", "-o", type=str, default="runs", help="Output directory (default: runs)"
     )
-    
+
     parser.add_argument(
         "--timeout",
-        type=int,
+        type=_positive_int,
         default=3600,
-        help="Timeout per task in seconds (default: 3600 = 1 hour)"
+        help="Timeout per task in seconds (default: 3600 = 1 hour)",
     )
 
     parser.add_argument(
@@ -1752,14 +1741,14 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument(
         "--max-iters",
-        type=int,
+        type=_positive_int,
         default=None,
         help=(
             "OpenHands only: maximum iterations/steps (sets OPENHANDS_MAX_ITERATIONS). "
             "Precedence: config/env wins; CLI only applies when no config value is set. "
             "Default: do not override (OpenHands upstream default applies, typically 500). "
             "In --resume mode, this argument is ignored (uses run_metadata.json)."
-        )
+        ),
     )
 
     parser.add_argument(
@@ -1772,12 +1761,12 @@ def parse_args() -> argparse.Namespace:
             "In --resume mode, this argument is ignored (uses run_metadata.json)."
         ),
     )
-    
+
     parser.add_argument(
         "--proxy-port",
-        type=int,
+        type=_port,
         default=None,
-        help="Proxy port to use for inference (default: None)"
+        help="Proxy port to use for inference (default: None)",
     )
 
     parser.add_argument(
@@ -1791,14 +1780,14 @@ def parse_args() -> argparse.Namespace:
             "This is ignored when full-body capture is enabled."
         ),
     )
-    
+
     parser.add_argument(
         "--gpu-ids",
         type=str,
         default=None,
-        help="Comma-separated GPU IDs to use (e.g., '0,1,2,3'). Default: all available GPUs"
+        help="Comma-separated GPU IDs to use (e.g., '0,1,2,3'). Default: all available GPUs",
     )
-    
+
     parser.add_argument(
         "--resume",
         type=str,
@@ -1808,7 +1797,7 @@ def parse_args() -> argparse.Namespace:
             "Most args are loaded from run_metadata.json; --n-concurrent, --timeout, --proxy-port, --gpu-ids, --force-timeout can be overridden"
         ),
     )
-    
+
     args = parser.parse_args()
 
     # Stash explicit-provided flags for resume-mode warning logic.
@@ -1819,28 +1808,31 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[InferConfig, Path]:
+def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> tuple[InferConfig, Path]:
     """
     Load configuration from a previous run for resume.
-    
+
     Args:
         resume_dir: Path to the previous run directory
         args: Parsed command line arguments
-        
+
     Returns:
         Tuple of (InferConfig, output_dir)
     """
     console = Console()
-    
+
     # Load run_metadata.json
     metadata_path = resume_dir / "run_metadata.json"
     if not metadata_path.exists():
         console.print(f"[bold red]Error: run_metadata.json not found in {resume_dir}[/]")
         sys.exit(1)
-    
-    with open(metadata_path, "r", encoding="utf-8") as f:
-        metadata = json.load(f)
-    
+
+    try:
+        metadata = RunMetadata.load(metadata_path).to_dict()
+    except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        console.print(f"[bold red]Error: invalid run_metadata.json: {exc}[/]")
+        raise SystemExit(1) from exc
+
     # Warn about ignored arguments (only if user explicitly specified them)
     warnings = []
     if args.agent is not None:
@@ -1850,16 +1842,13 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
     if getattr(args, "_dataset_provided", False):
         warnings.append(f"--dataset (using '{metadata.get('dataset')}' from metadata)")
     if getattr(args, "_dataset_version_provided", False):
-        warnings.append(
-            "--data-version "
-            f"(using '{metadata.get('dataset_revision', 'v1.0')}' from metadata)"
-        )
+        warnings.append(f"--data-version (using '{metadata['dataset_revision']}' from metadata)")
     if args.n_attempts != 1:  # Default is 1
         warnings.append(f"--n-attempts (using '{metadata['n_attempts']}' from metadata)")
     if args.task_id is not None:
-        warnings.append(f"--task-id (using task_ids from metadata)")
+        warnings.append("--task-id (using task_ids from metadata)")
     if args.level is not None:
-        warnings.append(f"--level (using level from metadata)")
+        warnings.append("--level (using level from metadata)")
     if getattr(args, "_split_provided", False):
         warnings.append(f"--split (using '{metadata.get('split')}' from metadata)")
     if args.output_dir != "runs":  # Default is "runs"
@@ -1869,81 +1858,73 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
     if args.cost_limit is not None:
         warnings.append(f"--cost-limit (using '{metadata.get('cost_limit')}' from metadata)")
     if getattr(args, "without", False):
-        warnings.append(
-            "--without (using 'without_interface_descriptions' from metadata)"
-        )
+        warnings.append("--without (using 'without_interface_descriptions' from metadata)")
     if getattr(args, "white", False):
-        warnings.append(
-            "--white (using 'white_box' from metadata)"
-        )
+        warnings.append("--white (using 'white_box' from metadata)")
     if getattr(args, "native_tool_calling", False):
-        warnings.append(
-            "--native-tool-calling (using 'native_tool_calling' from metadata)"
-        )
+        warnings.append("--native-tool-calling (using 'native_tool_calling' from metadata)")
     if getattr(args, "no_native_tool_calling", False):
-        warnings.append(
-            "--no-native-tool-calling (using 'native_tool_calling' from metadata)"
-        )
+        warnings.append("--no-native-tool-calling (using 'native_tool_calling' from metadata)")
     if getattr(args, "send_reasoning_content", False):
-        warnings.append(
-            "--send-reasoning-content (using 'send_reasoning_content' from metadata)"
-        )
+        warnings.append("--send-reasoning-content (using 'send_reasoning_content' from metadata)")
     if args.litellm_extra_body is not None:
-        warnings.append(
-            "--litellm-extra-body (using 'litellm_extra_body' from metadata)"
-        )
+        warnings.append("--litellm-extra-body (using 'litellm_extra_body' from metadata)")
     if getattr(args, "session_cache", False):
-        warnings.append(
-            "--session-cache (using 'session_cache' from metadata)"
-        )
-    
+        warnings.append("--session-cache (using 'session_cache' from metadata)")
+
     if warnings:
-        console.print("[bold yellow]Warning: The following arguments are ignored in resume mode:[/]")
+        console.print(
+            "[bold yellow]Warning: The following arguments are ignored in resume mode:[/]"
+        )
         for w in warnings:
             console.print(f"  [yellow]• {w}[/]")
         console.print()
-    
+
     # Determine n_concurrent: use command line if explicitly provided, otherwise use metadata
-    metadata_n_concurrent = metadata.get('n_concurrent', 1)
+    metadata_n_concurrent = metadata.get("n_concurrent", 1)
     n_concurrent = args.n_concurrent if args.n_concurrent is not None else metadata_n_concurrent
     if args.n_concurrent is not None and args.n_concurrent != metadata_n_concurrent:
         console.print(
             f"[cyan]Using --n-concurrent={args.n_concurrent} (overriding metadata value {metadata_n_concurrent})[/]"
         )
-    
+
     # Determine timeout: use command line if specified, otherwise use metadata
     default_timeout = 7200
-    metadata_timeout = metadata.get('timeout', default_timeout)
+    metadata_timeout = metadata.get("timeout", default_timeout)
     timeout = args.timeout if args.timeout != default_timeout else metadata_timeout
     if args.timeout != default_timeout and args.timeout != metadata_timeout:
-        console.print(f"[cyan]Using --timeout={args.timeout} (overriding metadata value {metadata_timeout})[/]")
-    
+        console.print(
+            f"[cyan]Using --timeout={args.timeout} (overriding metadata value {metadata_timeout})[/]"
+        )
+
     # Determine proxy_port: use command line if specified, otherwise use metadata
-    metadata_proxy_port = metadata.get('proxy_port')
+    metadata_proxy_port = metadata.get("proxy_port")
     proxy_port = args.proxy_port if args.proxy_port is not None else metadata_proxy_port
     if args.proxy_port is not None and args.proxy_port != metadata_proxy_port:
-        console.print(f"[cyan]Using --proxy-port={args.proxy_port} (overriding metadata value {metadata_proxy_port})[/]")
+        console.print(
+            f"[cyan]Using --proxy-port={args.proxy_port} (overriding metadata value {metadata_proxy_port})[/]"
+        )
 
     # Determine runtime_proxy: CLI overrides; otherwise use metadata; fallback to proxy_port.
     runtime_proxy_arg = None
     if args.runtime_proxy is not None:
         runtime_proxy_arg = str(args.runtime_proxy).strip().lower() == "on"
     metadata_runtime_proxy = metadata.get("runtime_proxy")
-    runtime_proxy = (
-        runtime_proxy_arg
-        if runtime_proxy_arg is not None
-        else metadata_runtime_proxy
-    )
+    runtime_proxy = runtime_proxy_arg if runtime_proxy_arg is not None else metadata_runtime_proxy
     if runtime_proxy is None:
         runtime_proxy = bool(proxy_port)
     if runtime_proxy_arg is not None and runtime_proxy_arg != metadata_runtime_proxy:
-        console.print(f"[cyan]Using --runtime-proxy={args.runtime_proxy} (overriding metadata value {metadata_runtime_proxy})[/]")
-    
+        console.print(
+            f"[cyan]Using --runtime-proxy={args.runtime_proxy} (overriding metadata value {metadata_runtime_proxy})[/]"
+        )
+
     # Determine gpu_ids: use command line if specified, otherwise use metadata
-    metadata_gpu_ids = metadata.get('gpu_ids')
+    metadata_gpu_ids = metadata.get("gpu_ids")
     gpu_ids = args.gpu_ids if args.gpu_ids is not None else metadata_gpu_ids
     if args.gpu_ids is not None and args.gpu_ids != metadata_gpu_ids:
-        console.print(f"[cyan]Using --gpu-ids={args.gpu_ids} (overriding metadata value {metadata_gpu_ids})[/]")
+        console.print(
+            f"[cyan]Using --gpu-ids={args.gpu_ids} (overriding metadata value {metadata_gpu_ids})[/]"
+        )
 
     metadata_force_timeout = bool(metadata.get("force_timeout", False))
     force_timeout = metadata_force_timeout or bool(getattr(args, "force_timeout", False))
@@ -1951,7 +1932,7 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
         console.print("[cyan]Using --force-timeout (overriding metadata value False)[/]")
 
     # Determine max_iters: always use metadata in resume mode.
-    max_iters = metadata.get('max_iters')
+    max_iters = metadata.get("max_iters")
 
     # Determine mini-swe-agent cost limit: always use metadata in resume mode.
     cost_limit = metadata.get("cost_limit")
@@ -1974,25 +1955,23 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
     # Determine session_cache: always use metadata in resume mode.
     session_cache = bool(metadata.get("session_cache", False))
 
-    # Determine api_key/base_url/version: CLI overrides; otherwise use metadata.
-    metadata_api_key = metadata.get("api_key")
-    api_key = args.api_key if args.api_key is not None else metadata_api_key
+    # Credentials are never persisted. Resume reads them from config.toml or an explicit flag.
+    api_key = args.api_key
     metadata_base_url = metadata.get("base_url")
     base_url = args.base_url if args.base_url is not None else metadata_base_url
     metadata_version = metadata.get("version")
     version = args.version if args.version is not None else metadata_version
-    
+
     # Create config from metadata (n_attempts, split, level always from metadata)
     config = InferConfig(
-        agent=metadata['agent'],
-        model=metadata['model'],
-        dataset=str(metadata.get('dataset') or "LiberCoders/FeatureBench"),
-        # Metadata written before dataset versioning corresponds to the original v1.0 release.
-        dataset_revision=str(metadata.get('dataset_revision') or "v1.0"),
+        agent=metadata["agent"],
+        model=metadata["model"],
+        dataset=str(metadata.get("dataset") or "LiberCoders/FeatureBench"),
+        dataset_revision=str(metadata["dataset_revision"]),
         n_concurrent=n_concurrent,
-        n_attempts=metadata.get('n_attempts', 1),
-        task_ids=metadata.get('task_ids'),
-        level=metadata.get('level'),  # Use level from metadata
+        n_attempts=metadata.get("n_attempts", 1),
+        task_ids=metadata.get("task_ids"),
+        level=metadata.get("level"),  # Use level from metadata
         output_dir=resume_dir.parent,  # Parent of timestamp folder
         timeout=timeout,
         proxy_port=proxy_port,
@@ -2000,7 +1979,7 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
         gpu_ids=gpu_ids,
         max_iters=max_iters,
         cost_limit=cost_limit,
-        split=metadata.get('split'),  # Use split from metadata
+        split=metadata.get("split"),  # Use split from metadata
         without_interface_descriptions=without_interface_descriptions,
         white_box=white_box,
         native_tool_calling=native_tool_calling,
@@ -2009,11 +1988,13 @@ def load_resume_config(resume_dir: Path, args: argparse.Namespace) -> Tuple[Infe
         session_cache=session_cache,
         force_timeout=force_timeout,
         force_rerun_ids=_load_force_rerun_ids(getattr(args, "force_rerun", None)),
+        openhands_reasoning_effort=metadata.get("openhands_reasoning_effort"),
+        codex_reasoning_effort=metadata.get("codex_reasoning_effort"),
         api_key=api_key,
         base_url=base_url,
         version=version,
     )
-    
+
     return config, resume_dir
 
 
@@ -2021,16 +2002,16 @@ def main() -> int:
     """Main entry point."""
     args = parse_args()
     config_path = Path(args.config_path).expanduser() if args.config_path else None
-    
+
     # Handle resume mode
     if args.resume:
         resume_dir = Path(args.resume)
         if not resume_dir.exists():
             console.print(f"[bold red]Error: Resume directory not found: {resume_dir}[/]")
             sys.exit(1)
-        
+
         config, output_dir = load_resume_config(resume_dir, args)
-        
+
         # Run inference in resume mode
         runner = InferenceRunner(config, resume_dir=output_dir, config_path=config_path)
         return runner.run()
@@ -2043,7 +2024,9 @@ def main() -> int:
             console.print("[bold red]Error: --model is required (unless using --resume)[/]")
             sys.exit(1)
         if getattr(args, "session_cache", False) and args.agent != "openhands":
-            console.print("[bold red]Error: --session-cache is only supported for --agent openhands[/]")
+            console.print(
+                "[bold red]Error: --session-cache is only supported for --agent openhands[/]"
+            )
             sys.exit(1)
         if args.cost_limit is not None:
             if args.agent != "mini_swe_agent":
@@ -2054,7 +2037,7 @@ def main() -> int:
             if args.cost_limit < 0:
                 console.print("[bold red]Error: --cost-limit must be greater than or equal to 0[/]")
                 sys.exit(1)
-        
+
         # Create new config
         config = InferConfig(
             agent=args.agent,
@@ -2108,7 +2091,7 @@ def main() -> int:
             base_url=args.base_url,
             version=args.version,
         )
-        
+
         # Run inference
         runner = InferenceRunner(config, config_path=config_path)
         return runner.run()

@@ -3,7 +3,7 @@
 Aggregate eval_outputs and generate a CSV report.
 
 Usage:
-    python featurebench/scripts/cal_eval_outputs.py --path <eval_outputs_dir> --attempt-mode <attempt_mode>
+    python -m featurebench.scripts.cal_eval_outputs --path <eval_outputs_dir> --attempt-mode <attempt_mode>
     <attempt_mode> can be 'best', 'worst', or a number (e.g., 1, 2, 3). Default: 'best'.
 
 Notes:
@@ -13,8 +13,8 @@ Notes:
       - prompt_tokens/completion_tokens: sum over the first k attempts, then averaged
 
 Examples:
-    python featurebench/scripts/cal_eval_outputs.py --path runs/2025-12-06__17-14-12/eval_outputs --attempt-mode best
-    python featurebench/scripts/cal_eval_outputs.py --path runs/2025-12-06__17-14-12/eval_outputs --attempt-mode 3 --merge
+    python -m featurebench.scripts.cal_eval_outputs --path runs/2025-12-06__17-14-12/eval_outputs --attempt-mode best
+    python -m featurebench.scripts.cal_eval_outputs --path runs/2025-12-06__17-14-12/eval_outputs --attempt-mode 3 --merge
 """
 
 import argparse
@@ -617,7 +617,7 @@ def main():
     level2_count = sum(1 for t in sorted_tasks if t['level'] == 'lv2')
     resolved_count = sum(1 for t in sorted_tasks if t['resolved'])
     
-    print(f"\nStatistics:")
+    print("\nStatistics:")
     print(f"  Level 1 tasks: {level1_count}")
     print(f"  Level 2 tasks: {level2_count}")
     print(f"  Resolved tasks: {resolved_count}")

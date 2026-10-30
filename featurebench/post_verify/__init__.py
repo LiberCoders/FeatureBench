@@ -1,3 +1,0 @@
-"""
-Post Verification module.
-"""

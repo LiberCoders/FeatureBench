@@ -1,0 +1,18 @@
+module: rspec
+match:
+  test_frameworks: [rspec]
+runner_guidance:
+  - >-
+    Use RSpec's JSON formatter and dry-run metadata for collection. Preserve stable example IDs or exact
+    file:line selectors and execute requested examples in one RSpec process.
+  - >-
+    Send RSpec JSON to a dedicated temporary file with --format json --out FILE; never parse combined stdout
+    or stderr as JSON because load errors and formatter notices may surround the JSON document. Capture the
+    framework exit status separately, parse the file when it exists, and always write a schema-valid Runner
+    response even when RSpec reports a load error or failing example. The external Runner Bash process exits
+    zero after writing the response; response.exit_code carries RSpec's status.
+  - >-
+    Preserve the primary Linux CI or Rake task's RSpec semantics. Do not add --backtrace, alternate formatters,
+    or other presentation flags to the actual accepted suite unless that exact flag is present in the evidenced
+    primary command; RSpec repositories may assert their own filtered backtrace and formatter output. A separate
+    JSON formatter used only for Runner result transport must not alter the tested command's semantic flags.

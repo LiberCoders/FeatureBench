@@ -1,0 +1,304 @@
+# 同时构建的仓库数量；不是单个容器的 CPU 数量。
+concurrency: 4
+
+repository:
+  # 宿主机使用的 Git 可执行文件。
+  git_binary: git
+  # clone、fetch、submodule、LFS 等单条 Git 命令的墙钟超时。
+  command_timeout_seconds: 1200
+  # 未配置 github_git Source 时，同一官方地址上的 Git 网络命令总尝试次数。
+  # 配置 Source 后由 sources.services.github_git.maximum_attempts 统一限制 endpoint 数量。
+  network_attempts: 3
+  # Git 网络重试的指数退避起始秒数。
+  retry_base_seconds: 2
+  # Git HTTP 传输低于该字节/秒时开始判定网络停滞。
+  low_speed_bytes_per_second: 1024
+  # Git HTTP 持续低速达到该秒数后切换下一个源。
+  low_speed_timeout_seconds: 30
+  # clone 时启用 blob 按需获取，减少临时磁盘和网络开销。
+  partial_clone: true
+  # 仓库声明 submodule 时是否递归物化。
+  update_submodules: true
+  # submodule 并行下载任务数。
+  submodule_jobs: 4
+  # 仓库使用 Git LFS 时是否下载真实对象；启用后 Build 会在提交任务前检查宿主机 git-lfs。
+  fetch_lfs: true
+  # 无存活租约的暂存目录超过该秒数后可作为垃圾清理。
+  stale_checkout_seconds: 86400
+
+docker:
+  # 宿主机使用的 Docker CLI 可执行文件。
+  binary: docker
+  # 已构建容器在分析、验证和 adapter 执行阶段使用的网络模式。
+  network: none
+  # Docker build 阶段使用的网络模式，依赖安装需要联网。
+  build_network: default
+  # 构建前是否刷新上游基础镜像。
+  pull: true
+  # create、start、exec、inspect 等普通 Docker 命令的默认超时。
+  command_timeout_seconds: 300
+  # 单个镜像源执行 docker pull 的墙钟超时，超时后切换下一个源。
+  pull_timeout_seconds: 900
+  # docker build 的墙钟超时。
+  build_timeout_seconds: 3600
+  # 每个 Docker 命令的 stdout、stderr 各自只保留末尾这些字符。
+  max_output_chars: 100000
+  # 容器 CPU 上限；null 表示交给 Docker/宿主机决定。
+  cpus: 8
+  # 容器内存上限，例如 8g；null 表示不额外限制。
+  memory: 16g
+  # 仅必需 GPU 的仓库会传给 docker create --gpus；null 表示未配置 GPU。
+  gpus: null
+
+# Pydantic AI 与 pydantic-ai-harness 只在宿主机运行，不会装进任务镜像。
+agent:
+  # 所有环境构建 Agent 使用的 Pydantic AI 模型名。
+  model: openai:gpt-5.6-luna
+  provider:
+    # 是否校验模型服务的 TLS 证书；仅中转站明确要求时才设为 false。
+    tls_verify: true
+  # 同一个工具连续触发 ModelRetry 的上限；该工具成功后单独清零。
+  tool_retries: 10
+  # 一次 Agent run 内结构化输出校验失败的累计重试上限。
+  output_retries: 10
+  # 同一次 Agent run 内模型传输临时故障的最多重试次数；不包含首次请求。
+  transient_request_retries: 10
+  # 一次完整 Analysis Agent run 的墙钟超时。
+  analysis_run_timeout_seconds: 600
+  # 一次完整 Artifact Agent run 的墙钟超时。
+  artifact_run_timeout_seconds: 600
+  # 独立 Runner Review Agent 审查一次完整 Runner 源码的墙钟超时。
+  runner_review_run_timeout_seconds: 300
+  # 单次模型 API 请求的网络超时；不限制完整 Agent run 的轮数。
+  request_timeout_seconds: 180
+  # 单次 Agent 工具调用的超时，超时会作为 ModelRetry 反馈给模型。
+  tool_timeout_seconds: 180
+  metrics:
+    # 是否为每次完整 Agent run 追加一行汇总指标。
+    enabled: true
+    # Agent 指标 JSONL 的宿主机落盘位置。
+    path: .featurebench/agent-metrics.jsonl
+  pricing:
+    # 中转站每百万输入/输出 token 的美元单价；两者必须同时配置，null 使用内置目录估算。
+    input_per_million_usd: null
+    output_per_million_usd: null
+    # 中转站每百万缓存读取/写入 token 的美元单价；null 表示不做自定义计价。
+    cache_read_per_million_usd: null
+    cache_write_per_million_usd: null
+  trajectory:
+    # 是否保存完整 prompt、response、工具调用、重试和可恢复快照。
+    enabled: true
+    # 每个逻辑 Agent run 独立目录的根路径；网络重试分别写入 attempt-* 子目录。
+    directory: .featurebench/agent-trajectories
+    # failures 只长期保留失败或拒绝仓库的轨迹；all 保留所有仓库轨迹。
+    retention: failures
+  # 以下参数只管理当前活动上下文，不限制累计请求数或累计 token。
+  compaction:
+    # 触发 Harness 分层压缩的目标上下文 token 数。
+    target_tokens: 240000
+    # 单个消息 part 压缩前允许保留的最大估算 token 数。
+    max_part_tokens: 50000
+    # 截断超大 part 时保留开头的字符数。
+    keep_head_chars: 2000
+    # 截断超大 part 时保留结尾的字符数。
+    keep_tail_chars: 2000
+    # 清理旧工具结果时保留最近的完整工具调用/返回对数。
+    keep_tool_pairs: 6
+    # 小于该估算 token 数的旧工具结果不值得单独清理。
+    min_clear_tokens: 4000
+    # 最终摘要压缩后仍原样保留的最近消息数。
+    keep_messages: 20
+
+environment:
+  # 所有任务镜像内仓库的唯一标准路径。
+  workdir: /testbed
+  # Analysis/Artifact Agent 首轮检查仓库时使用的语言无关镜像。
+  planner_image: ubuntu:24.04
+  # false 只拒绝测试必须依赖 GPU 的仓库；GPU 可选仓库仍可走 CPU 路径。
+  allow_gpu_repositories: false
+  # 自包含 Dockerfile 内单条 clone/fetch/checkout/submodule/LFS Git 命令的墙钟上限。
+  clone_command_timeout_seconds: 300
+  # 自包含 Dockerfile 内 Git 传输低于该字节/秒时开始判定源停滞。
+  clone_low_speed_bytes_per_second: 1024
+  # 自包含 Dockerfile 内 Git 持续低速达到该秒数后让构建失败并切换下一个源。
+  clone_low_speed_timeout_seconds: 30
+  # Runner 收集测试和 Quickcheck 抽样运行的单次墙钟上限。
+  collect_timeout_seconds: 600
+  # 环境至少需要该数量的测试点：collect 少于此值时立即修复；完整基线后真实 passed 少于此值时放弃该环境。
+  min_verified_test_points: 10
+  # 完整基线先按测试文件分组，再按该上限确定性切分；避免单个超大测试文件形成无界 Runner 请求。
+  baseline_group_max_test_points: 100
+  # 完整基线所有分组共享的总墙钟时限；每组使用当时剩余时间，耗尽后不再启动新分组。
+  baseline_total_timeout_seconds: 1800
+  # 单个仓库从在线克隆、Agent 分析、产物编写到全部构建/验证/修复的总墙钟上限；超时后本仓库记为 failed，并清理候选容器与中间镜像。
+  total_timeout_seconds: 7200
+  # Quickcheck 从 collect 结果中按 commit 和测试 ID 确定性抽取的测试点数量；collect 不足时取全部，即 min(配置值, collect 数量)。
+  quickcheck_test_points: 10
+  # Quickcheck 样本的最低真实通过率；低于该比例说明环境或 Runner 尚未达到可接受健康度并交回 Agent 修复。
+  quickcheck_min_pass_rate: 0.5
+  # 测试收集结果必须连续一致的运行次数。
+  collect_stability_runs: 2
+  # Docker 构建或验证失败后，带真实错误交回 Agent 修复的总轮数；达到 10 轮才放弃该仓库。
+  max_build_attempts: 10
+  # 修复成功或失败后是否删除不再使用的“中间”镜像标签。
+  cleanup_intermediate_images: true
+  audit:
+    # 是否额外生成供人类审计的目录包；JSONL 始终是正式产物。
+    enabled: false
+    # 审计目录包的宿主机根路径。
+    directory: .featurebench/audit/environments
+  # Agent 只能从该目录选择基础镜像；每项字段的语义只在第一项说明一次。
+  base_images:
+    # 配置内稳定且唯一的候选名称。
+    - name: generic-ubuntu
+      # Agent 产物必须使用的官方基础镜像引用。
+      image: ubuntu:24.04
+      # 该候选适用的标准化语言标签。
+      languages: [generic]
+      # 激活环境和运行时选择使用的语言家族。
+      runtime_family: generic
+      # 运行时版本；null 表示没有固定的语言版本。
+      runtime_version: null
+      # 托管 recipe 实际预装、可供 Agent 依赖的能力。
+      capabilities: [bash, git, build-toolchain]
+      # 该候选是否能够承载必须使用 GPU 的测试。
+      gpu_support: false
+      # 内联到最终 Dockerfile 的托管 recipe 资产名。
+      recipe: generic-ubuntu
+      # 提供给 Analysis Agent 的选型说明。
+      description: Generic Debian-family base for repositories with custom toolchains.
+    - name: python-3.14
+      image: ubuntu:24.04
+      languages: [python]
+      runtime_family: python
+      runtime_version: "3.14"
+      capabilities: [bash, git, pip, uv, conda, build-toolchain]
+      gpu_support: false
+      recipe: python-3.14
+      description: Python 3.14 projects using pytest or another Python test runner.
+    - name: python-3.13
+      image: ubuntu:24.04
+      languages: [python]
+      runtime_family: python
+      runtime_version: "3.13"
+      capabilities: [bash, git, pip, uv, conda, build-toolchain]
+      gpu_support: false
+      recipe: python-3.13
+      description: Python 3.13 projects using pytest or another Python test runner.
+    - name: python-3.12
+      image: ubuntu:24.04
+      languages: [python]
+      runtime_family: python
+      runtime_version: "3.12"
+      capabilities: [bash, git, pip, uv, conda, build-toolchain]
+      gpu_support: false
+      recipe: python-3.12
+      description: Python projects using pytest or another Python test runner.
+    - name: python-3.11
+      image: ubuntu:22.04
+      languages: [python]
+      runtime_family: python
+      runtime_version: "3.11"
+      capabilities: [bash, git, pip, uv, conda, build-toolchain]
+      gpu_support: false
+      recipe: python-3.11
+      description: Python 3.11 with Miniconda, uv, compilers, and scientific build libraries.
+    - name: python-3.10
+      image: ubuntu:22.04
+      languages: [python]
+      runtime_family: python
+      runtime_version: "3.10"
+      capabilities: [bash, git, pip, uv, conda, build-toolchain]
+      gpu_support: false
+      recipe: python-3.10
+      description: Python 3.10 compatibility builder with Miniconda and native toolchains.
+    - name: node-22
+      image: node:22-bookworm-slim
+      languages: [javascript, typescript]
+      runtime_family: node
+      runtime_version: "22"
+      capabilities: [bash, git, npm, corepack, build-toolchain]
+      gpu_support: false
+      recipe: node-22
+      description: Node.js projects using npm, pnpm, yarn, Jest, or Vitest.
+    - name: node-20
+      image: node:20-bookworm-slim
+      languages: [javascript, typescript]
+      runtime_family: node
+      runtime_version: "20"
+      capabilities: [bash, git, npm, corepack, build-toolchain]
+      gpu_support: false
+      recipe: node-20
+      description: Node.js 20 LTS projects using npm, pnpm, yarn, Jest, or Vitest.
+    - name: go-1.24
+      image: golang:1.24-bookworm
+      languages: [go]
+      runtime_family: go
+      runtime_version: "1.24"
+      capabilities: [bash, git, go, build-toolchain]
+      gpu_support: false
+      recipe: go-1.24
+      description: Go module projects.
+    - name: rust
+      image: rust:1-bookworm
+      languages: [rust]
+      runtime_family: rust
+      runtime_version: stable
+      capabilities: [bash, git, cargo, rustup, build-toolchain]
+      gpu_support: false
+      recipe: rust-stable
+      description: Cargo projects on stable Rust.
+    - name: java-21
+      image: eclipse-temurin:21-jdk-jammy
+      languages: [java, kotlin]
+      runtime_family: jvm
+      runtime_version: "21"
+      capabilities: [bash, git, java, maven, build-toolchain]
+      gpu_support: false
+      recipe: java-21
+      description: Maven or Gradle JVM projects.
+    - name: java-17
+      image: eclipse-temurin:17-jdk-jammy
+      languages: [java, kotlin]
+      runtime_family: jvm
+      runtime_version: "17"
+      capabilities: [bash, git, java, maven, build-toolchain]
+      gpu_support: false
+      recipe: java-17
+      description: Java 17 projects using Maven, Gradle, or their repository wrappers.
+    - name: ruby-3.3
+      image: ruby:3.3-slim-bookworm
+      languages: [ruby]
+      runtime_family: ruby
+      runtime_version: "3.3"
+      capabilities: [bash, git, bundler, build-toolchain]
+      gpu_support: false
+      recipe: ruby-3.3
+      description: Bundler, RSpec, or Minitest projects.
+    - name: php-8.3
+      image: php:8.3-cli-bookworm
+      languages: [php]
+      runtime_family: php
+      runtime_version: "8.3"
+      capabilities: [bash, git, composer, build-toolchain]
+      gpu_support: false
+      recipe: php-8.3
+      description: Composer and PHPUnit projects.
+    - name: dotnet-8
+      image: mcr.microsoft.com/dotnet/sdk:8.0
+      languages: [csharp, "c#", fsharp, "f#"]
+      runtime_family: dotnet
+      runtime_version: "8.0"
+      capabilities: [bash, git, dotnet, build-toolchain]
+      gpu_support: false
+      recipe: dotnet-8
+      description: .NET test projects.
+    - name: cuda-12.4-ubuntu-22.04
+      image: nvidia/cuda:12.4.1-devel-ubuntu22.04
+      languages: [generic]
+      runtime_family: cuda
+      runtime_version: "12.4"
+      capabilities: [bash, git, cuda, build-toolchain]
+      gpu_support: true
+      recipe: cuda-12.4
+      description: Generic CUDA builder used only when unit tests cannot run on CPU.

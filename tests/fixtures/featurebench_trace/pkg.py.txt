@@ -1,0 +1,2 @@
+def child_feature(value: int) -> int:
+    return value + 1

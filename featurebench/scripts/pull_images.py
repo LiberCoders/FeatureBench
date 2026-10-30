@@ -20,9 +20,9 @@ Notes:
 from __future__ import annotations
 
 import argparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import shutil
 import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -161,7 +161,7 @@ def _docker_pull(spec: ImagePullSpec, *, capture_output: bool = False) -> PullRe
             official_tag=spec.official_tag,
             error="docker command not found",
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return PullResult(
             image=spec.image,
             ok=False,
@@ -171,7 +171,10 @@ def _docker_pull(spec: ImagePullSpec, *, capture_output: bool = False) -> PullRe
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Pre-pull Docker images for FeatureBench")
+    parser = argparse.ArgumentParser(
+        prog="fb pull",
+        description="Pre-pull Docker images for FeatureBench",
+    )
     parser.add_argument(
         "--mode",
         type=str,
@@ -194,7 +197,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if shutil.which("docker") is None:
-        print("❌ docker not found in PATH. Please install Docker and ensure the daemon is running.")
+        print(
+            "❌ docker not found in PATH. Please install Docker and ensure the daemon is running."
+        )
         return 2
 
     if mode in {"full", "lite", "fast"}:
@@ -204,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         images = _load_images_from_txt(list_path)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(f"❌ Failed to load image list: {e}")
         return 2
 
@@ -242,17 +247,14 @@ def main(argv: list[str] | None = None) -> int:
         results_by_image: dict[str, PullResult] = {}
         with ThreadPoolExecutor(max_workers=n_concurrent) as ex:
             futs = {
-                ex.submit(_docker_pull, spec, capture_output=True): spec.image
-                for spec in images
+                ex.submit(_docker_pull, spec, capture_output=True): spec.image for spec in images
             }
-            done = 0
             total = len(images)
-            for fut in as_completed(futs):
+            for done, fut in enumerate(as_completed(futs), start=1):
                 image = futs[fut]
-                done += 1
                 try:
                     res = fut.result()
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     res = PullResult(image=image, ok=False, error=str(e))
                 results_by_image[image] = res
                 status = "OK+TAG" if res.tagged_official else ("OK" if res.ok else "FAIL")

@@ -1,0 +1,5 @@
+import sys
+
+from pkg import child_feature
+
+raise SystemExit(0 if child_feature(int(sys.argv[1])) == 2 else 1)

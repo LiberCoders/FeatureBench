@@ -1,0 +1,415 @@
+"""Dependency-free repository-projected runtime tracer copied into task containers."""
+
+from __future__ import annotations
+
+import builtins
+import inspect
+import json
+import os
+import pathlib
+import sys
+import threading
+import uuid
+from collections import defaultdict
+from types import CodeType, FrameType
+from typing import Any
+
+from featurebench_trace_codec import encode_index_ranges
+from featurebench_trace_context import current_test_id
+
+Identity = tuple[str, str, int, str]
+
+
+class ThreadTrace:
+    """One lock-free event accumulator owned by exactly one Python thread."""
+
+    __slots__ = ("edges", "imports", "records", "test_id_positions")
+
+    def __init__(self) -> None:
+        self.records: dict[tuple[str, str, int], dict[str, Any]] = {}
+        self.edges: dict[tuple[str, str], dict[str, Any]] = {}
+        self.imports: dict[tuple[str, int, str, str, str], dict[str, Any]] = {}
+        self.test_id_positions: dict[str, int] = {}
+
+
+class RuntimeTracer:
+    def __init__(self, repository_root: str, output_directory: str) -> None:
+        self.root = pathlib.Path(repository_root).resolve()
+        self.root_prefix = str(self.root) + os.sep
+        self.output_directory = pathlib.Path(output_directory)
+        self.pid = os.getpid()
+        self._local = threading.local()
+        self._states: list[ThreadTrace] = []
+        self._state_registration_lock = threading.Lock()
+        self._identity_cache: dict[CodeType, Identity | None] = {}
+        self._path_cache: dict[str, str | None] = {}
+        self._monitoring_id: int | None = None
+        self._using_monitoring = False
+        self._started = False
+        self._original_import = builtins.__import__
+        self.ignored = {
+            ".git",
+            ".tox",
+            ".nox",
+            ".venv",
+            "venv",
+            "env",
+            "site-packages",
+            "node_modules",
+            "build",
+            "dist",
+            "__pycache__",
+        }
+
+    def _repository_path(self, filename: str) -> str | None:
+        if not filename or filename.startswith("<"):
+            return None
+        cached = self._path_cache.get(filename, ...)
+        if cached is not ...:
+            return cached
+        try:
+            resolved = pathlib.Path(filename).resolve()
+            relative = resolved.relative_to(self.root)
+        except (OSError, ValueError):
+            self._path_cache[filename] = None
+            return None
+        if any(part in self.ignored for part in relative.parts):
+            self._path_cache[filename] = None
+            return None
+        result = relative.as_posix()
+        self._path_cache[filename] = result
+        return result
+
+    def _frame_identity(self, frame: FrameType) -> Identity | None:
+        cached = self._identity_cache.get(frame.f_code, ...)
+        if cached is not ...:
+            return cached
+        path = self._repository_path(frame.f_code.co_filename)
+        if path is None:
+            self._identity_cache[frame.f_code] = None
+            return None
+        qualname = getattr(frame.f_code, "co_qualname", frame.f_code.co_name)
+        line = frame.f_code.co_firstlineno
+        identity = (path, qualname, line, "::".join((path, qualname, str(line))))
+        self._identity_cache[frame.f_code] = identity
+        return identity
+
+    @staticmethod
+    def _object_id(identity: Identity) -> str:
+        return identity[3]
+
+    def _nearest_repository_caller(
+        self, frame: FrameType | None
+    ) -> tuple[Identity | None, bool]:
+        direct = True
+        cursor = frame
+        while cursor is not None:
+            identity = self._frame_identity(cursor)
+            if identity is not None:
+                return identity, direct
+            direct = False
+            cursor = cursor.f_back
+        return None, False
+
+    def _touch_record(
+        self,
+        state: ThreadTrace,
+        identity: Identity,
+        *,
+        calls: int = 0,
+        test_id: int | None = None,
+    ) -> None:
+        key = identity[:3]
+        item = state.records.setdefault(
+            key,
+            {"calls": 0, "test_ids": set()},
+        )
+        item["calls"] += calls
+        if test_id is not None:
+            item["test_ids"].add(test_id)
+
+    def _state(self) -> ThreadTrace:
+        state = getattr(self._local, "state", None)
+        if state is not None:
+            return state
+        state = ThreadTrace()
+        self._local.state = state
+        with self._state_registration_lock:
+            self._states.append(state)
+        return state
+
+    @staticmethod
+    def _test_id(state: ThreadTrace, node_id: str | None) -> int | None:
+        if not node_id:
+            return None
+        index = state.test_id_positions.get(node_id)
+        if index is None:
+            index = len(state.test_id_positions)
+            state.test_id_positions[node_id] = index
+        return index
+
+    def _record_call(self, frame: FrameType, callee: Identity) -> None:
+        node_id = current_test_id()
+        caller, direct = self._nearest_repository_caller(frame.f_back)
+        thread_id = threading.get_ident()
+        state = self._state()
+        test_id = self._test_id(state, node_id)
+        self._touch_record(state, callee, calls=1, test_id=test_id)
+        if caller is None:
+            return
+        self._touch_record(state, caller, test_id=test_id)
+        caller_id = self._object_id(caller)
+        callee_id = self._object_id(callee)
+        provenance = "direct" if direct else "third_party_bridge"
+        key = (caller_id, callee_id)
+        edge = state.edges.setdefault(
+            key,
+            {
+                "calls": 0,
+                "test_ids": set(),
+                "thread_ids": set(),
+                "provenance": set(),
+            },
+        )
+        edge["calls"] += 1
+        edge["thread_ids"].add(thread_id)
+        edge["provenance"].add(provenance)
+        if test_id is not None:
+            edge["test_ids"].add(test_id)
+
+    def _profile(self, frame: FrameType, event: str, arg: object) -> None:
+        del arg
+        if event != "call" or getattr(self._local, "busy", False):
+            return
+        self._local.busy = True
+        try:
+            callee = self._frame_identity(frame)
+            if callee is not None:
+                self._record_call(frame, callee)
+        finally:
+            self._local.busy = False
+
+    def _monitor(self, code: CodeType, instruction_offset: int) -> object:
+        del code, instruction_offset
+        if getattr(self._local, "busy", False):
+            return None
+        frame = sys._getframe(1)
+        callee = self._frame_identity(frame)
+        if callee is None:
+            return sys.monitoring.DISABLE
+        self._local.busy = True
+        try:
+            self._record_call(frame, callee)
+        finally:
+            self._local.busy = False
+        return None
+
+    def _start_monitoring(self) -> bool:
+        if os.environ.get("FEATUREBENCH_TRACE_DISABLE_MONITORING") == "1":
+            return False
+        monitoring = getattr(sys, "monitoring", None)
+        if monitoring is None:
+            return False
+        for tool_id in range(5, -1, -1):
+            if monitoring.get_tool(tool_id) is not None:
+                continue
+            try:
+                monitoring.use_tool_id(tool_id, "featurebench-featurebench")
+                monitoring.register_callback(tool_id, monitoring.events.PY_START, self._monitor)
+                monitoring.set_events(tool_id, monitoring.events.PY_START)
+            except (RuntimeError, ValueError):
+                try:
+                    monitoring.free_tool_id(tool_id)
+                except (RuntimeError, ValueError):
+                    pass
+                continue
+            self._monitoring_id = tool_id
+            self._using_monitoring = True
+            return True
+        return False
+
+    def _definition(self, value: object) -> tuple[str, str, int | None] | None:
+        candidate = value
+        if inspect.ismethod(candidate):
+            candidate = candidate.__func__
+        path_value = inspect.getsourcefile(candidate) or inspect.getfile(candidate)
+        path = self._repository_path(path_value)
+        if path is None:
+            return None
+        name = getattr(candidate, "__qualname__", getattr(candidate, "__name__", ""))
+        code = getattr(candidate, "__code__", None)
+        line = code.co_firstlineno if code is not None else None
+        return path, str(name), line
+
+    def _traced_import(
+        self,
+        name: str,
+        globals_value: dict[str, Any] | None = None,
+        locals_value: dict[str, Any] | None = None,
+        fromlist: tuple[str, ...] | list[str] = (),
+        level: int = 0,
+    ) -> object:
+        module = self._original_import(name, globals_value, locals_value, fromlist, level)
+        if getattr(self._local, "busy", False):
+            return module
+        self._local.busy = True
+        try:
+            importer = self._repository_path(
+                str((globals_value or {}).get("__file__", ""))
+            )
+            if importer is None:
+                return module
+            try:
+                importer_line = sys._getframe(1).f_lineno
+            except (ValueError, AttributeError):
+                importer_line = 1
+            node_id = current_test_id()
+            for imported_name in fromlist or ():
+                if imported_name == "*" or not hasattr(module, imported_name):
+                    continue
+                try:
+                    definition = self._definition(getattr(module, imported_name))
+                except (OSError, TypeError):
+                    definition = None
+                if definition is None:
+                    continue
+                defined_path, defined_name, defined_line = definition
+                key = (importer, importer_line, imported_name, defined_path, defined_name)
+                state = self._state()
+                test_id = self._test_id(state, node_id)
+                item = state.imports.setdefault(
+                    key,
+                    {"defined_line": defined_line, "test_ids": set()},
+                )
+                if test_id is not None:
+                    item["test_ids"].add(test_id)
+        finally:
+            self._local.busy = False
+        return module
+
+    def start(self) -> None:
+        if self._started:
+            return
+        self._started = True
+        builtins.__import__ = self._traced_import
+        if not self._start_monitoring():
+            sys.setprofile(self._profile)
+            threading.setprofile(self._profile)
+
+    def stop(self) -> None:
+        if not self._started:
+            return
+        if self._using_monitoring and self._monitoring_id is not None:
+            monitoring = sys.monitoring
+            monitoring.set_events(self._monitoring_id, 0)
+            monitoring.register_callback(
+                self._monitoring_id, monitoring.events.PY_START, None
+            )
+            monitoring.free_tool_id(self._monitoring_id)
+            self._monitoring_id = None
+            self._using_monitoring = False
+        else:
+            sys.setprofile(None)
+            threading.setprofile(None)
+        builtins.__import__ = self._original_import
+        self._started = False
+
+    def payload(self) -> dict[str, object]:
+        test_ids = sorted(
+            {
+                test_id
+                for state in self._states
+                for test_id in state.test_id_positions
+            }
+        )
+        canonical_positions = {value: index for index, value in enumerate(test_ids)}
+        records: dict[tuple[str, str, int], dict[str, Any]] = {}
+        edges: dict[tuple[str, str], dict[str, Any]] = {}
+        imports: dict[tuple[str, int, str, str, str], dict[str, Any]] = {}
+        for state in self._states:
+            remap = {
+                process_index: canonical_positions[value]
+                for value, process_index in state.test_id_positions.items()
+            }
+            for key, raw in state.records.items():
+                item = records.setdefault(key, {"calls": 0, "test_ids": set()})
+                item["calls"] += raw["calls"]
+                item["test_ids"].update(remap[value] for value in raw["test_ids"])
+            for key, raw in state.edges.items():
+                item = edges.setdefault(
+                    key,
+                    {
+                        "calls": 0,
+                        "test_ids": set(),
+                        "thread_ids": set(),
+                        "provenance": set(),
+                    },
+                )
+                item["calls"] += raw["calls"]
+                item["test_ids"].update(remap[value] for value in raw["test_ids"])
+                item["thread_ids"].update(raw["thread_ids"])
+                item["provenance"].update(raw["provenance"])
+            for key, raw in state.imports.items():
+                item = imports.setdefault(
+                    key,
+                    {"defined_line": raw["defined_line"], "test_ids": set()},
+                )
+                item["test_ids"].update(remap[value] for value in raw["test_ids"])
+        rendered_records = []
+        for (path, qualname, line), item in sorted(records.items()):
+            rendered_records.append(
+                {
+                    "path": path,
+                    "qualname": qualname,
+                    "line": line,
+                    "calls": max(1, int(item["calls"])),
+                    "test_id_ranges": encode_index_ranges(item["test_ids"]),
+                }
+            )
+        rendered_edges = []
+        for (caller, callee), item in sorted(edges.items()):
+            rendered_edges.append(
+                {
+                    "caller": caller,
+                    "callee": callee,
+                    "calls": item["calls"],
+                    "test_id_ranges": encode_index_ranges(item["test_ids"]),
+                    "thread_ids": sorted(item["thread_ids"]),
+                    "provenance": sorted(item["provenance"]),
+                }
+            )
+        rendered_imports = []
+        for (
+            importer_path,
+            importer_line,
+            imported_name,
+            defined_path,
+            defined_name,
+        ), item in sorted(imports.items()):
+            rendered_imports.append(
+                {
+                    "importer_path": importer_path,
+                    "importer_line": importer_line,
+                    "imported_name": imported_name,
+                    "defined_path": defined_path,
+                    "defined_name": defined_name,
+                    "defined_line": item["defined_line"],
+                    "test_id_ranges": encode_index_ranges(item["test_ids"]),
+                }
+            )
+        return {
+            "pid": self.pid,
+            "test_ids": test_ids,
+            "records": rendered_records,
+            "edges": rendered_edges,
+            "imports": rendered_imports,
+        }
+
+    def dump(self) -> pathlib.Path:
+        self.output_directory.mkdir(parents=True, exist_ok=True)
+        destination = self.output_directory / f"trace-{self.pid}-{uuid.uuid4().hex}.json"
+        temporary = destination.with_suffix(".tmp")
+        with temporary.open("w", encoding="utf-8") as stream:
+            json.dump(self.payload(), stream, separators=(",", ":"))
+        os.replace(temporary, destination)
+        return destination

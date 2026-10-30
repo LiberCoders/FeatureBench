@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Minimal real pytest implementation of the language-neutral Runner V1 contract.
+python - "$@" <<'PY'
+import argparse
+import json
+import pathlib
+import subprocess
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--request", required=True)
+parser.add_argument("--response", required=True)
+arguments = parser.parse_args()
+request = json.loads(pathlib.Path(arguments.request).read_text())
+
+
+def collect():
+    completed = subprocess.run(
+        ["pytest", "--collect-only", "-q"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    native_nodes = [line.strip() for line in completed.stdout.splitlines() if "::" in line]
+    public_nodes = [f"{node}#0" for node in native_nodes]
+    return completed, public_nodes
+
+
+collected_process, collected = collect()
+action = request["action"]
+results = []
+output = collected_process.stdout
+exit_code = collected_process.returncode
+if action == "run" and exit_code == 0:
+    selected = request["test_ids"]
+    exit_code = 0
+    chunks = []
+    known = set(collected)
+    for node in selected:
+        if node not in known:
+            exit_code = 4
+            chunks.append(f"unknown test point: {node}")
+            results.append({"id": node, "outcome": "error"})
+            continue
+        native_node = node.rsplit("#", 1)[0]
+        completed = subprocess.run(
+            ["pytest", "-q", native_node],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        chunks.append(completed.stdout)
+        passed = completed.returncode == 0
+        results.append({"id": node, "outcome": "passed" if passed else "failed"})
+        if not passed:
+            exit_code = 1
+    output = "\n".join(chunks)
+
+response = {
+    "action": action,
+    "exit_code": exit_code,
+    "collected": (
+        [{"id": node, "path": node.split("::", 1)[0]} for node in collected]
+        if action == "collect"
+        else []
+    ),
+    "results": results,
+    "errors": [] if collected_process.returncode == 0 else ["pytest collection failed"],
+    "output": output,
+}
+pathlib.Path(arguments.response).write_text(json.dumps(response))
+raise SystemExit(0)
+PY

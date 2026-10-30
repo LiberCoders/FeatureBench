@@ -1,0 +1,12 @@
+module: ruby
+match:
+  languages: [ruby]
+  package_managers: [bundler, rubygems]
+dockerfile_guidance:
+  - >-
+    Install the locked Bundler bundle during build and use the resulting bundle offline; do not run bundle
+    install from activation or Runner.
+  - >-
+    Install every Bundler group required by the accepted tests. A group named development may still contain
+    RSpec, Cucumber, Aruba, or other test-time dependencies, so exclude it only when repository evidence proves
+    the accepted suite does not load it.

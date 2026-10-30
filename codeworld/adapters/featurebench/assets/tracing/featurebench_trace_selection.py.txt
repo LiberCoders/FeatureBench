@@ -1,0 +1,33 @@
+"""Root-process trace selection configured before pytest loads its plugin."""
+
+from __future__ import annotations
+
+_requested_test_ids: tuple[str, ...] = ()
+_phase_outcomes: dict[str, dict[str, str]] = {}
+
+
+def configure_requested_test_ids(test_ids: list[str]) -> None:
+    global _requested_test_ids
+    _requested_test_ids = tuple(test_ids)
+    _phase_outcomes.clear()
+
+
+def requested_test_ids() -> tuple[str, ...]:
+    return _requested_test_ids
+
+
+def record_test_outcome(test_id: str, phase: str, outcome: str) -> None:
+    _phase_outcomes.setdefault(test_id, {})[phase] = outcome
+
+
+def passed_test_ids() -> tuple[str, ...]:
+    passed: list[str] = []
+    for test_id, phases in _phase_outcomes.items():
+        if phases.get("call") != "passed":
+            continue
+        if phases.get("setup") not in (None, "passed"):
+            continue
+        if phases.get("teardown") not in (None, "passed"):
+            continue
+        passed.append(test_id)
+    return tuple(sorted(passed))

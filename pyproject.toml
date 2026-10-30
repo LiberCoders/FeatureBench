@@ -1,26 +1,36 @@
 [project]
 name = "featurebench"
 version = "0.2.3"
-description = "FeatureBench Pipeline - A test-driven data generation pipeline for building and evaluating feature-level coding benchmarks"
+description = "Build reproducible coding environments, generate FeatureBench tasks, and evaluate coding agents."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "datasets>=3.3.3",
     "docker>=5.0.3",
-    "filelock>=3.20.0",
+    "genai-prices>=0.0.72",
     "huggingface-hub>=0.26.5",
+    "httpx>=0.28.1",
     "jinja2>=3.1.6",
-    "matplotlib>=3.10.7",
-    "openai>=2.6.1",
+    "ortools>=9.12.0",
     "pandas>=2.2.3",
-    "pyarrow>=18.1.0",
-    "pytest>=8.4.2",
+    "pydantic>=2.12.0",
+    "pydantic-ai>=2.19.0,<2.20",
+    "pydantic-ai-harness>=0.12.0,<0.13",
+    "python-dotenv>=1.1.0",
     "pyyaml>=6.0.3",
-    "rich>=13.0.0",
-    "scipy>=1.16.3",
-    "seaborn>=0.13.2",
+    "rich>=15.0.0,<16",
+    "textual>=8.0.0,<9",
     "toml>=0.10.2",
-    "tqdm>=4.67.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyright>=1.1.400",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.2.0",
+    "pytest-xdist>=3.8.0",
+    "ruff>=0.12.0",
 ]
 
 [project.scripts]
@@ -32,12 +42,60 @@ requires = ["hatchling>=1.24.2"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["featurebench"]
+packages = ["featurebench", "codeworld"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"configs" = "codeworld/configs"
 
 [tool.pytest.ini_options]
 minversion = "8.0"
 addopts = "-ra -q --strict-markers"
 testpaths = ["tests"]
+norecursedirs = ["tests/fixtures"]
+asyncio_mode = "auto"
+markers = ["integration: real Docker and network integration tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
+[tool.coverage.run]
+branch = true
+source = ["codeworld", "featurebench"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+include = [
+    "codeworld/**/*.py",
+    "featurebench/cli.py",
+    "featurebench/harness/review_codes.py",
+    "featurebench/scripts/pull_images.py",
+    "featurebench/utils/docker_images.py",
+    "featurebench/utils/identifiers.py",
+    "featurebench/utils/runtime_config.py",
+    "tests/integration/**/*.py",
+    "tests/test_*.py",
+    "tests/unit/**/*.py",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "C4", "DTZ", "PIE", "PTH", "RUF", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+include = [
+    "codeworld",
+    "featurebench/cli.py",
+    "featurebench/utils/docker_images.py",
+    "featurebench/utils/identifiers.py",
+    "featurebench/utils/runtime_config.py",
+]

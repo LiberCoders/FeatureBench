@@ -1,0 +1,17 @@
+module: python
+match:
+  languages: [python]
+  package_managers: [pip, uv, poetry, pdm, conda]
+dockerfile_guidance:
+  - >-
+    Use the repository's evidenced Python environment and lock semantics; materialize test dependencies and
+    configure project loading during build; never let activation or Runner install or sync dependencies. For uv,
+    --no-lock is not a valid sync option; use --frozen only when consuming a committed lock without changing it,
+    or confirm the selected uv CLI's supported flags before choosing another mode.
+  - >-
+    Use an editable installation or another repository-supported mechanism that resolves project imports from the
+    current /testbed checkout; a detached site-packages copy or unrelated distribution is not an acceptable substitute.
+  - >-
+    Materialize tox or nox environments during image build. Activation may only expose the resulting
+    environment; only the Runner invokes its installed test executable. Never invoke tox or nox at runtime
+    because they provision environments.

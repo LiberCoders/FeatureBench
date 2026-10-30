@@ -1,0 +1,15 @@
+module: node
+match:
+  languages: [javascript, typescript]
+  package_managers: [npm, pnpm, yarn]
+dockerfile_guidance:
+  - >-
+    Honor the committed Node lockfile with its matching package manager and materialize dev/test
+    dependencies during build; runtime commands must not install or update packages.
+runner_guidance:
+  - >-
+    Use the selected test framework's machine-readable reporter and one batched invocation; do not infer
+    individual outcomes from the aggregate Node process exit status.
+  - >-
+    When a helper program is read from `node -`, account for Node's stdin-script argv sentinel and
+    explicitly forward the request and response file paths.

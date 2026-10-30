@@ -1,0 +1,37 @@
+# FeatureBench Mask Repair Feedback
+
+- Attempt: `{{ result.attempt_id }}`
+- Next proposal `based_on_attempt`: `{{ result.attempt_id }}`
+- Accepted: `{{ "yes" if result.accepted else "no" }}`
+- Collection healthy: `{{ "yes" if result.collection_ok else "no" }}`
+- Runtime healthy: `{{ "yes" if result.runtime_ok else "no" }}`
+- F2P / P2P: `{{ result.f2p }}` / `{{ result.p2p }}`
+- Gold Patch: `{{ result.gold_patch_lines }}` lines across `{{ result.gold_patch_files }}` files
+- Masked objects: `{{ result.masked_objects }}`
+
+{% if result.violation_codes %}
+## Current violations
+
+{% for code in result.violation_codes %}
+- `{{ code }}`
+{% endfor %}
+Read `violations.jsonl` for concise corrections. Diagnostic files are present only when a traceback
+or test-output excerpt materially helps.
+{% endif %}
+
+## Files
+
+- `result.json`: authoritative metrics and deltas.
+- `violations.jsonl`: every current host validation violation.
+- `mask-objects.jsonl`: exact objects in this attempt's Mask Plan.
+{% if learned_protection|default(false) %}
+- `learned-protected.jsonl`: objects that a previous real repair proved must stay restored.
+{% endif %}
+- `submitted-proposal.json`: the proposal that produced this attempt, when one exists.
+- `{{ catalog_path }}`: complete repository object catalog. Inspect only the portions useful for the
+  current diagnosis; do not load the complete catalog into context.{% if impact_catalog|default(false) %} Its
+  `estimated_seed_affected_points` and `estimated_p2p_affected_points` fields are searchable planning
+  evidence, not substitutes for submit validation.{% endif %}
+
+Edit `{{ proposal_path }}` and call `submit_repair_file` with that path. Direct edits under
+`/testbed` are diagnostic only and are discarded at submit time.

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# The Python executable and installed fixture package are already on the image PATH.
+cd /testbed

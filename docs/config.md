@@ -1,224 +1,47 @@
-# FeatureBench Configuration Guide: config.toml
+# Configuration
 
-FeatureBench has three major workflows:
+FeatureBench uses separate configuration for benchmark workflows and the data factory.
 
-- **harness (evaluation)**: runs tests on inference outputs and produces a report.
-- **infer (inference)**: runs different agents on FeatureBench benchmark tasks to generate patches.
-- **data pipeline (dataset generation)**: builds FeatureBench-style tasks automatically from real repositories.
+## Inference and evaluation
 
-The repo-root `config.toml` is the single configuration file that manages what all three workflows need at runtime.
-
-This guide uses the example configuration [config_example.toml](../config_example.toml) as the source of truth. It explains every field and how to use it, organized into **harness / infer / data pipeline**, and provides examples.
-
-## Quickstart
-
-Copy the example config:
+`fb infer` and `fb eval` read `config.toml` from the current working directory unless
+`--config-path` selects another file. In a source checkout, start from the checked-in example:
 
 ```bash
 cp config_example.toml config.toml
 ```
 
-### [env_vars] (global environment variables used by harness / infer / pipeline)
+The TOML file contains three kinds of settings:
 
-`[env_vars]` is the global environment variable section. Values here will be injected into every runnable container.
+- `[env_vars]` contains values injected into benchmark containers.
+- `[dataset]` pins the Hugging Face dataset revision used by inference and evaluation.
+- `[infer]` and `[infer_config.<agent>]` configure the selected inference runtime.
 
-Example:
+Command-line options override the matching TOML values. See
+[Inference CLI](infer.md) and [Evaluation CLI](eval.md) for the complete
+argument references.
 
-```toml
-[env_vars]
-HF_ENDPOINT = ""
-HF_TOKEN = ""
-GITHUB_TOKEN = ""
+## Data factory
+
+`fb discover`, `fb build`, and `fb generate` use YAML instead of `config.toml`. Without
+`--config`, each command uses its stage default from local `configs/default/` when available,
+or from the installed package otherwise.
+
+- `discover.yaml` controls repository discovery.
+- `build.yaml` controls environment construction and validation.
+- `adapters/featurebench.yaml` controls FeatureBench task generation.
+- `host.yaml` and `sources.yaml` are optional overlays for machine-specific resources and
+  package-source configuration.
+
+Repeat `--config` to compose profiles. By default, credentials are read from `.env`, while
+outputs and runtime state are written under the current working directory. Source checkouts can
+use [`.env.example`](../.env.example) as the template.
+
+```bash
+fb build owner/project \
+  --config configs/default/build.yaml \
+  --config configs/default/host.yaml
 ```
 
-### [dataset] (dataset version used by harness / infer)
-
-```toml
-[dataset]
-revision = "v1.1"
-```
-
-- `revision`: Hugging Face dataset tag, branch, or commit SHA used by both
-  `fb infer` and `fb eval`. The default is `v1.1`.
-- `--data-version` overrides this value for a single command.
-
----
-
-## A. Harness
-
-The core idea of harness is: read the `output.jsonl` produced by infer, apply each patch to the corresponding repository image, run tests, and generate evaluation results.
-
-When harness loads the HuggingFace dataset during evaluation, it uses `HF_ENDPOINT`
-from `[env_vars]` and the pinned revision from `[dataset]`.
-
----
-
-## B. Infer
-
-The core idea of infer is: run an agent inside a container (e.g. `claude_code/openhands/codex/mini_swe_agent/...`) and let it generate a patch for each task.
-
-How infer reads `config.toml`:
-
-- Load global `[env_vars]` first
-- Then load `[infer]` (inference runtime settings)
-- Then load the current agent’s `[infer_config.<agent>]`
-- Merge `[env_vars]` and `[infer_config.<agent>]`, and inject them into the inference container as environment variables
-
-### B1. [infer]
-
-```toml
-[infer]
-# Optional shared install cache. Leave unset for leakage-resistant evaluations.
-# download_cache_dir = "/abs/path/to/FeatureBench/download_cache"
-```
-
-- `download_cache_dir`: optional host-side cache directory mounted into the container at `/download`. It is disabled by default because the agent can read shared cache contents during inference.
-  - Purpose: speed up agent installs/downloads (e.g. npm cache).
-  - Empty means no mount (each container downloads on its own; usually slower).
-
-### B2. [infer_config.openhands]
-
-```toml
-[infer_config.openhands]
-LLM_API_KEY = ""
-LLM_BASE_URL = ""     # Optional
-LLM_API_VERSION = ""  # Optional: Azure only
-OPENHANDS_VERSION = "" # Optional: pin OpenHands version (empty usually means default/latest)
-SAVE_COMPLETIONS = false      # Optional: whether to save LLM completions (true/false)
-INFER_LOG_RENDER_MODE = "compact" # Optional: compact|full for infer.log rendering
-
-LLM_REASONING_EFFORT = ""     # Optional: Reasoning effort for OpenAI o-series models
-LLM_NATIVE_TOOL_CALLING = ""  # Optional: true/false to force OpenHands native tool calling; empty uses OpenHands default
-LLM_SEND_REASONING_CONTENT = "" # Optional: true to send prior assistant reasoning_content in history
-LLM_LITELLM_EXTRA_BODY = "" # Optional: JSON object passed to LiteLLM extra_body, e.g. {"enable_thinking": true}
-OPENHANDS_MAX_ITERATIONS = "" # Optional: OpenHands agent max iterations (step limit). Upstream default is 500.
-
-```
-
-Example 1: OpenHands + OpenAI
-
-```toml
-[infer_config.openhands]
-LLM_API_KEY = "<your-openai-api-key>"
-LLM_BASE_URL = ""            # Fill if needed
-LLM_API_VERSION = ""
-OPENHANDS_VERSION = "0.62.0"
-SAVE_COMPLETIONS = false
-```
-
-Example 2: OpenHands + Azure OpenAI
-
-```toml
-[infer_config.openhands]
-LLM_API_KEY = "<your-azure-api-key>"
-LLM_BASE_URL = "https://<resource>.openai.azure.com"
-LLM_API_VERSION = "2024-xx-xx"
-OPENHANDS_VERSION = "0.62.0"
-SAVE_COMPLETIONS = false
-```
-
-### B3. [infer_config.claude_code]
-
-```toml
-[infer_config.claude_code]
-ANTHROPIC_API_KEY = ""    # Required
-ANTHROPIC_BASE_URL = ""   # Optional
-```
-
-### B4. [infer_config.gemini_cli]
-
-```toml
-[infer_config.gemini_cli]
-GEMINI_API_KEY = ""         # Required
-GOOGLE_GEMINI_BASE_URL = "" # Optional
-```
-
-### B5. [infer_config.codex]
-
-```toml
-[infer_config.codex]
-OPENAI_API_KEY = ""         # Required
-OPENAI_BASE_URL = ""        # Optional
-CODEX_REASONING_EFFORT = "" # Optional: empty defaults to medium
-```
-
-Example 1: Codex + OpenAI
-
-```toml
-[infer_config.codex]
-OPENAI_API_KEY = "<your-openai-api-key>"
-OPENAI_BASE_URL = ""
-CODEX_REASONING_EFFORT = "medium"
-```
-
-Example 2: Codex + Azure OpenAI
-
-```toml
-[infer_config.codex]
-OPENAI_API_KEY = "<your-azure-api-key>"
-OPENAI_BASE_URL = "https://<resource>.openai.azure.com"
-CODEX_REASONING_EFFORT = "high"
-```
-
-### B6. [infer_config.mini_swe_agent]
-
-```toml
-[infer_config.mini_swe_agent]
-MSWEA_API_KEY = ""
-MSWEA_BASE_URL = ""
-MSWEA_COST_TRACKING = ""
-MINI_SWE_AGENT_VERSION = ""
-```
-
----
-
-## C. Data Pipeline
-
-the core idea of the data pipeline is: call an LLM + access repositories/platforms to automatically generate or process data (tasks, prompts, test files, etc.).
-
-It mainly depends on two types of config:
-
-- `[env_vars]`: platform/repo access related
-- `[llm_config]` + `[llm.<name>]`: select an LLM configuration for the pipeline
-
-### C1. [llm_config]
-
-```toml
-[llm_config]
-llm_name = ""         # Select the name of one [llm.<name>]
-llm_temperature = 0.0  # Default temperature (some models/backends may ignore it, e.g. some GPT-5 paths)
-llm_max_tokens = 65536 # Max output tokens; set -1 to "not send max_tokens/max_completion_tokens", backend decides the default behavior
-timeout = 180          # Request timeout (seconds)
-```
-
-### C2. [llm.\<name>]
-
-Example (Azure OpenAI):
-
-```toml
-[llm.azure-o3-fy1]
-model = "azure/o3-fy1"
-api_key = "..."
-base_url = "https://<resource>.openai.azure.com"
-api_version = "2025-04-01-preview"
-```
-
-Example (Anthropic):
-
-```toml
-[llm.claude-sonnet-4-20250514]
-model = "claude-sonnet-4-20250514"
-api_key = "..."
-base_url = [
-  "https://...",
-  "https://..."
-]   # Supports multiple URLs; will retry the list on failure
-```
-
-Example (local vLLM):
-
-```toml
-[llm.local]
-backend = "vllm"
-base_url = "http://localhost:8080/v1"
-```
+See [Host configuration](host.md), [Source configuration](sources.md), and
+[Run configuration](configure.md) for usage details.

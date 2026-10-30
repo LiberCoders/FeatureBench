@@ -1,0 +1,15 @@
+module: dotnet
+match:
+  languages: [c#, csharp, f#, visual basic]
+  build_systems: [dotnet, msbuild]
+  test_frameworks: [mstest, nunit, xunit]
+dockerfile_guidance:
+  - >-
+    Restore the exact solution/test projects and warm required build state during image build. At runtime use
+    dotnet test --no-restore so it rebuilds changed /testbed source offline; do not use --no-build or stale assemblies.
+runner_guidance:
+  - >-
+    Use the pinned `dotnet test --list-tests` version-stable listing as the explicitly permitted
+    machine-oriented collection fallback, and use a TRX logger for structured individual execution outcomes.
+    Parse the listing fail-closed, preserve fully qualified names and parameterized display identities, and batch
+    requested tests in one filter expression; never infer an individual outcome from the aggregate process status.

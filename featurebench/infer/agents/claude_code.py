@@ -5,7 +5,6 @@ Claude Code agent implementation.
 import json
 import shlex
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from featurebench.infer.agents.base import BaseAgent
 from featurebench.infer.container import DOCKER_HOST_GATEWAY

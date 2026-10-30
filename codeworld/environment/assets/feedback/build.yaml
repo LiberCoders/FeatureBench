@@ -1,0 +1,50 @@
+- code: build.dependency_lock_incompatible
+  message: The dependency command rejected the repository's committed lock state.
+  correction: >-
+    Replace the failing command with a repository-supported installation that does not update tracked files;
+    for uv, inspect whether --frozen or the project's documented test setup is correct.
+- code: build.dependency_version_incompatible
+  message: The installed test dependency version is incompatible with the pinned repository commit.
+  correction: >-
+    Change the Dockerfile dependency installation to enforce the expected compatible version; do not suppress
+    the error, change tests, or modify Runner behavior.
+- code: build.local_reactor_dependency_unmaterialized
+  message: A Maven reactor module needs another module's local snapshot before that artifact has been installed.
+  correction: >-
+    Build and install the minimum required upstream reactor closure into the image's local Maven repository
+    (for example with -pl :artifactId -am install) before running dependency:go-offline or downstream module
+    goals. Avoid whole-reactor install when unrelated optional/native modules exist, and retain the resulting
+    local Maven artifacts because offline validation needs them. Build the module that produces the exact
+    missing artifact; installing only a parent POM with install:install-file does not materialize its JAR.
+- code: build.maven_test_provider_unmaterialized
+  message: Maven selected a Surefire or Failsafe test provider that was not materialized for offline use.
+  correction: >-
+    During the Docker build, run the narrowest accepted Maven test goal that exercises the target module while
+    network access and the temporary source are available (for example, -pl :artifactId -am test). Surefire and
+    Failsafe select providers dynamically, so dependency:go-offline or a skipped test goal alone may not fetch
+    the provider and its transitive dependencies. Preserve the populated local Maven repository for offline
+    validation; do not solve this by enabling runtime network access.
+- code: build.ruby_test_dependency_unmaterialized
+  message: The accepted Ruby test suite requires a gem or require path that was not installed in the image.
+  correction: >-
+    Install every Bundler group needed by the accepted tests during the Docker build. Do not exclude a group
+    merely because it is named development when the repository's test setup loads gems from that group; keep
+    validation offline and do not compensate by changing the Runner or suppressing the failing require.
+- code: build.ruby_deployment_without_lockfile
+  message: Bundler deployment mode was enabled for a repository that has no committed lockfile.
+  correction: >-
+    Disable deployment/frozen mode and install from the repository's declared Gemfile or gemspec without
+    creating tracked files. Respect a committed lockfile when one exists, but do not invent or require one;
+    keep dependency installation in the Docker build and validation offline.
+- code: build.project_import_shadowed
+  message: Tests imported an unrelated installed distribution instead of the pinned repository checkout.
+  correction: >-
+    Materialize the checked-out project with its repository-supported build or installation method after
+    installing test dependencies, and verify imports resolve to the project under /testbed. Do not hide the
+    problem by changing tests or Runner result translation.
+- code: build.command_failed
+  message: An Agent-authored Dockerfile instruction failed.
+  correction: >-
+    Fix the failing instruction in the current Dockerfile using the exact command output as evidence. Build-log
+    stage numbers and rendered Dockerfile line numbers include Harness-managed content and are not source text to
+    copy into the artifact.

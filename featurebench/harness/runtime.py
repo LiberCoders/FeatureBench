@@ -5,6 +5,7 @@ Contains Level 1 and Level 2 evaluation logic.
 
 import logging
 import os
+import shlex
 import tempfile
 import traceback
 from pathlib import Path
@@ -31,6 +32,11 @@ from featurebench.harness.utils import (
 )
 from featurebench.harness.test_parsers import MAP_REPO_TO_TEST_CMD
 from featurebench.utils.command_utils import apply_uv_run_prefix
+from featurebench.utils.identifiers import (
+    normalize_test_ids,
+    testbed_test_file,
+    testbed_test_id,
+)
 
 
 def _normalize_patch_content(patch_content: str) -> str:
@@ -39,6 +45,7 @@ def _normalize_patch_content(patch_content: str) -> str:
     if patch_content and not patch_content.endswith("\n"):
         return patch_content + "\n"
     return patch_content
+
 
 def run_instance_level1(
     instance: pd.Series,
@@ -87,6 +94,17 @@ def run_instance_level1(
     }
 
     try:
+        fail_to_pass = normalize_test_ids(
+            instance.get("FAIL_TO_PASS"),
+            field="dataset field 'FAIL_TO_PASS'",
+            allow_empty=False,
+        )
+        pass_to_pass = normalize_test_ids(
+            instance.get("PASS_TO_PASS", []),
+            field="dataset field 'PASS_TO_PASS'",
+            allow_empty=True,
+        )
+
         # Step 1: Activate conda and restore project
         logger.info("Step 1: Activating conda environment and restoring project")
         cmd = (
@@ -157,28 +175,19 @@ def run_instance_level1(
 
         # Delete F2P test files (skip in white-box mode)
         if not white:
-            fail_to_pass = instance.get('FAIL_TO_PASS', [])
-            if fail_to_pass:
-                f2p_tests = fail_to_pass if isinstance(fail_to_pass, list) else [fail_to_pass]
+            for f2p_test in fail_to_pass:
+                f2p_test_file = testbed_test_file(f2p_test)
+                logger.info(f"Deleting F2P test file: {f2p_test_file}")
+                delete_cmd = f"rm -f -- {shlex.quote(f2p_test_file)}"
+                exit_code, output = exec_run_with_timeout(container, delete_cmd, timeout=60)
 
-                for f2p_test in f2p_tests:
-                    if not f2p_test.startswith('/testbed/'):
-                        f2p_test_path = f'/testbed/{f2p_test}'
-                    else:
-                        f2p_test_path = f2p_test
-
-                    logger.info(f"Deleting F2P test file: {f2p_test_path}")
-                    delete_cmd = f"rm -f {f2p_test_path}"
-                    exit_code, output = exec_run_with_timeout(container, delete_cmd, timeout=60)
-
-                    if exit_code != 0:
-                        logger.warning(
-                            f"Failed to delete F2P test file {f2p_test_path}: {output.decode(UTF8, errors='replace')}"
-                        )
-                    else:
-                        logger.info(f"Successfully deleted F2P test file: {f2p_test_path}")
-            else:
-                logger.warning("No FAIL_TO_PASS tests found in instance, skipping test file deletion")
+                if exit_code != 0:
+                    logger.warning(
+                        f"Failed to delete F2P test file {f2p_test_file}: "
+                        f"{output.decode(UTF8, errors='replace')}"
+                    )
+                else:
+                    logger.info(f"Successfully deleted F2P test file: {f2p_test_file}")
 
         # Step 3: Apply the same repository-specific cleanup used during
         # inference. Running it before Git initialization keeps the cleanup out
@@ -249,22 +258,16 @@ def run_instance_level1(
         # Step 6: Prepare for testing - delete generated F2P files and restore F2P test
         logger.info("Step 6: Preparing for testing - cleaning up and restoring F2P test")
 
-        fail_to_pass = instance.get('FAIL_TO_PASS', [])
-        if not fail_to_pass:
-            logger.error("No FAIL_TO_PASS tests found in instance")
-            results["error"] = "No FAIL_TO_PASS tests"
-            return results
+        f2p_test_paths = [testbed_test_id(test_id) for test_id in fail_to_pass]
+        f2p_test_files = {testbed_test_file(test_id) for test_id in fail_to_pass}
 
-        f2p_test_path = fail_to_pass[0] if isinstance(fail_to_pass, list) else fail_to_pass
-        if not f2p_test_path.startswith('/testbed/'):
-            f2p_test_path = f"/testbed/{f2p_test_path}"
+        logger.info(f"F2P test paths: {f2p_test_paths}")
 
-        logger.info(f"F2P test path: {f2p_test_path}")
-
-        # Delete F2P test file if exists
-        delete_cmd = f"rm -f {f2p_test_path}"
-        exit_code, output = exec_run_with_timeout(container, delete_cmd, timeout=60)
-        logger.info(f"Delete F2P file exit code: {exit_code}")
+        # Delete any F2P files recreated by the agent before restoring the tests.
+        for f2p_test_file in sorted(f2p_test_files):
+            delete_cmd = f"rm -f -- {shlex.quote(f2p_test_file)}"
+            exit_code, output = exec_run_with_timeout(container, delete_cmd, timeout=60)
+            logger.info(f"Delete F2P file {f2p_test_file} exit code: {exit_code}")
 
         # Restore F2P test file using reverse apply test_patch
         if test_patch_path_container:
@@ -306,12 +309,13 @@ def run_instance_level1(
         logger.info(f"Test command: {test_cmd}")
         logger.info(f"Test timeout: {effective_timeout}s")
 
-        pass_to_pass = instance.get('PASS_TO_PASS', [])
-        p2p_tests = pass_to_pass if isinstance(pass_to_pass, list) else []
-
         # Run F2P test
-        logger.info(f"Running F2P test: {f2p_test_path}")
-        test_cmd_full = f"source /opt/miniconda3/etc/profile.d/conda.sh && conda activate testbed && cd /testbed && {test_cmd} {f2p_test_path}"
+        logger.info(f"Running {len(f2p_test_paths)} F2P test(s): {f2p_test_paths}")
+        f2p_arguments = " ".join(shlex.quote(path) for path in f2p_test_paths)
+        test_cmd_full = (
+            "source /opt/miniconda3/etc/profile.d/conda.sh && conda activate testbed && "
+            f"cd /testbed && {test_cmd} {f2p_arguments}"
+        )
         exit_code, output = exec_run_with_timeout(
             container, test_cmd_full, timeout=effective_timeout
         )
@@ -329,17 +333,18 @@ def run_instance_level1(
         logger.info(f"Saved F2P test output to {test_output_file}")
 
         # Run P2P tests
-        if p2p_tests:
-            logger.info(f"Running {len(p2p_tests)} P2P tests")
+        if pass_to_pass:
+            logger.info(f"Running {len(pass_to_pass)} P2P tests")
             p2p_results = []
-            for p2p_test in p2p_tests:
-                p2p_test_path = p2p_test
-                if not p2p_test_path.startswith('/testbed/'):
-                    p2p_test_path = f"/testbed/{p2p_test_path}"
+            for index, p2p_test in enumerate(pass_to_pass, start=1):
+                p2p_test_path = testbed_test_id(p2p_test)
 
                 logger.info(f"Running P2P test: {p2p_test_path}")
 
-                test_cmd_full = f"source /opt/miniconda3/etc/profile.d/conda.sh && conda activate testbed && cd /testbed && {test_cmd} {p2p_test_path}"
+                test_cmd_full = (
+                    "source /opt/miniconda3/etc/profile.d/conda.sh && conda activate testbed && "
+                    f"cd /testbed && {test_cmd} {shlex.quote(p2p_test_path)}"
+                )
                 exit_code, output = exec_run_with_timeout(
                     container, test_cmd_full, timeout=effective_timeout
                 )
@@ -350,8 +355,7 @@ def run_instance_level1(
                 p2p_results.append(exit_code == 0)
 
                 # Save P2P test output
-                test_file_name = os.path.basename(p2p_test_path).replace('.py', '')
-                p2p_output_file = log_dir / f"test_output_p2p_{test_file_name}.txt"
+                p2p_output_file = log_dir / f"test_output_p2p_{index}.txt"
                 with open(p2p_output_file, "w", encoding=UTF8) as f:
                     f.write(p2p_output)
                 logger.info(f"Saved P2P test output to {p2p_output_file}")
@@ -414,6 +418,12 @@ def run_instance_level2(
     }
 
     try:
+        fail_to_pass = normalize_test_ids(
+            instance.get("FAIL_TO_PASS"),
+            field="dataset field 'FAIL_TO_PASS'",
+            allow_empty=False,
+        )
+
         # Step 1: Activate conda environment
         logger.info("Step 1: Activating conda environment")
         cmd = "source /opt/miniconda3/etc/profile.d/conda.sh && conda activate testbed"
@@ -568,19 +578,14 @@ def run_instance_level2(
         logger.info(f"Test command: {test_cmd}")
         logger.info(f"Test timeout: {effective_timeout}s")
 
-        fail_to_pass = instance.get('FAIL_TO_PASS', [])
-        if not fail_to_pass:
-            logger.error("No FAIL_TO_PASS tests found in instance")
-            results["error"] = "No FAIL_TO_PASS tests"
-            return results
+        f2p_test_paths = [testbed_test_id(test_id) for test_id in fail_to_pass]
 
-        f2p_test = fail_to_pass[0] if isinstance(fail_to_pass, list) else fail_to_pass
-        f2p_test_path = f2p_test
-        if not f2p_test_path.startswith('/testbed/'):
-            f2p_test_path = f"/testbed/{f2p_test_path}"
-
-        logger.info(f"Running F2P test: {f2p_test_path}")
-        test_cmd_full = f"source /opt/miniconda3/etc/profile.d/conda.sh && conda activate testbed && cd /testbed && {test_cmd} {f2p_test_path}"
+        logger.info(f"Running {len(f2p_test_paths)} F2P test(s): {f2p_test_paths}")
+        f2p_arguments = " ".join(shlex.quote(path) for path in f2p_test_paths)
+        test_cmd_full = (
+            "source /opt/miniconda3/etc/profile.d/conda.sh && conda activate testbed && "
+            f"cd /testbed && {test_cmd} {f2p_arguments}"
+        )
         exit_code, output = exec_run_with_timeout(
             container, test_cmd_full, timeout=effective_timeout
         )

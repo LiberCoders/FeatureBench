@@ -15,35 +15,6 @@ GITHUB_TOKEN=""
 revision="v1.1"
 
 # ==============================================================================
-# DataPipeline Configuration
-# ==============================================================================
-
-# LLM Basic Configuration
-[llm_config]
-llm_name="" # e.g., "azure-gpt-5-fy0828" / "local"
-llm_temperature=0.0
-llm_max_tokens=65536    # Maximum output tokens (-1 = no limit)
-timeout=180
-
-[llm.azure-gpt-5-fy0828]
-model = "azure/gpt-5-fy0828"
-api_key = ""
-base_url = ""
-
-[llm.claude-sonnet-4-20250514]
-model = "claude-sonnet-4-20250514"
-api_key = ""
-base_url = [
-    "",
-    "",
-]
-
-[llm.local]
-backend = "vllm"                                     # Backend type: vllm
-api_key = ""                                         # Optional: API key passed to vLLM server
-base_url = "http://localhost:8080/v1"                # vLLM server URL
-
-# ==============================================================================
 # Inference Agent Configuration
 # ==============================================================================
 

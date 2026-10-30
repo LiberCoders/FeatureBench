@@ -1,0 +1,18 @@
+- code: analysis.base_name_unknown
+  message: The selected base-image name is not configured.
+  correction: For a testable repository, select one name exactly from base_image_options.
+- code: analysis.base_language_unsupported
+  message: The selected base image does not support any detected repository language.
+  correction: Choose a configured base image whose languages intersect the detected languages.
+- code: analysis.gpu_base_required
+  message: A required-GPU repository selected a CPU-only base image.
+  correction: Select a configured GPU-capable base image.
+- code: analysis.cpu_base_required
+  message: A CPU-runnable repository selected a GPU base image.
+  correction: Select a configured CPU base image; optional GPU support is metadata only.
+- code: analysis.evidence_required
+  message: The analysis contains no repository evidence.
+  correction: Cite at least one inspected manifest, CI file, or test path.
+- code: analysis.evidence_path_missing
+  message: A cited repository evidence path does not exist.
+  correction: Remove the invented path or replace it with an existing repository-relative path.

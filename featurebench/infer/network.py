@@ -197,7 +197,7 @@ class _AllowlistProxyServer(socketserver.ThreadingTCPServer):
         self.logger = logger
         super().__init__(server_address, _AllowlistProxyHandler)
 
-    def handle_error(self, request, client_address) -> None:
+    def handle_error(self, _request, _client_address) -> None:
         self.logger.debug("Restricted API proxy connection failed", exc_info=True)
 
     def connect_target(self, endpoint: ApiEndpoint) -> socket.socket:

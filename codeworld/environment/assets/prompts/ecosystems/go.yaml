@@ -1,0 +1,12 @@
+module: go
+match:
+  languages: [go]
+  build_systems: [go, go modules]
+dockerfile_guidance:
+  - >-
+    Download Go modules during image build and run validation without network access; keep the module and
+    build caches needed by the pinned checkout.
+runner_guidance:
+  - >-
+    Use `go test -json` or another bounded structured stream for execution outcomes. Preserve
+    package-qualified top-level and subtest identities and globally sort the complete inventory.

@@ -1,0 +1,218 @@
+# 跨阶段源配置；核心流程只调用 Source Manager，不识别具体生态。
+sources:
+  # true 表示优先使用候选镜像并以官方源兜底；false 表示只使用 canonical 项。
+  enabled: true
+  # 所有下载生态共享的超时与重试策略；Source Adapter 会翻译成各工具的原生参数。
+  download:
+    # 建立单个下载连接的最长秒数。
+    connect_timeout_seconds: 30
+    # 单次下载请求或连续无数据读取的最长秒数。
+    timeout_seconds: 300
+    # 工具自身在同一 endpoint 内的重试次数；endpoint 失败后仍由 Source Manager 负责切换。
+    retries: 5
+  # 一个端点连续失败多少次后进入冷却。
+  failure_threshold: 1
+  # 首次冷却秒数；后续连续失败按指数增长。
+  cooldown_seconds: 300
+  # 单个端点指数冷却的最大秒数。
+  maximum_cooldown_seconds: 3600
+  # 跨 worker、跨续跑共享的端点健康状态。
+  state_path: .featurebench/source-state.json
+  # 每次真实源访问的指标记录配置。
+  metrics:
+    # 是否为每次实际访问的源记录成功、失败、耗时和回退信息。
+    enabled: true
+    # 镜像源指标的追加式 JSONL 路径。
+    path: .featurebench/source-metrics.jsonl
+  # 每个键是逻辑服务名；服务之间使用相同的 endpoints 结构。
+  services:
+    # GitHub REST API 服务；endpoints 按优先级排列，最后且仅最后一个 canonical 项是官方兜底。
+    github_api:
+      # 端点的 name 用作健康状态键，url 禁止携带凭据，forward_credentials 只允许 canonical 项开启。
+      endpoints:
+        - {name: official, url: https://api.github.com, canonical: true, forward_credentials: true}
+    # GitHub Git clone、fetch、submodule 和 LFS 传输服务。
+    github_git:
+      # 单条 Git 网络操作至多尝试两个候选源，并始终保留官方源作为最后兜底。
+      maximum_attempts: 3
+      endpoints:
+        - {name: ghfast, url: https://ghfast.top}
+        - {name: gh_proxy, url: https://gh-proxy.com}
+        - {name: ghproxy_vip, url: https://ghproxy.vip}
+        - {name: githubproxy, url: https://githubproxy.cc}
+        - {name: official, url: https://github.com, canonical: true}
+    # Docker Hub 镜像拉取服务，覆盖无显式 Registry 的镜像引用。
+    docker_io:
+      endpoints:
+        - {name: one_ms, url: https://docker.1ms.run}
+        - {name: daocloud, url: https://m.daocloud.io/docker.io}
+        - {name: official, url: https://docker.io, canonical: true}
+    # GitHub Container Registry 镜像拉取服务。
+    ghcr_io:
+      endpoints:
+        - {name: daocloud_prefix, url: https://m.daocloud.io/ghcr.io}
+        - {name: daocloud_host, url: https://ghcr.m.daocloud.io}
+        - {name: official, url: https://ghcr.io, canonical: true}
+    # Microsoft Container Registry 镜像拉取服务。
+    mcr_microsoft:
+      endpoints:
+        - {name: daocloud_prefix, url: https://m.daocloud.io/mcr.microsoft.com}
+        - {name: daocloud_host, url: https://mcr.m.daocloud.io}
+        - {name: official, url: https://mcr.microsoft.com, canonical: true}
+    # Google Container Registry 镜像拉取服务。
+    gcr_io:
+      endpoints:
+        - {name: daocloud_prefix, url: https://m.daocloud.io/gcr.io}
+        - {name: official, url: https://gcr.io, canonical: true}
+    # Quay Container Registry 镜像拉取服务。
+    quay_io:
+      endpoints:
+        - {name: daocloud_prefix, url: https://m.daocloud.io/quay.io}
+        - {name: official, url: https://quay.io, canonical: true}
+    # Kubernetes 官方容器 Registry 镜像拉取服务。
+    k8s_registry:
+      endpoints:
+        - {name: daocloud_prefix, url: https://m.daocloud.io/registry.k8s.io}
+        - {name: official, url: https://registry.k8s.io, canonical: true}
+    # Debian 主软件仓库服务。
+    debian_apt:
+      endpoints:
+        - {name: tuna, url: http://mirrors.tuna.tsinghua.edu.cn/debian}
+        - {name: ustc, url: http://mirrors.ustc.edu.cn/debian}
+        - {name: official, url: http://deb.debian.org/debian, canonical: true}
+    # Debian 安全更新仓库服务。
+    debian_security:
+      endpoints:
+        - {name: tuna, url: http://mirrors.tuna.tsinghua.edu.cn/debian-security}
+        - {name: ustc, url: http://mirrors.ustc.edu.cn/debian-security}
+        - {name: official, url: http://security.debian.org/debian-security, canonical: true}
+    # Ubuntu 主仓库与安全更新仓库服务。
+    ubuntu_apt:
+      endpoints:
+        - {name: tuna, url: http://mirrors.tuna.tsinghua.edu.cn/ubuntu}
+        - {name: ustc, url: http://mirrors.ustc.edu.cn/ubuntu}
+        - {name: official, url: http://archive.ubuntu.com/ubuntu, canonical: true}
+    # Ubuntu 非 x86 架构软件仓库服务。
+    ubuntu_ports:
+      endpoints:
+        - {name: tuna, url: http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports}
+        - {name: ustc, url: http://mirrors.ustc.edu.cn/ubuntu-ports}
+        - {name: official, url: http://ports.ubuntu.com/ubuntu-ports, canonical: true}
+    # Python 包索引与分发文件服务。
+    pypi:
+      endpoints:
+        - {name: tuna, url: https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple}
+        - {name: ustc, url: https://mirrors.ustc.edu.cn/pypi/simple}
+        - {name: official, url: https://pypi.org/simple, canonical: true}
+    # PyTorch CPU wheel 目录；作为 pip find-links 补充普通 PyPI index，而不是替代它。
+    pytorch_cpu:
+      endpoints:
+        - {name: aliyun, url: https://mirrors.aliyun.com/pytorch-wheels/cpu}
+        - {name: official, url: https://download.pytorch.org/whl/cpu, canonical: true}
+    # uv 安装器及其 GitHub Release 下载服务。
+    uv_dist:
+      endpoints:
+        - {name: ghfast, url: https://ghfast.top/https://github.com}
+        - {name: gh_proxy, url: https://gh-proxy.com/https://github.com}
+        - {name: ghproxy_vip, url: https://ghproxy.vip/https://github.com}
+        - {name: githubproxy, url: https://githubproxy.cc/https://github.com}
+        - {name: official, url: https://github.com, canonical: true}
+    # uv 管理的 Python Build Standalone 下载服务。
+    uv_python:
+      endpoints:
+        - {name: ghfast, url: https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download}
+        - {name: official, url: https://github.com/astral-sh/python-build-standalone/releases/download, canonical: true}
+    # Miniforge 安装包下载服务。
+    miniforge:
+      endpoints:
+        - {name: ustc, url: https://mirrors.ustc.edu.cn/github-release/conda-forge/miniforge/LatestRelease}
+        - {name: ghfast, url: https://ghfast.top/https://github.com/conda-forge/miniforge/releases/latest/download}
+        - {name: official, url: https://github.com/conda-forge/miniforge/releases/latest/download, canonical: true}
+    # conda-forge 包通道服务。
+    conda:
+      endpoints:
+        - {name: tuna, url: https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge}
+        - {name: ustc, url: https://mirrors.ustc.edu.cn/anaconda/cloud/conda-forge}
+        - {name: official, url: https://conda.anaconda.org/conda-forge, canonical: true}
+    # Hugging Face Hub 模型与数据集下载服务；镜像站支持标准 HF_ENDPOINT 协议。
+    huggingface:
+      endpoints:
+        - {name: hf_mirror, url: https://hf-mirror.com}
+        - {name: official, url: https://huggingface.co, canonical: true}
+    # npm、pnpm、Yarn 与 Corepack 共享的包 Registry 服务。
+    npm:
+      endpoints:
+        - {name: npmmirror, url: https://registry.npmmirror.com}
+        - {name: official, url: https://registry.npmjs.org, canonical: true}
+    # Node.js 官方二进制分发文件服务。
+    node_dist:
+      endpoints:
+        - {name: npmmirror, url: https://cdn.npmmirror.com/binaries/node}
+        - {name: official, url: https://nodejs.org/dist, canonical: true}
+    # Playwright 管理的 Chromium、Firefox、WebKit 与 FFmpeg 二进制下载服务。
+    playwright:
+      endpoints:
+        - {name: npmmirror, url: https://cdn.npmmirror.com/binaries/playwright}
+        - {name: official, url: https://cdn.playwright.dev, canonical: true}
+    # Go Module Proxy 服务。
+    go_proxy:
+      endpoints:
+        - {name: goproxy_cn, url: https://goproxy.cn}
+        - {name: official, url: https://proxy.golang.org, canonical: true}
+    # Go Checksum Database 服务。
+    go_sumdb:
+      endpoints:
+        - {name: google_cn, url: https://sum.golang.google.cn}
+        - {name: official, url: https://sum.golang.org, canonical: true}
+    # Rust Cargo 稀疏索引与 Crate 下载服务。
+    cargo:
+      endpoints:
+        - {name: rsproxy, url: https://rsproxy.cn/index}
+        - {name: official, url: https://index.crates.io, canonical: true}
+    # Rustup 安装器、自更新与 Rust 工具链分发服务；独立于 Cargo Crate 索引。
+    rustup:
+      endpoints:
+        - {name: rsproxy, url: https://rsproxy.cn}
+        - {name: official, url: https://static.rust-lang.org, canonical: true}
+    # Maven 依赖仓库服务。
+    maven:
+      endpoints:
+        - {name: aliyun, url: https://maven.aliyun.com/repository/public}
+        - {name: huawei, url: https://repo.huaweicloud.com/repository/maven}
+        - {name: official, url: https://repo1.maven.org/maven2, canonical: true}
+    # RubyGems 包索引与 Gem 下载服务。
+    rubygems:
+      endpoints:
+        - {name: tuna, url: https://mirrors.tuna.tsinghua.edu.cn/rubygems}
+        - {name: official, url: https://rubygems.org, canonical: true}
+    # Composer Packagist 包仓库服务。
+    composer:
+      endpoints:
+        - {name: aliyun, url: https://mirrors.aliyun.com/composer}
+        - {name: official, url: https://repo.packagist.org, canonical: true}
+    # Composer PHAR 程序下载服务。
+    composer_binary:
+      endpoints:
+        - {name: aliyun, url: https://mirrors.aliyun.com/composer/composer.phar}
+        - {name: tencent, url: https://mirrors.cloud.tencent.com/composer/composer.phar}
+        - {name: official, url: https://getcomposer.org/download/latest-stable/composer.phar, canonical: true}
+    # Dart 与 Flutter 的 Pub 包仓库服务。
+    pub:
+      endpoints:
+        - {name: flutter_cn, url: https://pub.flutter-io.cn}
+        - {name: official, url: https://pub.dev, canonical: true}
+    # Flutter SDK 与相关构件下载服务。
+    flutter:
+      endpoints:
+        - {name: flutter_cn, url: https://storage.flutter-io.cn}
+        - {name: official, url: https://storage.googleapis.com, canonical: true}
+    # Elixir Hex 包仓库服务。
+    hex:
+      endpoints:
+        - {name: official, url: https://repo.hex.pm, canonical: true}
+    # R 语言 CRAN 包仓库服务。
+    cran:
+      endpoints:
+        - {name: tuna, url: https://mirrors.tuna.tsinghua.edu.cn/CRAN}
+        - {name: ustc, url: https://mirrors.ustc.edu.cn/CRAN}
+        - {name: official, url: https://cloud.r-project.org, canonical: true}

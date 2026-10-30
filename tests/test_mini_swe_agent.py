@@ -7,7 +7,6 @@ from featurebench.infer import run_infer
 from featurebench.infer.agents.mini_swe_agent import MiniSweAgent
 from featurebench.infer.models import InferResult
 
-
 MISSING_TRAJECTORY = object()
 MALFORMED_TRAJECTORY = object()
 
@@ -27,7 +26,7 @@ class FakeContainerManager:
         # mini-swe-agent returns process code 0 for semantic terminal statuses
         # such as LimitsExceeded.
         if self.stream_exit_code == -1 and log_file is not None:
-            with open(log_file, "a", encoding="utf-8") as f:
+            with log_file.open("a", encoding="utf-8") as f:
                 f.write(f"\n[TIMEOUT after {timeout} seconds]\n")
         return self.stream_exit_code
 
@@ -159,9 +158,7 @@ def test_inference_does_not_change_other_agent_workspace_ownership(tmp_path):
         "FutureMiniSweAgentError",
     ],
 )
-def test_non_submission_status_fails_even_with_zero_process_exit(
-    tmp_path, exit_status
-):
+def test_non_submission_status_fails_even_with_zero_process_exit(tmp_path, exit_status):
     agent = _agent(exit_status)
 
     assert not agent.run(object(), "solve task", tmp_path / "infer.log")
@@ -187,9 +184,7 @@ def test_outer_timeout_sets_time_exceeded_status(tmp_path):
     assert agent.agent_exit_status == "TimeExceeded"
 
 
-@pytest.mark.parametrize(
-    "trajectory", [MISSING_TRAJECTORY, MALFORMED_TRAJECTORY]
-)
+@pytest.mark.parametrize("trajectory", [MISSING_TRAJECTORY, MALFORMED_TRAJECTORY])
 def test_missing_or_malformed_trajectory_is_failure(tmp_path, trajectory):
     agent = _agent(trajectory)
 

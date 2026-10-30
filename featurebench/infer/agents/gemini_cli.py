@@ -348,16 +348,14 @@ echo "Gemini CLI installation complete"
             if not candidates:
                 return
 
-        output_dir = log_file.parent
-
-        # with open(log_file, "a", encoding="utf-8") as f:
-        #     f.write("\n[Gemini CLI] Detected error report(s); copying from container:\n")
-
-        # for src in candidates[:5]:
-        #     dest = output_dir / Path(src).name
-        #     copied = self.cm.copy_from_container(container, src, dest)
-        #     with open(log_file, "a", encoding="utf-8") as f:
-        #         if copied:
-        #             f.write(f"- Copied: {src} -> {dest}\n")
-        #         else:
-        #             f.write(f"- Failed to copy: {src}\n")
+        with log_file.open("a", encoding="utf-8") as stream:
+            stream.write(
+                "\n[Gemini CLI] Detected error report(s); copying from container:\n"
+            )
+            for source in candidates[:5]:
+                destination = log_file.parent / Path(source).name
+                copied = self.cm.copy_from_container(container, source, destination)
+                if copied:
+                    stream.write(f"- Copied: {source} -> {destination}\n")
+                else:
+                    stream.write(f"- Failed to copy: {source}\n")

@@ -1,0 +1,22 @@
+- code: validation.collection_granularity
+  message: The Runner collected files or modules instead of enough individual test cases.
+  correction: >-
+    Return one stable framework-addressable ID per individual test case from a framework-native
+    machine-readable hook or report; never parse human-facing collection display. When the framework exposes
+    case or node IDs, a test file or module is not a test point.
+- code: validation.pytest_collect_executed_tests
+  message: The Runner's collect action executed the pytest suite instead of collecting node IDs.
+  correction: >-
+    For collect, invoke pytest with --collect-only and use a temporary importable plugin's
+    pytest_collection_finish hook to emit exact item.nodeid and item.path values through a machine-readable
+    protocol. Never parse pytest's human-facing collection display, run test bodies, infer IDs from a normal
+    test run, or return an empty successful list.
+- code: validation.runtime_materialization
+  message: The Runner tried to create an environment or fetch dependencies during validation.
+  correction: >-
+    Materialize every dependency in the Dockerfile, activate that exact built environment, and make the Runner
+    invoke only installed tools without install, sync, update, or fetch; use 'uv run --no-sync' only when it
+    targets the already-built environment.
+- code: validation.runtime_contract_failed
+  message: The built environment violated its activation, Runner, Git, or test contract.
+  correction: Correct the implicated external artifact or Dockerfile while preserving the accepted test suite.

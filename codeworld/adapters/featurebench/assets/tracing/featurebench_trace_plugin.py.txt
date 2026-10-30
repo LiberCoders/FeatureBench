@@ -1,0 +1,99 @@
+"""Pytest plugin that attributes runtime edges to exact test node IDs."""
+
+from __future__ import annotations
+
+import os
+
+import pytest
+from featurebench_pytest_ids import format_pytest_public_id
+from featurebench_pytest_ids import pytest_native_base as _pytest_native_base
+from featurebench_trace_context import reset_test_id, set_test_id
+from featurebench_trace_selection import record_test_outcome, requested_test_ids
+
+_selected_test_ids: dict[int, str] = {}
+_selected_node_ids: dict[str, str] = {}
+
+
+def _structural_tail(public_id: str) -> str | None:
+    """Return the path-independent identity inside one already bounded test file."""
+    _, separator, tail = public_id.partition("::")
+    return tail if separator and tail else None
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Resolve public IDs to native items inside the already bounded test file."""
+    configured_ids = requested_test_ids()
+    if not configured_ids:
+        return
+    _selected_test_ids.clear()
+    _selected_node_ids.clear()
+    requested = set(configured_ids)
+    requested_by_tail: dict[str, list[str]] = {}
+    for requested_id in configured_ids:
+        tail = _structural_tail(requested_id)
+        if tail is not None:
+            requested_by_tail.setdefault(tail, []).append(requested_id)
+    occurrences: dict[str, int] = {}
+    selected: list[pytest.Item] = []
+    selected_ids: set[str] = set()
+    deselected: list[pytest.Item] = []
+    for item in items:
+        native = item.nodeid
+        base = _pytest_native_base(native, getattr(item, "originalname", None))
+        occurrence = occurrences.get(base, 0)
+        occurrences[base] = occurrence + 1
+        public_id = format_pytest_public_id(base, occurrence)
+        if public_id not in requested:
+            # A Runner may expose a stable logical path that differs from the
+            # repository's physical pytest path. Collection is already bounded to
+            # exactly one resolved file, so the structural suffix is sufficient only
+            # when it identifies one requested ID unambiguously.
+            tail = _structural_tail(public_id)
+            aliases = requested_by_tail.get(tail, ()) if tail is not None else ()
+            public_id = aliases[0] if len(aliases) == 1 else None
+        if public_id is None:
+            deselected.append(item)
+            continue
+        if public_id in selected_ids:
+            deselected.append(item)
+            continue
+        selected.append(item)
+        selected_ids.add(public_id)
+        _selected_test_ids[id(item)] = public_id
+        _selected_node_ids[native] = public_id
+    missing = requested - selected_ids
+    if missing:
+        preview = sorted(missing)[:20]
+        raise pytest.UsageError(
+            "trace selection could not resolve environment test IDs in the requested file: "
+            f"missing_count={len(missing)}; missing={preview!r}"
+        )
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+    items[:] = selected
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    """Retain real per-phase outcomes under the public Runner ID."""
+    if report.when not in ("setup", "call", "teardown"):
+        return
+    test_id = _selected_node_ids.get(report.nodeid)
+    if test_id is not None:
+        record_test_outcome(test_id, report.when, report.outcome)
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
+    del nextitem
+    test_id = _selected_test_ids.get(id(item), item.nodeid)
+    token = set_test_id(test_id)
+    previous = os.environ.get("FEATUREBENCH_TRACE_PARENT_TEST_ID")
+    os.environ["FEATUREBENCH_TRACE_PARENT_TEST_ID"] = test_id
+    try:
+        yield
+    finally:
+        reset_test_id(token)
+        if previous is None:
+            os.environ.pop("FEATUREBENCH_TRACE_PARENT_TEST_ID", None)
+        else:
+            os.environ["FEATUREBENCH_TRACE_PARENT_TEST_ID"] = previous

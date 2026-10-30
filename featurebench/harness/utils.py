@@ -2,9 +2,10 @@
 
 import json
 import re
-import pandas as pd
 from pathlib import Path
 from typing import Any, Optional
+
+import pandas as pd
 
 from featurebench.harness.constants import (
     KEY_INSTANCE_ID,
@@ -12,12 +13,13 @@ from featurebench.harness.constants import (
     KEY_N_ATTEMPT,
     KEY_PREDICTION,
 )
-from featurebench.utils.docker_images import build_legacy_instance_image_name, normalize_image_name
+from featurebench.utils.docker_images import normalize_image_name
+from featurebench.utils.identifiers import normalize_instance_id
+from featurebench.utils.runtime_config import DockerRuntimeConfig, parse_docker_runtime_config
 
 
 class EvaluationError(Exception):
     """Custom exception for evaluation errors."""
-    pass
 
 
 def get_predictions_from_file(file_path: str | Path) -> list[dict]:
@@ -40,31 +42,59 @@ def get_predictions_from_file(file_path: str | Path) -> list[dict]:
         raise FileNotFoundError(f"Predictions file not found: {file_path}")
 
     predictions = []
-    with open(file_path, "r", encoding="utf-8") as f:
-        for line in f:
-            if line.strip():
+    seen_keys: set[tuple[str, int]] = set()
+    with file_path.open("r", encoding="utf-8") as f:
+        for line_number, line in enumerate(f, start=1):
+            if not line.strip():
+                continue
+            try:
                 pred = json.loads(line)
-                # Normalize prediction format
-                if KEY_PREDICTION not in pred:
-                    # Try to extract from test_result.git_patch
-                    if "test_result" in pred and "git_patch" in pred["test_result"]:
-                        pred[KEY_PREDICTION] = pred["test_result"]["git_patch"]
-                    else:
-                        pred[KEY_PREDICTION] = ""
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid JSON at {file_path}:{line_number}") from exc
+            if not isinstance(pred, dict):
+                raise ValueError(f"Prediction at {file_path}:{line_number} must be a JSON object")
 
-                # Ensure instance_id exists
-                if KEY_INSTANCE_ID not in pred:
-                    raise ValueError(f"Prediction missing '{KEY_INSTANCE_ID}': {pred}")
+            try:
+                pred[KEY_INSTANCE_ID] = normalize_instance_id(pred.get(KEY_INSTANCE_ID))
+            except ValueError as exc:
+                raise ValueError(
+                    f"Prediction at {file_path}:{line_number} has an invalid "
+                    f"'{KEY_INSTANCE_ID}': {exc}"
+                ) from exc
 
-                # Set default model name if not provided
-                if KEY_MODEL not in pred:
-                    pred[KEY_MODEL] = "unknown"
+            model_patch = pred.get(KEY_PREDICTION)
+            if not isinstance(model_patch, str):
+                raise ValueError(
+                    f"Prediction at {file_path}:{line_number} has an invalid '{KEY_PREDICTION}'"
+                )
 
-                # Set default n_attempt if not provided
-                if KEY_N_ATTEMPT not in pred:
-                    pred[KEY_N_ATTEMPT] = 1
+            model = pred.get(KEY_MODEL, "unknown")
+            if not isinstance(model, str) or not model.strip():
+                raise ValueError(
+                    f"Prediction at {file_path}:{line_number} has an invalid '{KEY_MODEL}'"
+                )
+            pred[KEY_MODEL] = model.strip()
 
-                predictions.append(pred)
+            n_attempt = pred.get(KEY_N_ATTEMPT, 1)
+            if isinstance(n_attempt, bool) or not isinstance(n_attempt, int) or n_attempt < 1:
+                raise ValueError(
+                    f"Prediction at {file_path}:{line_number} has an invalid '{KEY_N_ATTEMPT}'"
+                )
+            pred[KEY_N_ATTEMPT] = n_attempt
+
+            if "success" in pred and not isinstance(pred["success"], bool):
+                raise ValueError(
+                    f"Prediction at {file_path}:{line_number} has an invalid 'success'"
+                )
+
+            prediction_key = (pred[KEY_INSTANCE_ID], n_attempt)
+            if prediction_key in seen_keys:
+                raise ValueError(
+                    "Duplicate prediction for "
+                    f"instance_id={prediction_key[0]!r}, n_attempt={prediction_key[1]}"
+                )
+            seen_keys.add(prediction_key)
+            predictions.append(pred)
 
     return predictions
 
@@ -120,15 +150,9 @@ def get_docker_image_name(instance: pd.Series) -> str:
     Returns:
         Docker image name (e.g., docker.io/libercoders/image_name)
     """
-    # HuggingFace dataset uses 'image_name' field
-    if "image_name" in instance and pd.notna(instance["image_name"]):
-        return normalize_image_name(instance["image_name"])
-
-    # Fallback to old instance_image field for backward compatibility
-    if "instance_image" not in instance or pd.isna(instance["instance_image"]):
+    if "image_name" not in instance or pd.isna(instance["image_name"]):
         raise ValueError(f"image_name not found for {instance[KEY_INSTANCE_ID]}")
-
-    return build_legacy_instance_image_name(instance["instance_image"])
+    return normalize_image_name(instance["image_name"])
 
 
 def str2bool(v: str) -> bool:
@@ -154,18 +178,25 @@ def parse_repo_settings(instance: pd.Series) -> dict:
         Dictionary containing repo settings
     """
     repo_settings_str = instance.get("repo_settings", "{}")
-    if not repo_settings_str or pd.isna(repo_settings_str):
+    if repo_settings_str is None or (
+        pd.api.types.is_scalar(repo_settings_str) and pd.isna(repo_settings_str)
+    ):
+        return {}
+    if isinstance(repo_settings_str, str) and not repo_settings_str.strip():
         return {}
 
-    try:
-        if isinstance(repo_settings_str, str):
-            return json.loads(repo_settings_str)
-        elif isinstance(repo_settings_str, dict):
-            return repo_settings_str
-        else:
-            return {}
-    except json.JSONDecodeError:
-        return {}
+    if isinstance(repo_settings_str, str):
+        try:
+            parsed = json.loads(repo_settings_str)
+        except json.JSONDecodeError as exc:
+            raise ValueError("repo_settings must contain valid JSON") from exc
+    elif isinstance(repo_settings_str, dict):
+        parsed = repo_settings_str
+    else:
+        raise ValueError("repo_settings must be a JSON object")
+    if not isinstance(parsed, dict):
+        raise ValueError("repo_settings must be a JSON object")
+    return parsed
 
 
 def get_test_config_from_repo_settings(repo_settings: dict) -> dict:
@@ -186,75 +217,9 @@ def get_test_config_from_repo_settings(repo_settings: dict) -> dict:
     }
 
 
-def get_docker_runtime_config(repo_settings: dict) -> dict:
-    """
-    Extract Docker runtime configuration from repo_settings.
-
-    Args:
-        repo_settings: Repository settings dictionary
-
-    Returns:
-        Dictionary with docker runtime config (need_gpu, shm_size, number_once, env_vars, env_exports)
-    """
-    docker_specs = repo_settings.get("docker_specs", {})
-    run_args = docker_specs.get("run_args", {})
-    custom_docker_args = docker_specs.get("custom_docker_args", [])
-
-    # Check whether GPU runtime is requested.
-    # Prefer new key cuda_visible_num; fall back to legacy cuda_visible_devices.
-    cuda_visible_cfg = run_args.get("cuda_visible_num", run_args.get("cuda_visible_devices", None))
-    if isinstance(cuda_visible_cfg, int):
-        need_gpu = cuda_visible_cfg > 0
-    else:
-        need_gpu = bool(cuda_visible_cfg)
-
-    # Parse shm_size
-    shm_size = run_args.get("shm_size")
-
-    # Parse number_once (GPU count)
-    number_once = run_args.get("number_once", 1)
-    if not isinstance(number_once, int) or number_once <= 0:
-        number_once = 1
-
-    # Parse environment variables from custom_docker_args (-e and -ee)
-    # Ignore -v (volume) and proxy-related -e
-    env_vars = {}
-    env_exports = []  # For -ee (to be written to .bashrc)
-
-    proxy_keywords = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']
-
-    if isinstance(custom_docker_args, list):
-        for arg in custom_docker_args:
-            if not isinstance(arg, str):
-                continue
-
-            if arg.startswith('-e '):
-                # Regular environment variable
-                env_part = arg.split(' ', 1)[1] if ' ' in arg else ''
-                if '=' in env_part:
-                    key = env_part.split('=')[0].strip()
-                    # Skip proxy-related variables
-                    if key not in proxy_keywords:
-                        env_vars[key] = env_part.split('=', 1)[1]
-
-            elif arg.startswith('-ee '):
-                # Environment variable to be written to .bashrc
-                env_part = arg.split(' ', 1)[1] if ' ' in arg else ''
-                if '=' in env_part:
-                    key = env_part.split('=')[0].strip()
-                    # Skip proxy-related variables
-                    if key not in proxy_keywords:
-                        env_exports.append(f'export {env_part}')
-
-            # Ignore -v (volume) arguments
-
-    return {
-        "need_gpu": need_gpu,
-        "shm_size": shm_size,
-        "number_once": number_once,
-        "env_vars": env_vars,
-        "env_exports": env_exports,
-    }
+def get_docker_runtime_config(repo_settings: dict) -> DockerRuntimeConfig:
+    """Extract Docker runtime configuration from repository settings."""
+    return parse_docker_runtime_config(repo_settings)
 
 
 def build_test_command(test_cmd: str, timeout_one: Optional[int] = None) -> str:

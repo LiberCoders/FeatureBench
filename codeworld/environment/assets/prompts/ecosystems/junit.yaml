@@ -1,0 +1,7 @@
+module: junit
+match:
+  test_frameworks: [junit, junit 4, junit 5, junit5]
+runner_guidance:
+  - >-
+    Use Maven Surefire/Gradle XML or another bounded machine-readable report for individual JUnit
+    outcomes. IDs must distinguish class, method, parameters, module, and repeated invocations.

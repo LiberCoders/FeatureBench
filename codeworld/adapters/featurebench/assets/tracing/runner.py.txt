@@ -1,0 +1,202 @@
+"""Run pytest under the repository-projected tracer and merge process shards."""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import pathlib
+import sys
+from collections import defaultdict
+
+from featurebench_trace_codec import decode_position_ranges, encode_position_ranges
+from featurebench_trace_runtime import RuntimeTracer
+
+
+def merge_shards(
+    directory: pathlib.Path,
+    destination: pathlib.Path,
+    parent_pid: int,
+    passed_test_ids: tuple[str, ...],
+) -> None:
+    records: dict[tuple[str, str, int], dict[str, object]] = {}
+    edges: dict[tuple[str, str], dict[str, object]] = {}
+    imports: dict[tuple[str, int, str, str, str], dict[str, object]] = {}
+    for shard in sorted(directory.glob("trace-*.json")):
+        with shard.open(encoding="utf-8") as stream:
+            payload = json.load(stream)
+        shard_pid = int(payload.get("pid", 0))
+        shard_test_ids = payload.get("test_ids", [])
+        for raw in payload.get("records", []):
+            key = (raw["path"], raw["qualname"], int(raw["line"]))
+            item = records.setdefault(
+                key,
+                {"calls": 0, "test_ids": set(), "process_ids": set()},
+            )
+            item["calls"] += int(raw["calls"])
+            item["test_ids"].update(
+                decode_position_ranges(raw.get("test_id_ranges", []), shard_test_ids)
+            )
+            if shard_pid:
+                item["process_ids"].add(shard_pid)
+        for raw in payload.get("edges", []):
+            key = (raw["caller"], raw["callee"])
+            item = edges.setdefault(
+                key,
+                {
+                    "calls": 0,
+                    "test_ids": set(),
+                    "process_ids": set(),
+                    "thread_ids": set(),
+                    "provenance": set(),
+                },
+            )
+            item["calls"] += int(raw["calls"])
+            item["test_ids"].update(
+                decode_position_ranges(raw.get("test_id_ranges", []), shard_test_ids)
+            )
+            if shard_pid:
+                item["process_ids"].add(shard_pid)
+            item["thread_ids"].update(raw.get("thread_ids", []))
+            item["provenance"].update(raw.get("provenance", []))
+            if shard_pid and shard_pid != parent_pid:
+                item["provenance"].add("subprocess")
+        for raw in payload.get("imports", []):
+            key = (
+                raw["importer_path"],
+                int(raw["importer_line"]),
+                raw["imported_name"],
+                raw["defined_path"],
+                raw["defined_name"],
+            )
+            item = imports.setdefault(
+                key,
+                {"defined_line": raw.get("defined_line"), "test_ids": set()},
+            )
+            item["test_ids"].update(
+                decode_position_ranges(raw.get("test_id_ranges", []), shard_test_ids)
+            )
+
+    callers: dict[str, set[str]] = defaultdict(set)
+    for caller, callee in edges:
+        callers[callee].add(caller)
+
+    test_ids = sorted(
+        {
+            test_id
+            for group in (records.values(), edges.values(), imports.values())
+            for item in group
+            for test_id in item["test_ids"]
+        }
+    )
+    test_id_positions = {test_id: index for index, test_id in enumerate(test_ids)}
+    rendered_records = [
+        {
+            "path": path,
+            "qualname": qualname,
+            "line": line,
+            "calls": max(1, int(item["calls"])),
+            "callers": sorted(callers.get("::".join((path, qualname, str(line))), ())),
+            "test_id_ranges": encode_position_ranges(item["test_ids"], test_id_positions),
+            "process_ids": sorted(item["process_ids"]),
+        }
+        for (path, qualname, line), item in sorted(records.items())
+    ]
+    rendered_edges = [
+        {
+            "caller": caller,
+            "callee": callee,
+            "calls": item["calls"],
+            "test_id_ranges": encode_position_ranges(item["test_ids"], test_id_positions),
+            "process_ids": sorted(item["process_ids"]),
+            "thread_ids": sorted(item["thread_ids"]),
+            "provenance": sorted(item["provenance"]),
+        }
+        for (caller, callee), item in sorted(edges.items())
+    ]
+    rendered_imports = [
+        {
+            "importer_path": importer_path,
+            "importer_line": importer_line,
+            "imported_name": imported_name,
+            "defined_path": defined_path,
+            "defined_name": defined_name,
+            "defined_line": item["defined_line"],
+            "test_id_ranges": encode_position_ranges(item["test_ids"], test_id_positions),
+        }
+        for (
+            importer_path,
+            importer_line,
+            imported_name,
+            defined_path,
+            defined_name,
+        ), item in sorted(imports.items())
+    ]
+    payload = {
+        "test_ids": test_ids,
+        "passed_test_ids": list(passed_test_ids),
+        "records": rendered_records,
+        "edges": rendered_edges,
+        "imports": rendered_imports,
+        "process_count": len(
+            {pid for item in records.values() for pid in item["process_ids"]}
+        ),
+    }
+    with destination.open("w", encoding="utf-8") as stream:
+        json.dump(payload, stream, separators=(",", ":"))
+
+
+def main() -> int:
+    destination = pathlib.Path(sys.argv[1])
+    shard_directory = pathlib.Path(sys.argv[2])
+    arguments_path = pathlib.Path(sys.argv[3])
+    repository_root = pathlib.Path.cwd().resolve()
+    invocation = json.loads(arguments_path.read_text(encoding="utf-8"))
+    if not isinstance(invocation, dict):
+        raise ValueError("trace invocation must be a JSON object")
+    pytest_args = invocation.get("pytest_args")
+    requested_test_ids = invocation.get("requested_test_ids")
+    if not isinstance(pytest_args, list) or not all(isinstance(item, str) for item in pytest_args):
+        raise ValueError("trace pytest_args must be an array of strings")
+    if not isinstance(requested_test_ids, list) or not all(
+        isinstance(item, str) for item in requested_test_ids
+    ):
+        raise ValueError("trace requested_test_ids must be an array of strings")
+    if not requested_test_ids or len(requested_test_ids) != len(set(requested_test_ids)):
+        raise ValueError("trace requested_test_ids must be non-empty and unique")
+    runtime_directory = pathlib.Path(__file__).parent.resolve()
+    original_pythonpath = os.environ.get("PYTHONPATH", "")
+    original_plugins = os.environ.get("PYTEST_PLUGINS", "")
+    os.environ["FEATUREBENCH_TRACE_REPOSITORY_ROOT"] = str(repository_root)
+    os.environ["FEATUREBENCH_TRACE_OUTPUT_DIRECTORY"] = str(shard_directory)
+    os.environ["PYTHONPATH"] = os.pathsep.join(
+        part for part in (str(runtime_directory), str(repository_root), original_pythonpath) if part
+    )
+    os.environ["PYTEST_PLUGINS"] = ",".join(
+        part for part in ("featurebench_trace_plugin", original_plugins) if part
+    )
+    tracer = RuntimeTracer(str(repository_root), str(shard_directory))
+    tracer.start()
+    try:
+        # Import pytest only after tracing starts. pytest and its plugins can import and
+        # execute the repository under test during interpreter bootstrap; those calls
+        # have no test-ID attribution and must become collection protection evidence.
+        import featurebench_trace_selection
+        import pytest
+
+        featurebench_trace_selection.configure_requested_test_ids(requested_test_ids)
+        # Trace selection and outcome state is process-local. Repository-level xdist
+        # addopts would move collection and execution into workers that cannot see it.
+        if importlib.util.find_spec("xdist") is not None:
+            pytest_args.append("-n0")
+        exit_code = int(pytest.main(pytest_args))
+        passed_test_ids = featurebench_trace_selection.passed_test_ids()
+    finally:
+        tracer.stop()
+        tracer.dump()
+    merge_shards(shard_directory, destination, os.getpid(), passed_test_ids)
+    return exit_code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,13 @@
+import pathlib
+import subprocess
+import sys
+
+from pkg import child_feature
+
+
+def test_parent_and_child_processes() -> None:
+    assert child_feature(1) == 2
+    subprocess.run(
+        [sys.executable, str(pathlib.Path(__file__).with_name("worker.py")), "1"],
+        check=True,
+    )

@@ -3,8 +3,8 @@ Report generation for FeatureBench evaluation.
 """
 
 import json
+import os
 from pathlib import Path
-from typing import Any
 
 from featurebench.harness.constants import (
     EvalType,
@@ -202,8 +202,26 @@ def save_report(report: dict, log_dir: Path) -> None:
         log_dir: Directory to save report
     """
     report_path = log_dir / LOG_REPORT
-    with open(report_path, "w", encoding=UTF8) as f:
-        json.dump(report, f, indent=4)
+    _save_json_atomic(report, report_path)
+
+
+def save_summary_report(report: dict, output_dir: Path) -> Path:
+    """Atomically save the aggregate evaluation report."""
+    report_path = output_dir / LOG_REPORT
+    _save_json_atomic(report, report_path)
+    return report_path
+
+
+def _save_json_atomic(payload: dict, path: Path) -> None:
+    temporary_path = path.with_suffix(f"{path.suffix}.tmp")
+    try:
+        with temporary_path.open("w", encoding=UTF8) as f:
+            json.dump(payload, f, indent=4)
+            f.flush()
+            os.fsync(f.fileno())
+        temporary_path.replace(path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def _infer_log_path(output_dir: Path, instance_id: str, n_attempt: int) -> str:
@@ -337,4 +355,3 @@ def generate_summary_report(results: list[dict], output_dir: Path) -> dict:
         }
 
     return summary_report
-

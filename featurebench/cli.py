@@ -1,46 +1,54 @@
-"""Unified CLI entrypoint for core FeatureBench workflows.
-
-Commands:
-  - fb infer ...   -> featurebench.infer.run_infer
-  - fb eval ...    -> featurebench.harness.run_evaluation
-  - fb pull ...    -> featurebench.scripts.pull_images
-  - fb data ...    -> featurebench.pipeline
-"""
+"""Unified CLI for data production, inference, and evaluation."""
 
 from __future__ import annotations
 
 import sys
-from typing import Callable, Sequence
+from collections.abc import Callable, Sequence
+from typing import TextIO
 
 
-def _print_help(stream=None) -> None:
+def _print_help(stream: TextIO | None = None) -> None:
     out = stream if stream is not None else sys.stdout
     out.write(
         "FeatureBench CLI\n"
         "\n"
         "Usage:\n"
+        "  fb discover [SOURCE] [OPTIONS]\n"
+        "  fb build SOURCE [OPTIONS]\n"
+        "  fb generate ENVIRONMENTS --adapter featurebench [OPTIONS]\n"
+        "  fb configure RUN_DIRECTORY\n"
+        "  fb --resume RUN_DIRECTORY [--select POLICY]\n"
         "  fb infer [INFER_ARGS...]\n"
         "  fb eval [EVAL_ARGS...]\n"
         "  fb pull [PULL_ARGS...]\n"
-        "  fb data [PIPELINE_ARGS...]\n"
         "\n"
-        "Core commands:\n"
+        "Data factory:\n"
+        "  discover   Find candidate GitHub repositories\n"
+        "  build      Build and validate reproducible environments\n"
+        "  generate   Generate tasks through a registered Adapter\n"
+        "  configure  Edit an inactive run before resuming it\n"
+        "\n"
+        "Benchmark:\n"
         "  infer  Run inference (supports all existing run_infer args)\n"
         "  eval   Run harness evaluation (supports all existing harness args)\n"
         "  pull   Pre-pull images (supports --mode, and other pull_images args)\n"
-        "  data   Run data pipeline (supports featurebench-pipeline args)\n"
         "\n"
         "Examples:\n"
+        "  fb discover\n"
+        "  fb build owner/project\n"
+        "  fb generate outputs/build-.../environments.jsonl --adapter featurebench\n"
+        "  fb --resume outputs/build-... --select non-success\n"
         "  fb infer --data-version v1.1 --agent mini_swe_agent --model openai/gpt-4o --split fast\n"
         "  fb eval --predictions-path runs/xxx/output.jsonl --split fast\n"
         "  fb pull --mode fast\n"
-        "  fb data --config-path constants/python_new.py --output-dir runs/data\n"
         "\n"
         "Use command-specific help:\n"
+        "  fb discover --help\n"
+        "  fb build --help\n"
+        "  fb generate --help\n"
         "  fb infer --help\n"
         "  fb eval --help\n"
         "  fb pull --help\n"
-        "  fb data --help\n"
     )
 
 
@@ -95,10 +103,10 @@ def _dispatch_pull(args: Sequence[str]) -> int:
         return 1
 
 
-def _dispatch_data(args: Sequence[str]) -> int:
-    from featurebench.pipeline import main as pipeline_main
+def _dispatch_factory(args: Sequence[str]) -> int:
+    from codeworld.cli import main as factory_main
 
-    return _run_with_patched_argv("fb data", args, pipeline_main)
+    return factory_main(args)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -113,15 +121,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         _print_help()
         return 0
 
+    if command in {"discover", "build", "generate", "configure", "--resume", "--select"}:
+        return _dispatch_factory(args)
     if command == "infer":
         return _dispatch_infer(command_args)
     if command == "eval":
         return _dispatch_eval(command_args)
     if command == "pull":
         return _dispatch_pull(command_args)
-    if command == "data":
-        return _dispatch_data(command_args)
-
     print(f"Unknown command: {command}", file=sys.stderr)
     _print_help(stream=sys.stderr)
     return 2

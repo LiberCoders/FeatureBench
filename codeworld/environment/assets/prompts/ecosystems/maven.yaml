@@ -1,0 +1,19 @@
+module: maven
+match:
+  build_systems: [maven, apache maven, maven wrapper, mvnw]
+  package_managers: [maven]
+dockerfile_guidance:
+  - >-
+    In a multi-module Maven reactor, dependency:go-offline does not install sibling SNAPSHOT artifacts.
+    When downstream modules need them, first build/install the minimum required upstream reactor closure
+    (for example with -pl :artifactId -am install), then materialize downstream plugins and dependencies.
+    Do not install the whole reactor merely to supply one sibling artifact when optional integration or
+    native-image modules are outside the accepted test scope. Installing only the reactor's parent POM with
+    install:install-file does not produce the missing module JAR and is not a repair.
+  - >-
+    Retain /root/.m2 artifacts required for offline tests; removing stale .lastUpdated markers is safe,
+    but deleting the populated local repository defeats offline validation.
+  - >-
+    Surefire and Failsafe may choose a test provider dynamically only when the test goal runs. A skipped test
+    goal and dependency:go-offline can therefore leave provider dependencies absent. Materialize them during
+    the Docker build by running the narrowest accepted target-module test goal while network access is present.

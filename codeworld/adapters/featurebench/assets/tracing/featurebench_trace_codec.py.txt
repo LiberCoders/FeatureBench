@@ -1,0 +1,41 @@
+"""Lossless compact encoding shared by trace producers and the shard merger."""
+
+from __future__ import annotations
+
+
+def encode_position_ranges(values, positions):
+    """Encode values through a shared position table as canonical half-open ranges."""
+    indexes = sorted(positions[value] for value in values)
+    return _ranges(indexes)
+
+
+def encode_integer_ranges(values, remap):
+    """Encode process-local integer IDs after remapping them to canonical positions."""
+    indexes = sorted(remap[value] for value in values)
+    return _ranges(indexes)
+
+
+def encode_index_ranges(values):
+    """Encode already-canonical integer positions."""
+    return _ranges(sorted(values))
+
+
+def decode_position_ranges(ranges, values):
+    """Yield exact values referenced by canonical half-open ranges."""
+    for start, stop in ranges:
+        yield from values[start:stop]
+
+
+def _ranges(indexes):
+    if not indexes:
+        return []
+    result = []
+    start = previous = indexes[0]
+    for index in indexes[1:]:
+        if index == previous + 1:
+            previous = index
+            continue
+        result.append([start, previous + 1])
+        start = previous = index
+    result.append([start, previous + 1])
+    return result

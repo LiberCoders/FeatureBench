@@ -1,0 +1,13 @@
+module: php
+match:
+  languages: [php]
+  package_managers: [composer]
+dockerfile_guidance:
+  - >-
+    Install the committed Composer dependency graph including development tools during build and retain
+    vendor/ for offline validation.
+  - >-
+    Use only options supported by each exact Composer subcommand; install and dump-autoload do not necessarily
+    accept the same flags. When no composer.lock is committed, Composer may create one while resolving
+    dependencies: retain vendor/ but remove only that generated untracked lockfile before the final clean Git
+    baseline. Never remove or rewrite a lockfile that was present in the pinned checkout.

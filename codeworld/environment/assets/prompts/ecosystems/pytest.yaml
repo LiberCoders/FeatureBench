@@ -1,0 +1,53 @@
+module: pytest
+match:
+  test_frameworks: [pytest]
+runner_guidance:
+  - >-
+    Every public Runner ID MUST use `<native_base>#<zero_based_occurrence>`, including `#0` for a
+    non-parameterized test. Define native_base from item.nodeid by replacing its final item leaf with
+    item.originalname when pytest provides originalname; otherwise use the exact item.nodeid. While visiting
+    items in pytest collection order, number items sharing a native_base from zero without gaps. This removes
+    volatile parameter displays while retaining pytest's file, class, and item structure. Rebuild this same
+    base-and-occurrence mapping inside the selected run invocation and translate phase reports back to the
+    requested public IDs.
+  - >-
+    MUST use one temporary importable pytest plugin to emit bounded machine-readable collection and phase
+    results. pytest_collection_finish exposes exact item.nodeid/item.path and pytest_runtest_logreport
+    exposes setup, call, and teardown outcomes. Put the plugin's parent on PYTHONPATH and pass its module
+    name, never its file path, to pytest -p. Never parse pytest's human-facing collection display as the
+    data protocol: repeated quiet flags change `-q` into `-qq`, which collapses node IDs into per-file counts.
+  - >-
+    For run, execute all requested test points in one pytest invocation, but never expand an arbitrary ID
+    list into operating-system argv, an environment-variable value, a shell array expansion, or generated
+    plugin source. Keep the original Runner request JSON, or a derived selected-ID document, in a temporary
+    file and pass only its bounded path to the pytest plugin (for example through CW_REQUEST_PATH); the plugin
+    must read every requested public ID from that file inside the pytest process. Decode the requested public
+    IDs to a bounded unique set of source paths and select only those paths before pytest imports unrelated
+    test modules. When the
+    repository's locked or installed pytest version is proven to be 8.2 or newer, write those paths to an
+    @ARGFILE and pass it to pytest. For pytest older than 8.2, or when @ARGFILE support is not proven, pass
+    the paths through a temporary filter file and have the same plugin implement pytest_ignore_collect to
+    reject every path outside that set before collection. Do not upgrade or override the repository's pytest
+    constraint solely to obtain @ARGFILE support. In that same pytest execution invocation, the plugin must rebuild
+    the deterministic ID mapping in pytest_collection_modifyitems, retain exactly the requested mapped items,
+    fail closed if any requested ID is missing or ambiguous, and map execution reports back to the requested
+    IDs. Never resolve a nondeterministic native node ID in one pytest process and pass that native string to a
+    second pytest process: address values, unordered reprs, UUIDs, or other parameter displays may change between
+    the two processes. Filtering `items` only after an unscoped full-suite collection is invalid: an unrelated
+    test module can fail import and abort a selected run. Derive each passed, failed, skipped, or error outcome
+    from the pytest plugin's execution reports; neither a zero aggregate exit status nor a successful
+    `--collect-only` process proves each requested test's individual outcome.
+  - >-
+    Use pytest's standard repository configuration without adding presentation flags such as `-q`; pytest
+    accumulates quiet flags, and `-qq` can collapse collection output from individual node IDs to aggregate
+    `test_file.py: count` lines. Machine evidence must come from the temporary plugin rather than presentation output.
+  - >-
+    Preserve entire node-ID lines including spaces in parameter values; never split a node ID on
+    whitespace. Combine phase reports: setup/teardown failure is error, call failure is failed, skipped is
+    skipped, clean call is passed; never replace per-item outcomes with pytest's aggregate return code.
+  - >-
+    Keep report transport linear in the number of executed phases. Accumulate bounded phase records in the
+    plugin process and serialize them once at session finish, or append one independent JSONL record per
+    hook call and read the stream once afterward. Never read, parse, append to, and rewrite the complete
+    report file from every pytest_runtest_logreport invocation; that becomes quadratic on large
+    parameterized suites.

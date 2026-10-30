@@ -1,0 +1,22 @@
+"""Per-test execution context shared by the pytest plugin and runtime tracer."""
+
+from __future__ import annotations
+
+import contextvars
+import os
+
+_CURRENT_TEST_ID: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "featurebench_current_test_id", default=None
+)
+
+
+def set_test_id(node_id: str) -> contextvars.Token[str | None]:
+    return _CURRENT_TEST_ID.set(node_id)
+
+
+def reset_test_id(token: contextvars.Token[str | None]) -> None:
+    _CURRENT_TEST_ID.reset(token)
+
+
+def current_test_id() -> str | None:
+    return _CURRENT_TEST_ID.get() or os.environ.get("FEATUREBENCH_TRACE_PARENT_TEST_ID")

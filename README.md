@@ -12,10 +12,16 @@
 
 ---
 
-FeatureBench is a test-driven data generation and evaluation pipeline for feature-level coding benchmarks.
-It provides a unified CLI to run inference, evaluation, and dataset generation.
+FeatureBench combines a feature-level coding benchmark with a fully automated, **Universal Coding
+Data Factory**. With one CLI, it continuously discovers GitHub repositories, builds reproducible
+environments across languages, and generates validated coding tasks for training and evaluation
+through extensible Adapters.
 
 ## 📰 News
+
+🏭 **2026.10.30**: We launched a **Universal Coding Data Factory**—fully automated, language-agnostic, and Adapter-driven—to continuously turn GitHub repositories into validated training data for any coding task format.
+
+📈 **2026.10.30**: In internal mixed-task RL experiments using data from our **Universal Coding Data Factory**, Qwen3.8-27B improved SWE-bench Verified Pass@1 from **70.2% to a peak of 79.8%** and FeatureBench 1.1 Tests Passed from **50.3% to a peak of 60.3%**.
 
 📦 **2026.08.24**: We released **FeatureBench Dataset V1.1**, primarily correcting inconsistencies and omissions in task problem statements.
 
@@ -23,7 +29,7 @@ It provides a unified CLI to run inference, evaluation, and dataset generation.
 
 🚀 **2026.03.27**: We released the **fast split** containing 100 instances (a subset of full split). These instances require no GPU and are optimized for rapid evaluation. On an Intel Xeon Platinum 8457C with 944GB RAM, the average evaluation time per instance using gold patches is **57.2 seconds**.
 
-🎁 **2026.02.06**: We now support one-click inference for mainstream agent frameworks, including **OpenHands, Claude Code, Codex, Gemini CLI, and mini-swe-agent**. All supported agent frameworks can be found [here](featurebench/infer/agents/). We have also open-sourced the FeatureBench **data pipeline**.
+🎁 **2026.02.06**: We added one-click inference for mainstream agent frameworks, including **OpenHands, Claude Code, Codex, Gemini CLI, and mini-swe-agent**. All supported agent frameworks can be found [here](featurebench/infer/agents/).
 
 <!-- LEADERBOARD_START -->
 ## 🏆 Leaderboard
@@ -62,40 +68,39 @@ It provides a unified CLI to run inference, evaluation, and dataset generation.
 ## 🚀 Quickstart
 
 **Prerequisites:**
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) for Python environment management
-- [docker](https://docs.docker.com/engine/install/) for reproducible builds and evaluation
+
+- Python 3.12 or later
+- [Docker](https://docs.docker.com/engine/install/) for reproducible builds and evaluation
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) when using uv or installing from source
 
 ```bash
-# pypi
+# Install from PyPI
 pip install featurebench
-# or uv add featurebench
 
-# local
+# Or install the CLI with uv
+uv tool install featurebench
+
+# Install from source
 git clone https://github.com/LiberCoders/FeatureBench.git
 cd FeatureBench
 uv sync
 source .venv/bin/activate
 ```
 
-**Configure:**
+Create `config.toml` from [config_example.toml](config_example.toml). From a source checkout:
+
 ```bash
 cp config_example.toml config.toml
 ```
-See [docs/config.md](docs/config.md) for a comprehensive reference (harness, infer, data pipeline) with examples.
 
-**Optional: pre-pull images to reduce network variance:**
+Optionally pre-pull the benchmark images:
+
 ```bash
-fb pull --mode lite                 # lite split image list (13 images)
-fb pull --mode fast                 # fast split image list (18 images)
-fb pull --mode full                 # full split image list (24 images)
-fb pull --mode /path/to/images.txt  # one image name per line
-
-# full list: featurebench/resources/constants/full_images.txt
-# lite list: featurebench/resources/constants/lite_images.txt
-# fast list: featurebench/resources/constants/fast_images.txt
+fb pull --mode fast
 ```
 
-**Run inference:**
+Run inference:
+
 ```bash
 fb infer \
     --config-path config.toml \
@@ -105,20 +110,52 @@ fb infer \
     --split fast
 ```
 
-**Run evaluation:**
+Evaluate the generated patches:
+
 ```bash
 fb eval \
     -p runs/<timestamp>/output.jsonl \
     --split fast
-    # use -p gold to verify the gold patches
 ```
 
-## 🧭 CLI Overview
+## 🏭 Universal Coding Data Factory
 
-`fb` provides three core commands:
-- `fb infer` runs `featurebench.infer.run_infer` (docs: [docs/infer_cli_arg.md](docs/infer_cli_arg.md))
-- `fb eval` runs `featurebench.harness.run_evaluation` (docs: [docs/harness_cli_arg.md](docs/harness_cli_arg.md))
-- `fb data` runs `featurebench.pipeline` (docs: [docs/pipeline.md](docs/pipeline.md))
+The factory automatically discovers GitHub repositories, builds reproducible environments, and
+generates validated coding tasks. Adapters define the task format; FeatureBench is included by
+default. This workflow is optional for benchmark users.
+
+Put provider credentials in `.env`. From a source checkout:
+
+```bash
+cp .env.example .env
+```
+
+The default settings work out of the box and can be customized through
+`configs/default/*.yaml` or `--config`.
+
+```bash
+fb discover
+fb build outputs/discover-YYYYMMDD-HHMMSS/repositories.jsonl
+fb generate outputs/build-YYYYMMDD-HHMMSS/environments.jsonl \
+  --adapter featurebench
+```
+
+## 🧭 CLI
+
+**Benchmark:**
+
+- `fb infer` runs coding agents on FeatureBench tasks ([Documentation](docs/infer.md)).
+- `fb eval` evaluates generated patches ([Documentation](docs/eval.md)).
+- `fb pull` pre-pulls benchmark Docker images ([Documentation](docs/pull.md)).
+
+**Data factory:**
+
+- `fb discover` finds candidate GitHub repositories ([Documentation](docs/discover.md)).
+- `fb build` creates reusable, validated environments ([Documentation](docs/build.md)).
+- `fb generate` generates tasks through an Adapter ([Documentation](docs/generate.md)).
+- `fb configure` edits an inactive run before resuming it
+  ([Documentation](docs/configure.md)).
+- `fb --resume` continues an interrupted run ([Documentation](docs/reference/resume.md)).
 
 ## ✍️ Citation
 

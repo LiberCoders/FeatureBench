@@ -1,0 +1,32 @@
+"""Automatically enable tracing in child Python processes."""
+
+from __future__ import annotations
+
+import atexit
+import os
+
+
+def _start() -> None:
+    root = os.environ.get("FEATUREBENCH_TRACE_REPOSITORY_ROOT")
+    output = os.environ.get("FEATUREBENCH_TRACE_OUTPUT_DIRECTORY")
+    if not root or not output:
+        return
+    try:
+        from featurebench_trace_runtime import RuntimeTracer
+
+        tracer = RuntimeTracer(root, output)
+        tracer.start()
+    except Exception:
+        return
+
+    def finish() -> None:
+        try:
+            tracer.stop()
+            tracer.dump()
+        except Exception:
+            pass
+
+    atexit.register(finish)
+
+
+_start()

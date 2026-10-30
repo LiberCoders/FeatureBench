@@ -1,0 +1,113 @@
+- code: artifact.reserved_base_stage
+  message: The Dockerfile uses FeatureBench data factory's reserved managed-base stage name.
+  correction: Use a different internal stage name.
+- code: artifact.agent_content_forbidden
+  message: An artifact contains an Agent package name or API-key identifier.
+  correction: Remove Agent software and credentials; Agents run only on the host.
+- code: artifact.control_content_forbidden
+  message: The Dockerfile embeds FeatureBench data factory control files.
+  correction: Keep activation and Runner as external JSONL artifacts.
+- code: artifact.external_runtime_reference
+  message: A runtime script assumes an external activation or Runner artifact exists in the image.
+  correction: >-
+    Do not source /testbed/activate or invoke /testbed/runner; the host sources activation before streaming
+    the Runner to Bash, and neither artifact is stored in the image.
+- code: artifact.secret_declaration_forbidden
+  message: The Dockerfile declares a credential-bearing ARG or ENV.
+  correction: Remove credential declarations from the task image.
+- code: artifact.build_arg_default_required
+  message: The Dockerfile requires an external build argument with no standalone default.
+  correction: >-
+    Give the argument a canonical public default inside the Dockerfile, or remove it. A formal environment
+    Dockerfile must build without FeatureBench data factory, sources.yaml, or caller-supplied arguments.
+- code: artifact.base_path_overridden
+  message: The Dockerfile replaces PATH and makes managed base-image capabilities unreachable.
+  correction: Preserve the inherited PATH with $PATH or ${PATH} whenever an ENV instruction extends PATH.
+- code: artifact.shell_requirement_unquoted
+  message: A Python requirement containing < or > is unquoted in a shell-form RUN instruction.
+  correction: Quote the complete requirement so the shell cannot interpret its version operator as redirection.
+- code: artifact.git_baseline_mutation
+  message: The Dockerfile mutates the pinned Git baseline.
+  correction: Do not initialize, clean, reset, commit, or otherwise rewrite /testbed Git state.
+- code: artifact.from_required
+  message: The Dockerfile has no FROM instruction.
+  correction: Start the Dockerfile with the exact selected base image.
+- code: artifact.base_reference_mismatch
+  message: The first Dockerfile stage does not use the selected base image.
+  correction: Use the exact selected_base.image from the resolved base contract in the first FROM instruction.
+- code: artifact.external_stage_forbidden
+  message: The Dockerfile references an unapproved external stage image.
+  correction: Use only the selected base image and stages derived from it.
+- code: artifact.context_transfer_forbidden
+  message: The Dockerfile copies or adds files from the local build context.
+  correction: Use the source marker; FeatureBench data factory injects the pinned repository clone there.
+- code: artifact.copy_stage_unknown
+  message: COPY --from references an undeclared internal stage.
+  correction: Reference a stage name declared earlier in this Dockerfile.
+- code: artifact.source_marker_count
+  message: The Dockerfile does not contain exactly one source marker.
+  correction: Place exactly one '# FEATUREBENCH_SOURCE' line in the final stage.
+- code: artifact.source_marker_position
+  message: The source marker is not in the final Dockerfile stage.
+  correction: Move the single source marker after the final FROM instruction.
+- code: artifact.source_prefix_testbed
+  message: The Dockerfile uses /testbed before FeatureBench data factory materializes the pinned repository.
+  correction: >-
+    Move every /testbed work directory, environment creation, dependency installation, and repository-dependent
+    command after the source marker. Before the marker, create only repository-independent state outside /testbed.
+- code: artifact.activation_workdir
+  message: The activation script does not enter /testbed.
+  correction: Add a source-safe 'cd /testbed' operation.
+- code: artifact.activation_control_flow
+  message: The activation script exits or replaces its caller.
+  correction: Remove exit, exec, and return; the host sources this script.
+- code: artifact.activation_environment
+  message: The activation script does not enter the environment created by the Dockerfile.
+  correction: >-
+    Activate or prepend the exact project environment path created during image build; do not sync or install
+    at runtime.
+- code: artifact.runtime_dependency_mutation
+  message: An activation or Runner artifact may install, update, fetch, or synchronize dependencies at runtime.
+  correction: >-
+    Move dependency materialization into the Dockerfile; invoke installed tools directly, or use
+    'uv run --no-sync'.
+- code: artifact.runner_contract
+  message: The Runner did not satisfy the request/response behavior contract.
+  correction: Correct the reported action, response-file, result-shape, or process behavior.
+- code: artifact.runner_public_id
+  message: The pytest Runner returned IDs outside the canonical public-ID contract.
+  correction: >-
+    Return every pytest item as '<native_base>#<zero-based occurrence>', including '#0' for a
+    non-parameterized item. Replace the final node-ID leaf with item.originalname when pytest provides it,
+    then assign contiguous occurrence numbers in collection order to items sharing that base. Rebuild the
+    same mapping inside the selected run invocation and translate machine-reported outcomes back to these IDs.
+- code: artifact.runner_integrity_rejected
+  message: The independent Runner Review Agent found behavior that can fabricate, bypass, or misreport tests.
+  correction: >-
+    Use this issue's concrete Reviewer reason in actual and its context.applicable_runner_guidance to replace
+    only the rejected Runner path with framework-native collection or execution evidence; preserve unrelated
+    accepted behavior.
+- code: artifact.collection_unstable
+  message: The Runner returned a different test-ID-to-path mapping across repeated collection.
+  correction: >-
+    Do not expose nondeterministic parameter display values, addresses, UUIDs, or unordered reprs as task IDs.
+    Derive each ID from stable framework metadata plus a deterministic occurrence index. During run, scope the
+    framework to the requested source paths and resolve and select requested stable IDs within that same framework
+    execution invocation. Do not collect a nondeterministic native ID in one process and replay it in another, and
+    do not pass a transformed ID directly to the framework unless it is itself a valid native selector. Return the
+    same unique framework-addressable IDs and repository-relative path for each ID every time; output order may vary
+    because FeatureBench data factory canonicalizes it.
+- code: artifact.script_syntax
+  message: An external Bash artifact has invalid syntax.
+  correction: Correct the reported Bash syntax error and return the complete script again.
+- code: artifact.failed_field_unchanged
+  message: The field responsible for the previous failure was returned unchanged.
+  correction: Use the supplied evidence to change that field; do not resubmit the failed value.
+- code: artifact.unrelated_field_changed
+  message: A repair changed an artifact field that the structured feedback did not implicate.
+  correction: Restore that field exactly from current_artifacts and change only feedback-named fields.
+- code: artifact.repair_regressed_accepted_content
+  message: A repair removed working content unrelated to the reported failure or violated an accepted constraint.
+  correction: >-
+    Restore the reported working content and make the smallest complete change that fixes the current failure
+    while preserving every accepted repair constraint.

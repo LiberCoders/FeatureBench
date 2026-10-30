@@ -21,12 +21,11 @@ import atexit
 import json
 import logging
 import os
-import shutil
 import signal
 import threading
 import traceback
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -36,11 +35,17 @@ from datasets import load_dataset
 from docker.models.containers import Container
 from rich.console import Console, Group
 from rich.live import Live
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from rich.table import Table
 
 from featurebench.harness.constants import (
-    EvalType,
     FAIL_ONLY_REPOS,
     KEY_INSTANCE_ID,
     KEY_N_ATTEMPT,
@@ -49,6 +54,7 @@ from featurebench.harness.constants import (
     LOG_PATCH,
     LOG_REPORT,
     UTF8,
+    EvalType,
 )
 from featurebench.harness.container import DOCKER_HOST_GATEWAY, EvalContainerManager
 from featurebench.harness.report import (
@@ -58,6 +64,7 @@ from featurebench.harness.report import (
     generate_summary_report,
     parse_test_outputs,
     save_report,
+    save_summary_report,
 )
 from featurebench.harness.review_codes import (
     save_review_codes_level1,
@@ -70,10 +77,9 @@ from featurebench.harness.utils import (
     get_docker_runtime_config,
     get_instance_from_dataset,
     get_predictions_from_file,
-    preprocess_hf_patch,
     parse_repo_settings,
+    preprocess_hf_patch,
 )
-
 from featurebench.infer.config import (
     DEFAULT_DATASET_REVISION,
     InferConfigLoader,
@@ -81,7 +87,14 @@ from featurebench.infer.config import (
     resolve_hf_dataset_revision,
     verify_loaded_dataset_revision,
 )
-from featurebench.infer.gpu_scheduler import GpuLease, GpuScheduler, detect_host_gpu_ids, parse_gpu_id_list
+from featurebench.infer.gpu_scheduler import (
+    GpuLease,
+    GpuScheduler,
+    detect_host_gpu_ids,
+    parse_gpu_id_list,
+)
+from featurebench.infer.models import RunMetadata
+from featurebench.utils.identifiers import normalize_instance_id, normalize_test_ids
 
 # Global console for rich output
 console = Console()
@@ -122,7 +135,9 @@ class RunningTasksTracker:
         with self._lock:
             items = list(self._running_tasks.items())
         items.sort(key=lambda item: item[1])
-        return [(instance_id, n_attempt, started_at) for (instance_id, n_attempt), started_at in items]
+        return [
+            (instance_id, n_attempt, started_at) for (instance_id, n_attempt), started_at in items
+        ]
 
     def build_table(self) -> Table:
         table = Table(
@@ -169,48 +184,15 @@ def _mark_report_completed(report: dict[str, Any], instance_id: str) -> None:
 def _report_has_completion_marker(report: dict[str, Any], instance_id: str) -> bool:
     instance_report = report.get(instance_id)
     return (
-        isinstance(instance_report, dict)
-        and instance_report.get(EVAL_REPORT_COMPLETED_KEY) is True
+        isinstance(instance_report, dict) and instance_report.get(EVAL_REPORT_COMPLETED_KEY) is True
     )
-
-
-def _legacy_report_looks_interrupted(log_dir: Path) -> bool:
-    """Best-effort detection for reports written by old interrupted runs."""
-    log_file = log_dir / LOG_INSTANCE
-    if not log_file.exists():
-        return False
-
-    try:
-        log_text = log_file.read_text(encoding=UTF8, errors="replace").lower()
-    except Exception:
-        return False
-
-    if "evaluation interrupted during shutdown" in log_text:
-        return True
-    if "interrupted before container creation" in log_text:
-        return True
-
-    cleanup_failed = "failed to cleanup container" in log_text
-    cleanup_raced = (
-        "already in progress" in log_text
-        or "no such container" in log_text
-        or "not found" in log_text
-    )
-    return cleanup_failed and cleanup_raced
 
 
 def _existing_report_is_reusable(
     report: dict[str, Any],
-    log_dir: Path,
     instance_id: str,
 ) -> bool:
-    if _report_has_completion_marker(report, instance_id):
-        return True
-
-    # Reports produced before this marker existed are still reusable unless
-    # their logs show they were written while Ctrl+C cleanup was racing the
-    # worker thread.
-    return not _legacy_report_looks_interrupted(log_dir)
+    return _report_has_completion_marker(report, instance_id)
 
 
 class EvalContainerCleanup:
@@ -262,7 +244,7 @@ class EvalContainerCleanup:
         with self._active_containers_lock:
             self._active_containers.pop(container_id, None)
 
-    def _ignore_interrupt_during_cleanup(self, signum, frame) -> None:
+    def _ignore_interrupt_during_cleanup(self, _signum, _frame) -> None:
         self.request_shutdown()
         if not self._cleanup_interrupt_notice_printed:
             self._cleanup_interrupt_notice_printed = True
@@ -366,9 +348,7 @@ class EvalContainerCleanup:
             removed += self._cleanup_labeled_containers()
             if removed:
                 try:
-                    self.console.print(
-                        f"[yellow]Removed {removed} eval container(s).[/]"
-                    )
+                    self.console.print(f"[yellow]Removed {removed} eval container(s).[/]")
                 except Exception:
                     pass
             return removed
@@ -397,9 +377,7 @@ def setup_logger(name: str, log_file: Path) -> logging.Logger:
     # File handler only - no console output
     fh = logging.FileHandler(log_file, mode="w")
     fh.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        "%(asctime)s - %(levelname)s - %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     fh.setFormatter(formatter)
     logger.addHandler(fh)
 
@@ -420,12 +398,8 @@ def _load_force_rerun_ids(raw_values: list[str] | None) -> set[str]:
         if candidate.endswith(".txt"):
             path = Path(candidate)
             if not path.exists():
-                logging.getLogger(__name__).warning(
-                    "--force-rerun file not found: %s",
-                    path,
-                )
-                continue
-            with open(path, "r", encoding="utf-8") as f:
+                raise FileNotFoundError(f"--force-rerun file not found: {path}")
+            with open(path, encoding="utf-8") as f:
                 for line in f:
                     task_id = line.strip()
                     if task_id:
@@ -434,6 +408,20 @@ def _load_force_rerun_ids(raw_values: list[str] | None) -> set[str]:
         ids.append(candidate)
 
     return set(dict.fromkeys(ids))
+
+
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 1:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed
+
+
+def _port(value: str) -> int:
+    parsed = int(value)
+    if not 1 <= parsed <= 65535:
+        raise argparse.ArgumentTypeError("must be between 1 and 65535")
+    return parsed
 
 
 def run_instance(
@@ -488,21 +476,22 @@ def run_instance(
     if report_path.exists() and (force_rerun_ids is None or instance_id not in force_rerun_ids):
         existing_report = None
         try:
-            with open(report_path, "r", encoding=UTF8) as f:
+            with open(report_path, encoding=UTF8) as f:
                 existing_report = json.load(f)
         except Exception:
             existing_report = None
 
-        if (
-            isinstance(existing_report, dict)
-            and _existing_report_is_reusable(existing_report, log_dir, instance_id)
+        if isinstance(existing_report, dict) and _existing_report_is_reusable(
+            existing_report, instance_id
         ):
             return {
                 "instance_id": instance_id,
                 "n_attempt": n_attempt,
                 "completed": True,
                 "resolved": existing_report.get(instance_id, {}).get("resolved", False),
-                "patch_applied": existing_report.get(instance_id, {}).get("patch_successfully_applied", False),
+                "patch_applied": existing_report.get(instance_id, {}).get(
+                    "patch_successfully_applied", False
+                ),
                 "report": existing_report,
             }
 
@@ -536,10 +525,12 @@ def run_instance(
         if not docker_runtime_config:
             repo_settings = parse_repo_settings(instance)
             docker_runtime_config = get_docker_runtime_config(repo_settings)
-        logger.info(f"Docker runtime config: shm_size={docker_runtime_config.get('shm_size')}, "
-                    f"number_once={docker_runtime_config.get('number_once')}, "
-                    f"env_vars={list(docker_runtime_config.get('env_vars', {}).keys())}, "
-                    f"env_exports={len(docker_runtime_config.get('env_exports', []))} items")
+        logger.info(
+            f"Docker runtime config: shm_size={docker_runtime_config.get('shm_size')}, "
+            f"number_once={docker_runtime_config.get('number_once')}, "
+            f"env_vars={list(docker_runtime_config.get('env_vars', {}).keys())}, "
+            f"env_exports={len(docker_runtime_config.get('env_exports', []))} items"
+        )
 
         # Allocate GPUs for this instance if needed.
         task_gpu_ids = gpu_ids
@@ -581,16 +572,16 @@ def run_instance(
         # Run evaluation based on level
         level = int(instance["level"])
         if level == 1:
-            results = run_instance_level1(instance, pred, container, logger, log_dir, timeout, white=white)
+            results = run_instance_level1(
+                instance, pred, container, logger, log_dir, timeout, white=white
+            )
         elif level == 2:
             results = run_instance_level2(instance, pred, container, logger, log_dir, timeout)
         else:
             raise ValueError(f"Unsupported level: {level}")
 
         if container_cleanup is not None and container_cleanup.shutdown_requested():
-            logger.warning(
-                "Evaluation interrupted during shutdown; not saving report."
-            )
+            logger.warning("Evaluation interrupted during shutdown; not saving report.")
             return _interrupted_result("Interrupted during shutdown")
 
         # Save patch
@@ -624,15 +615,11 @@ def run_instance(
         )
         _mark_report_completed(report, instance_id)
         if container_cleanup is not None and container_cleanup.shutdown_requested():
-            logger.warning(
-                "Evaluation interrupted during shutdown; not saving report."
-            )
+            logger.warning("Evaluation interrupted during shutdown; not saving report.")
             return _interrupted_result("Interrupted during shutdown")
         save_report(report, log_dir)
         if container_cleanup is not None and container_cleanup.shutdown_requested():
-            logger.warning(
-                "Evaluation interrupted during shutdown; removing saved report."
-            )
+            logger.warning("Evaluation interrupted during shutdown; removing saved report.")
             try:
                 report_path.unlink()
             except FileNotFoundError:
@@ -659,7 +646,7 @@ def run_instance(
                     purpose="review",
                 )
             if level == 1:
-                save_review_codes_level1(
+                review_saved = save_review_codes_level1(
                     instance,
                     patch_content,
                     log_dir,
@@ -668,7 +655,7 @@ def run_instance(
                     labels=review_labels,
                 )
             elif level == 2:
-                save_review_codes_level2(
+                review_saved = save_review_codes_level2(
                     instance,
                     patch_content,
                     log_dir,
@@ -676,7 +663,12 @@ def run_instance(
                     logger,
                     labels=review_labels,
                 )
-            logger.info("Review codes saved.")
+            else:
+                review_saved = False
+            if review_saved:
+                logger.info("Review codes saved.")
+            else:
+                logger.warning("Review-code export failed; evaluation result remains valid.")
 
         return {
             "instance_id": instance_id,
@@ -688,13 +680,11 @@ def run_instance(
         }
 
     except Exception as e:
-        logger.error(f"Error during evaluation: {str(e)}")
+        logger.error(f"Error during evaluation: {e!s}")
         logger.error(traceback.format_exc())
 
         if container_cleanup is not None and container_cleanup.shutdown_requested():
-            logger.warning(
-                "Evaluation interrupted during shutdown; not saving failure report."
-            )
+            logger.warning("Evaluation interrupted during shutdown; not saving failure report.")
             return _interrupted_result(f"Interrupted during shutdown: {e}")
 
         # Generate and save error report
@@ -709,9 +699,7 @@ def run_instance(
         _mark_report_completed(error_report, instance_id)
         save_report(error_report, log_dir)
         if container_cleanup is not None and container_cleanup.shutdown_requested():
-            logger.warning(
-                "Evaluation interrupted during shutdown; removing saved failure report."
-            )
+            logger.warning("Evaluation interrupted during shutdown; removing saved failure report.")
             try:
                 report_path.unlink()
             except FileNotFoundError:
@@ -776,6 +764,8 @@ def load_dataset_from_hf(
         hf_token, hf_endpoint = configure_hf_access(env_vars)
         configured_revision = config_loader.get_dataset_revision()
     except FileNotFoundError:
+        if config_path:
+            raise
         console.print("[yellow]Warning: config.toml not found, using defaults[/]")
         hf_token, hf_endpoint = configure_hf_access({})
         configured_revision = DEFAULT_DATASET_REVISION
@@ -783,7 +773,7 @@ def load_dataset_from_hf(
     requested_revision = str(dataset_revision or "").strip()
     effective_revision = requested_revision or configured_revision
 
-    console.print(f"[bold blue]Loading dataset from HuggingFace...[/]")
+    console.print("[bold blue]Loading dataset from HuggingFace...[/]")
     console.print(f"[dim]Repository: {dataset}[/]")
     console.print(f"[dim]Split: {split}[/]")
     console.print(f"[dim]Version: {effective_revision}[/]")
@@ -808,6 +798,37 @@ def load_dataset_from_hf(
         verify_loaded_dataset_revision(hf_dataset, resolved_revision)
         df = pd.DataFrame(hf_dataset)
 
+        if "instance_id" not in df.columns:
+            raise ValueError("dataset is missing required 'instance_id' field")
+        df["instance_id"] = df["instance_id"].apply(
+            lambda value: normalize_instance_id(
+                value,
+                field="dataset field 'instance_id'",
+            )
+        )
+        duplicate_ids = sorted(
+            set(df.loc[df["instance_id"].duplicated(keep=False), "instance_id"].tolist())
+        )
+        if duplicate_ids:
+            raise ValueError(f"dataset contains duplicate instance_id values: {', '.join(duplicate_ids)}")
+        if "FAIL_TO_PASS" not in df.columns:
+            raise ValueError("dataset is missing required 'FAIL_TO_PASS' field")
+        df["FAIL_TO_PASS"] = df["FAIL_TO_PASS"].apply(
+            lambda value: normalize_test_ids(
+                value,
+                field="dataset field 'FAIL_TO_PASS'",
+                allow_empty=False,
+            )
+        )
+        if "PASS_TO_PASS" in df.columns:
+            df["PASS_TO_PASS"] = df["PASS_TO_PASS"].apply(
+                lambda value: normalize_test_ids(
+                    value,
+                    field="dataset field 'PASS_TO_PASS'",
+                    allow_empty=True,
+                )
+            )
+
         # Determine level from instance_id's last segment (e.g., "xxx.lv1" -> level 1)
         def get_level_from_instance_id(instance_id: str) -> int:
             last_segment = instance_id.split(".")[-1] if instance_id else ""
@@ -818,11 +839,13 @@ def load_dataset_from_hf(
             else:
                 raise RuntimeError(f"Unknown level: {last_segment} in instance_id: {instance_id}")
 
-        df['level'] = df['instance_id'].apply(get_level_from_instance_id)
+        df["level"] = df["instance_id"].apply(get_level_from_instance_id)
 
-        lv1_count = len(df[df['level'] == 1])
-        lv2_count = len(df[df['level'] == 2])
-        console.print(f"[green]Loaded {lv1_count} Level 1 + {lv2_count} Level 2 = {len(df)} instances from split '{split}'[/]")
+        lv1_count = len(df[df["level"] == 1])
+        lv2_count = len(df[df["level"] == 2])
+        console.print(
+            f"[green]Loaded {lv1_count} Level 1 + {lv2_count} Level 2 = {len(df)} instances from split '{split}'[/]"
+        )
         return df
 
     except Exception as e:
@@ -841,17 +864,19 @@ def resolve_eval_dataset_revision(
     """Resolve the dataset revision for evaluation.
 
     An explicit CLI value wins. Otherwise, evaluation follows the revision
-    recorded by inference. Runs created before revision tracking belong to the
-    original v1.0 dataset. When no run metadata is available, the dataset
-    loader falls back to the configured/default revision.
+    recorded by inference. Current run metadata must declare that revision.
+    When no run metadata is available, the dataset loader uses the
+    configured/default revision.
     """
     requested_revision = str(cli_revision or "").strip()
     if requested_revision:
         return requested_revision
 
-    if run_metadata:
+    if run_metadata is not None:
         recorded_revision = str(run_metadata.get("dataset_revision") or "").strip()
-        return recorded_revision or "v1.0"
+        if not recorded_revision:
+            raise ValueError("run_metadata.json is missing required dataset_revision")
+        return recorded_revision
 
     return None
 
@@ -870,7 +895,8 @@ def parse_args() -> argparse.Namespace:
         help="Path to config.toml (used for HF_TOKEN/HF_ENDPOINT when loading dataset)",
     )
     parser.add_argument(
-        "--predictions-path", "-p",
+        "--predictions-path",
+        "-p",
         type=str,
         required=True,
         help="Path to predictions JSONL file, or 'gold' to evaluate gold patch",
@@ -884,14 +910,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--n-concurrent",
-        type=int,
+        type=_positive_int,
         default=4,
         help="Number of parallel workers",
         dest="n_concurrent",
     )
     parser.add_argument(
         "--timeout",
-        type=int,
+        type=_positive_int,
         default=None,
         help="Override timeout for test execution (seconds). If not set, uses timeout_run from repo_settings",
     )
@@ -903,13 +929,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--review-codes",
-        type=lambda x: x.lower() in ['true', '1', 'yes'],
+        type=lambda x: x.lower() in ["true", "1", "yes"],
         default=False,
         help="Save agent-generated code for review (true/false)",
     )
     parser.add_argument(
         "--proxy-port",
-        type=int,
+        type=_port,
         default=None,
         help="Proxy port for network access (uses host network if set)",
     )
@@ -980,23 +1006,29 @@ def print_summary(console: Console, summary_report: dict) -> None:
         console.print(f"[bold white][{attempt_key}][/]")
         console.print(f"  [white]Total:[/] [green]{attempt_data['total_instances']}[/]")
         console.print(f"  [white]Completed:[/] [green]{attempt_data['completed_instances']}[/]")
-        console.print(f"  [white]Resolved:[/] [green]{attempt_data['resolved_instances']}[/] | [red]Unresolved: {attempt_data['unresolved_instances']}[/]")
-        not_applied_empty = attempt_data.get('not_applied_patch_empty_instances', 0)
-        not_applied_other = attempt_data.get('not_applied_patch_other_instances', 0)
+        console.print(
+            f"  [white]Resolved:[/] [green]{attempt_data['resolved_instances']}[/] | [red]Unresolved: {attempt_data['unresolved_instances']}[/]"
+        )
+        not_applied_empty = attempt_data.get("not_applied_patch_empty_instances", 0)
+        not_applied_other = attempt_data.get("not_applied_patch_other_instances", 0)
         console.print(
             "  [white]Not applied patch:[/] "
             f"[yellow]empty:[/] [yellow]{not_applied_empty}[/]"
             f" | [yellow]other:[/] [yellow]{not_applied_other}[/]"
             f" | [red]Errors: {attempt_data['error_instances']}[/]"
         )
-        console.print(f"  [white]Resolved rate:[/] [bold green]{attempt_data['resolved_rate'] * 100:.1f}%[/]")
-        console.print(f"  [white]Avg F2P pass rate:[/] [bold green]{attempt_data['pass_rate'] * 100:.1f}%[/]")
+        console.print(
+            f"  [white]Resolved rate:[/] [bold green]{attempt_data['resolved_rate'] * 100:.1f}%[/]"
+        )
+        console.print(
+            f"  [white]Avg F2P pass rate:[/] [bold green]{attempt_data['pass_rate'] * 100:.1f}%[/]"
+        )
 
     console.print()
     console.print("[bold cyan]" + "=" * 60 + "[/]")
 
 
-def main():
+def main() -> int:
     """Main entry point for FeatureBench evaluation."""
     args = parse_args()
 
@@ -1007,7 +1039,7 @@ def main():
     output_dir = Path("./runs/gold") if use_gold_patch else predictions_path.parent
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Auto-detect white-box mode from FeatureBench infer metadata (best-effort).
+    # Auto-detect white-box mode from validated FeatureBench infer metadata.
     #
     # Rationale: harness is typically pointed at runs/<ts>/output.jsonl. In that folder,
     # featurebench.infer writes run_metadata.json which contains `white_box`. When enabled,
@@ -1015,17 +1047,13 @@ def main():
     # "patch touches deleted test file" apply failures.
     white_enabled = False
     run_metadata = None
-    try:
-        metadata_path = output_dir / "run_metadata.json"
-        if not use_gold_patch and metadata_path.exists():
-            with open(metadata_path, "r", encoding="utf-8") as f:
-                meta = json.load(f)
-            if isinstance(meta, dict):
-                run_metadata = meta
-                white_enabled = meta.get("white_box") is True
-    except Exception:
-        white_enabled = False
-        run_metadata = None
+    metadata_path = output_dir / "run_metadata.json"
+    if not use_gold_patch and metadata_path.exists():
+        try:
+            run_metadata = RunMetadata.load(metadata_path).to_dict()
+        except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            raise RuntimeError(f"Invalid inference metadata {metadata_path}: {exc}") from exc
+        white_enabled = run_metadata["white_box"] is True
 
     dataset_revision = resolve_eval_dataset_revision(
         args.dataset_version,
@@ -1037,7 +1065,7 @@ def main():
     console.print("[bold cyan]" + "=" * 60 + "[/]")
     console.print("[bold cyan]FeatureBench Evaluation[/]")
     if use_gold_patch:
-        console.print(f"[white]Predictions:[/] [green]gold (from dataset 'patch' field)[/]")
+        console.print("[white]Predictions:[/] [green]gold (from dataset 'patch' field)[/]")
     else:
         console.print(f"[white]Predictions:[/] [green]{predictions_path}[/]")
     console.print(f"[white]Output:[/] [green]{output_dir}[/]")
@@ -1047,17 +1075,17 @@ def main():
     if args.timeout:
         console.print(f"[white]Timeout:[/] [green]{args.timeout}s (override)[/]")
     else:
-        console.print(f"[white]Timeout:[/] [green]from repo_settings[/]")
+        console.print("[white]Timeout:[/] [green]from repo_settings[/]")
     if args.gpu_ids:
         console.print(f"[white]GPUs:[/] [green]{args.gpu_ids}[/]")
     else:
-        console.print(f"[white]GPUs:[/] [green]all available[/]")
+        console.print("[white]GPUs:[/] [green]all available[/]")
     if args.proxy_port:
         console.print(f"[white]Proxy:[/] [green]http://{DOCKER_HOST_GATEWAY}:{args.proxy_port}[/]")
     if args.review_codes:
-        console.print(f"[white]Review codes:[/] [yellow]ENABLED[/]")
+        console.print("[white]Review codes:[/] [yellow]ENABLED[/]")
     if white_enabled:
-        console.print(f"[white]White-box (harness):[/] [yellow]ENABLED[/]")
+        console.print("[white]White-box (harness):[/] [yellow]ENABLED[/]")
     console.print("[bold cyan]" + "=" * 60 + "[/]")
     console.print()
 
@@ -1071,10 +1099,12 @@ def main():
     )
 
     # Load predictions
-    console.print(f"[bold blue]Loading predictions...[/]")
+    console.print("[bold blue]Loading predictions...[/]")
     if use_gold_patch:
         if "patch" not in dataset.columns:
-            raise RuntimeError("Dataset does not contain required 'patch' field for --predictions-path gold")
+            raise RuntimeError(
+                "Dataset does not contain required 'patch' field for --predictions-path gold"
+            )
         before_gold_filter = len(dataset)
         dataset_gold = dataset[~dataset[KEY_INSTANCE_ID].astype(str).str.endswith("lv2")]
         filtered_lv2 = before_gold_filter - len(dataset_gold)
@@ -1111,26 +1141,29 @@ def main():
     if args.task_ids:
         predictions = filter_predictions_by_ids(predictions, args.task_ids)
         console.print(f"[yellow]Filtered to {len(predictions)} predictions[/]")
+        selected_ids = {prediction[KEY_INSTANCE_ID] for prediction in predictions}
+        missing_requested_ids = set(args.task_ids) - selected_ids
+        if missing_requested_ids:
+            missing = ", ".join(sorted(missing_requested_ids))
+            raise ValueError(f"No evaluable prediction found for requested task IDs: {missing}")
 
     # Match predictions with dataset
     instances_to_eval = []
-    missing_count = 0
+    missing_ids = []
     for pred in predictions:
         instance_id = pred[KEY_INSTANCE_ID]
         instance = get_instance_from_dataset(dataset, instance_id)
         if instance is None:
-            missing_count += 1
+            missing_ids.append(instance_id)
             continue
         # Precompute docker runtime config once (avoids repeating repo_settings parsing in workers)
-        try:
-            repo_settings = parse_repo_settings(instance)
-            docker_runtime_config = get_docker_runtime_config(repo_settings)
-        except Exception:
-            docker_runtime_config = {}
+        repo_settings = parse_repo_settings(instance)
+        docker_runtime_config = get_docker_runtime_config(repo_settings)
         instances_to_eval.append((instance, pred, docker_runtime_config))
 
-    if missing_count > 0:
-        console.print(f"[yellow]Warning: {missing_count} instances not found in dataset[/]")
+    if missing_ids:
+        missing = ", ".join(sorted(missing_ids))
+        raise ValueError(f"Prediction instances not found in the selected dataset: {missing}")
 
     total_tasks = len(instances_to_eval)
     console.print(f"[bold blue]Tasks to evaluate: {total_tasks}[/]")
@@ -1138,7 +1171,7 @@ def main():
 
     if total_tasks == 0:
         console.print("[bold red]No tasks to evaluate![/]")
-        return
+        return 1
 
     # Track success/failure counts
     resolved_count = 0
@@ -1202,10 +1235,7 @@ def main():
     )
 
     task_progress = progress.add_task(
-        "[cyan]Evaluating...",
-        total=total_tasks,
-        resolved=0,
-        failed=0
+        "[cyan]Evaluating...", total=total_tasks, resolved=0, failed=0
     )
 
     with Live(
@@ -1250,19 +1280,18 @@ def main():
 
                 except Exception as e:
                     failed_count += 1
-                    results.append({
-                        "instance_id": instance_id,
-                        "completed": False,
-                        "resolved": False,
-                        "patch_applied": False,
-                        "error": str(e),
-                    })
+                    results.append(
+                        {
+                            "instance_id": instance_id,
+                            "completed": False,
+                            "resolved": False,
+                            "patch_applied": False,
+                            "error": str(e),
+                        }
+                    )
 
                 progress.update(
-                    task_progress,
-                    advance=1,
-                    resolved=resolved_count,
-                    failed=failed_count
+                    task_progress, advance=1, resolved=resolved_count, failed=failed_count
                 )
         except KeyboardInterrupt:
             container_cleanup.request_shutdown()
@@ -1282,14 +1311,16 @@ def main():
 
     summary_report = generate_summary_report(results, output_dir)
 
-    summary_report_path = output_dir / "report.json"
-    with open(summary_report_path, "w", encoding=UTF8) as f:
-        json.dump(summary_report, f, indent=4)
+    summary_report_path = save_summary_report(summary_report, output_dir)
 
     console.print(f"[green]Report saved to: {summary_report_path}[/]")
 
     # Print summary
     print_summary(console, summary_report)
+    if any(not result.get("completed", False) for result in results):
+        console.print("[bold red]Evaluation ended with incomplete tasks[/]")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

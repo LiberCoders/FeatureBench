@@ -4,15 +4,17 @@ Based on SWE-Bench's run_infer.py implementation.
 """
 
 import logging
+import shlex
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from docker.models.containers import Container
 
 from featurebench.environment_fixes import apply_environment_fixes
 from featurebench.infer.container import ContainerManager
 from featurebench.infer.models import TaskInstance
+from featurebench.utils.identifiers import testbed_test_file
 
 
 class RuntimeHandler:
@@ -182,28 +184,17 @@ class RuntimeHandler:
             self.logger.info("Step 3: White-box enabled; keeping FAIL_TO_PASS test files visible")
         else:
             self.logger.info("Step 3: Deleting F2P test files")
-            fail_to_pass = instance.fail_to_pass
-
-            if fail_to_pass:
-                f2p_tests = fail_to_pass if isinstance(fail_to_pass, list) else [fail_to_pass]
-
-                for f2p_test in f2p_tests:
-                    # Ensure path starts with /testbed/
-                    if not f2p_test.startswith('/testbed/'):
-                        f2p_test_path = f'/testbed/{f2p_test}'
-                    else:
-                        f2p_test_path = f2p_test
-
-                    self.logger.info(f"Deleting F2P test file: {f2p_test_path}")
-                    exit_code, _ = self.cm.exec_command(
-                        container,
-                        f"rm -f {f2p_test_path}",
-                        log_file=log_file
-                    )
-                    if exit_code != 0:
-                        self.logger.warning(f"Failed to delete F2P test file {f2p_test_path}")
-            else:
-                self.logger.warning("No FAIL_TO_PASS tests found")
+            assert instance.fail_to_pass is not None
+            for f2p_test in instance.fail_to_pass:
+                f2p_test_file = testbed_test_file(f2p_test)
+                self.logger.info(f"Deleting F2P test file: {f2p_test_file}")
+                exit_code, _ = self.cm.exec_command(
+                    container,
+                    f"rm -f -- {shlex.quote(f2p_test_file)}",
+                    log_file=log_file,
+                )
+                if exit_code != 0:
+                    self.logger.warning(f"Failed to delete F2P test file {f2p_test_file}")
         
         # Step 4: Apply repository-specific environment fixes. This must happen
         # before Git is reinitialized so cleanup is part of the task baseline,

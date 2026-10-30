@@ -26,9 +26,7 @@ def test_make_image_pull_spec_adds_official_tag_for_prefix_override(monkeypatch)
 def test_make_image_pull_spec_skips_official_tag_without_prefix_override(monkeypatch) -> None:
     monkeypatch.delenv("FEATUREBENCH_IMAGE_PREFIX", raising=False)
 
-    spec = pull_images._make_image_pull_spec(
-        "libercoders/featurebench-specs_trl-instance_725be9aa"
-    )
+    spec = pull_images._make_image_pull_spec("libercoders/featurebench-specs_trl-instance_725be9aa")
 
     assert spec == ImagePullSpec(
         image="docker.io/libercoders/featurebench-specs_trl-instance_725be9aa",
@@ -64,4 +62,3 @@ def test_docker_pull_tags_official_image(monkeypatch) -> None:
             "docker.io/libercoders/featurebench-specs_trl-instance_725be9aa",
         ],
     ]
-

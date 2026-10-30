@@ -1,10 +1,6 @@
 """Constants for FeatureBench evaluation harness."""
 
 from enum import Enum
-from pathlib import Path
-
-# Directory constants
-FB_BENCH_DIR = Path(__file__).parent.parent
 
 # Docker constants
 DOCKER_USER = "root"
@@ -29,9 +25,6 @@ APPLY_PATCH_PASS = ">>>>> Applied Patch"
 # Encoding
 UTF8 = "utf-8"
 
-# Default pytest command
-DEFAULT_PYTEST_CMD = "pytest -rA -p no:cacheprovider --color=no"
-
 
 # Test Status Enum - PASSED, FAILED, ERROR, XFAIL, SKIPPED
 class TestStatus(Enum):
@@ -50,6 +43,4 @@ class EvalType(Enum):
 
 # Repos that use FAIL_ONLY evaluation mode
 # For these repos, only FAILED and ERROR count as failure; everything else silently passes
-FAIL_ONLY_REPOS: set[str] = {
-    # Add repo names here that should use FAIL_ONLY mode
-}
+FAIL_ONLY_REPOS: set[str] = set()

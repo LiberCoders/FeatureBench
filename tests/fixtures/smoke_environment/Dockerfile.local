@@ -1,0 +1,13 @@
+ARG BASE_IMAGE=python:3.12-slim-bookworm
+FROM ${BASE_IMAGE}
+
+USER root
+RUN rm -rf /testbed /opt/featurebench
+COPY python_repo/ /testbed/
+WORKDIR /testbed
+RUN python -m pip install --no-cache-dir --no-build-isolation --no-deps -e . \
+    && git init \
+    && git config user.email featurebench@localhost \
+    && git config user.name FeatureBench \
+    && git add -A \
+    && git -c commit.gpgsign=false commit -m baseline

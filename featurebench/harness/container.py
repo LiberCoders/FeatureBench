@@ -6,7 +6,6 @@ import io
 import logging
 import os
 import tarfile
-import time
 import threading
 import shlex
 from datetime import datetime

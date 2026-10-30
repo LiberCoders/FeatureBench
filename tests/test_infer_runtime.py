@@ -31,7 +31,7 @@ def _level1_instance():
         image_name="image:latest",
         level=1,
         patch="diff --git a/module.py b/module.py\n",
-        fail_to_pass=[],
+        fail_to_pass=["tests/test_feature.py::test_feature"],
     )
 
 
@@ -91,9 +91,7 @@ def test_level1_removes_python_bytecode_before_git_baseline(tmp_path):
     )
 
     bytecode_index = next(
-        index
-        for index, command in enumerate(manager.commands)
-        if "__pycache__" in command
+        index for index, command in enumerate(manager.commands) if "__pycache__" in command
     )
     bytecode_command = manager.commands[bytecode_index]
     git_init_index = next(

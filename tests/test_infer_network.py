@@ -68,21 +68,17 @@ def test_resolve_loopback_base_url_includes_translated_docker_gateway():
 
 
 def test_resolve_known_provider_default_and_reject_unknown_provider():
-    assert resolve_model_api_endpoints(
-        "mini_swe_agent", "deepseek/deepseek-v4", {}
-    ) == (ApiEndpoint("api.deepseek.com", 443),)
+    assert resolve_model_api_endpoints("mini_swe_agent", "deepseek/deepseek-v4", {}) == (
+        ApiEndpoint("api.deepseek.com", 443),
+    )
 
     with pytest.raises(ValueError, match="Pass --base-url explicitly"):
         resolve_model_api_endpoints("mini_swe_agent", "custom/model", {})
 
 
 def test_allowlist_proxy_allows_only_configured_origin():
-    allowed_server = http.server.ThreadingHTTPServer(
-        ("127.0.0.1", 0), _QuietHttpHandler
-    )
-    denied_server = http.server.ThreadingHTTPServer(
-        ("127.0.0.1", 0), _QuietHttpHandler
-    )
+    allowed_server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _QuietHttpHandler)
+    denied_server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _QuietHttpHandler)
     allowed_thread = _start_server(allowed_server)
     denied_thread = _start_server(denied_server)
 
@@ -115,14 +111,10 @@ def test_allowlist_proxy_allows_only_configured_origin():
 
 
 def test_allowlist_proxy_can_chain_through_configured_upstream_proxy():
-    target_server = http.server.ThreadingHTTPServer(
-        ("127.0.0.1", 0), _QuietHttpHandler
-    )
+    target_server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _QuietHttpHandler)
     target_thread = _start_server(target_server)
     target = ApiEndpoint("127.0.0.1", target_server.server_address[1])
-    upstream = _AllowlistProxyServer(
-        ("127.0.0.1", 0), [target], None, logging.getLogger("test")
-    )
+    upstream = _AllowlistProxyServer(("127.0.0.1", 0), [target], None, logging.getLogger("test"))
     upstream_thread = _start_server(upstream)
     downstream = _AllowlistProxyServer(
         ("127.0.0.1", 0),
@@ -132,9 +124,7 @@ def test_allowlist_proxy_can_chain_through_configured_upstream_proxy():
     )
     downstream_thread = _start_server(downstream)
     try:
-        response = _proxy_get(
-            downstream.server_address[1], target_server.server_address[1]
-        )
+        response = _proxy_get(downstream.server_address[1], target_server.server_address[1])
     finally:
         downstream.shutdown()
         downstream.server_close()

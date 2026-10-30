@@ -1,0 +1,7 @@
+module: phpunit
+match:
+  test_frameworks: [phpunit]
+runner_guidance:
+  - >-
+    Use PHPUnit's version-appropriate list and JUnit/log output. Keep data-provider cases distinct and map
+    requested IDs to one bounded filtered PHPUnit invocation.
