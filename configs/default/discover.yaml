@@ -5,7 +5,7 @@ discovery:
   # 请求 GitHub REST API 时声明的版本。
   github_api_version: "2022-11-28"
   # 请求头中发送给 GitHub 的应用标识。
-  github_user_agent: FeatureBench/0.2.3
+  github_user_agent: FeatureBench/0.3.0
   # 保存 GitHub Token 的宿主机环境变量名。
   github_token_env: GITHUB_TOKEN
   # 搜索模式允许的仓库主要编程语言；空列表表示不限制语言。

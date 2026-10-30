@@ -278,7 +278,7 @@ class AgentSettings(AgentFactorySettings):
 class DiscoverySettings(StrictModel):
     github_api_url: str = "https://api.github.com"
     github_api_version: str = "2022-11-28"
-    github_user_agent: str = "FeatureBench/0.2.3"
+    github_user_agent: str = "FeatureBench/0.3.0"
     github_token_env: str = "GITHUB_TOKEN"
     languages: tuple[str, ...] = (
         "Python",
