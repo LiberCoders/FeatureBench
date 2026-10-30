@@ -25,11 +25,16 @@ through extensible Adapters.
 
 📦 **2026.08.24**: We released **FeatureBench Dataset V1.1**, primarily correcting inconsistencies and omissions in task problem statements.
 
+<details>
+<summary><b>Previous News</b></summary>
+
 📊 **2026.05.18**: We added **lite split** evaluation results for frontier models including **GPT-5.5, Claude Opus 4.7, DeepSeek-V4, GLM-5.1, Kimi-2.6, Mimo-V2.5-Pro**, and more to the leaderboard.
 
 🚀 **2026.03.27**: We released the **fast split** containing 100 instances (a subset of full split). These instances require no GPU and are optimized for rapid evaluation. On an Intel Xeon Platinum 8457C with 944GB RAM, the average evaluation time per instance using gold patches is **57.2 seconds**.
 
 🎁 **2026.02.06**: We added one-click inference for mainstream agent frameworks, including **OpenHands, Claude Code, Codex, Gemini CLI, and mini-swe-agent**. All supported agent frameworks can be found [here](featurebench/infer/agents/).
+
+</details>
 
 <!-- LEADERBOARD_START -->
 ## 🏆 Leaderboard
