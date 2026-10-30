@@ -1,196 +1,196 @@
-# FeatureBench Adapter 数据生成配置。
+# Data generation configuration for the FeatureBench adapter.
 featurebench:
-  # 同时处理的 Environment 数量；每个 Environment 对应一个仓库。
+  # Number of environments processed concurrently; each environment corresponds to one repository.
   environment_concurrency: 8
-  # 本次 Generate/Resume 全局共享的端到端 Seed 流水线名额；从 Top 到最终 Gold Closure 全程占用。
+  # Global end-to-end seed pipeline slots shared by this Generate/Resume run; each slot remains occupied from Top through final Gold Closure.
   seed_concurrency: 16
-  # easy_first 按确定性可行性与预计成本调度；path 保留文件路径顺序。
+  # easy_first schedules by deterministic feasibility and estimated cost; path preserves file path order.
   seed_ordering: easy_first
 
-  # ---------- 数据质量 ----------
-  # Gold Patch 生产代码行数的绝对下限。
+  # ---------- Data quality ----------
+  # Absolute minimum production-code line count in the gold patch.
   gold_patch_line_minimum: 200
-  # 优先在该值到 maximum 的区间求解；首选区间被证明无解后才回退到 minimum。
+  # Prefer solving between this value and the maximum; fall back to the minimum only after the preferred range is proven infeasible.
   gold_patch_line_preferred_minimum: 600
-  # Gold Patch 生产代码行数的绝对上限。
+  # Absolute maximum production-code line count in the gold patch.
   gold_patch_line_maximum: 1000
-  # 至少产生多少个 F2P 测试点。
+  # Minimum number of F2P test points to produce.
   minimum_f2p_test_points: 1
-  # F2P 测试点绝对上限；null 表示不限制。
+  # Absolute maximum F2P test points; null sets no limit.
   maximum_f2p_test_points: null
-  # 最终选中的 P2P 测试点最多来自多少个物理测试文件；限制文件级 import、fixture 与 collection 成本；null 表示不限制。
+  # Maximum physical test files contributing selected P2P points, limiting file-level import, fixture, and collection costs; null sets no limit.
   maximum_selected_p2p_test_files: 64
-  # 最终至少保留多少个 P2P 测试点。
+  # Minimum P2P test points to retain in the final selection.
   minimum_remaining_p2p_test_points: 10
-  # P2P 测试点上限；超过时选择代表点而非拒绝 Seed，null 表示尽可能多地保留。
+  # Maximum P2P test points; select representative points when exceeded rather than rejecting the seed; null retains as many as possible.
   maximum_p2p_test_points: 3000
-  # F2P / (F2P + P2P) 的上限。
+  # Maximum F2P / (F2P + P2P) ratio.
   maximum_f2p_ratio: 0.7
-  # Seed 测试文件中允许继续通过的测试点比例上限。
+  # Maximum fraction of test points in the seed test file allowed to keep passing.
   maximum_seed_pass_rate: 0.9
-  # 每个环境最多成功产出多少条任务；null 表示尝试全部有效 Seed。
+  # Maximum tasks successfully produced per environment; null tries all valid seeds.
   maximum_tasks_per_environment: null
 
-  # ---------- Top 候选选择 ----------
-  # 沿动态调用图寻找 Top 候选的最大深度。
+  # ---------- Top candidate selection ----------
+  # Maximum depth for finding Top candidates along the dynamic call graph.
   top_max_depth: 5
-  # 每次独立 Top LLM 调用检查的动态候选对象数。
+  # Dynamic candidate objects examined per independent Top LLM call.
   top_batch_size: 20
-  # 单个测试文件同一 BFS 层的 Top LLM 调用并发数。
+  # Concurrent Top LLM calls at the same BFS depth within one test file.
   top_batch_concurrency: 1
 
-  # ---------- Mask 后修复 ----------
+  # ---------- Repair after masking ----------
   repair:
-    # rollback 使用确定性批量回退；agent 使用下面配置的 Repair Agent。
+    # rollback uses deterministic batch rollback; agent uses the Repair Agent configured below.
     strategy: rollback
-    # first_accepted 在首个满足全部硬门槛的方案处停止；interval_center 继续逼近区间中心。
+    # first_accepted stops at the first plan satisfying all hard constraints; interval_center continues toward the center of the range.
     optimization_target: first_accepted
-    # rollback 最多启动的唯一真实验证数；不含初始验证和缓存命中。
+    # Maximum unique actual validations started by rollback, excluding initial validation and cache hits.
     maximum_validations: 10
-    # 确定性回退的总墙钟上限；Agent 模式使用 agent.repair.run_timeout_seconds。
+    # Total wall-clock limit for deterministic rollback; agent mode uses agent.repair.run_timeout_seconds.
     timeout_seconds: 3600
 
   # ---------- Adapter Agent ----------
-  # 本次 Generate/Resume 中 Top、Repair、Issue Author 共用的 Agent run 并发上限。
+  # Agent run concurrency limit shared by Top, Repair, and Issue Author in this Generate/Resume run.
   agent_concurrency: 4
-  # 这份配置只属于 FeatureBench Adapter，不会读取或继承 build.yaml 的 Agent 配置。
+  # This configuration belongs only to the FeatureBench adapter; it does not read or inherit agent settings from build.yaml.
   agent:
-    # Adapter Agent 共用的模型服务传输配置。
+    # Model service transport settings shared by adapter agents.
     provider:
-      # 是否校验模型服务的 TLS 证书；仅中转站明确要求时才设为 false。
+      # Whether to verify the model service's TLS certificate; set to false only when explicitly required by a proxy service.
       tls_verify: true
-    # 同一个工具连续触发 ModelRetry 的上限；该工具成功后单独清零。
+    # Maximum consecutive ModelRetry retries for the same tool; reset independently when that tool succeeds.
     tool_retries: 10
-    # 一次 Agent run 内结构化输出校验失败的累计重试上限。
+    # Total retry limit for structured output validation failures within one agent run.
     output_retries: 10
-    # 同一次 Agent run 内模型传输临时故障的最多重试次数；不包含首次请求。
+    # Maximum retries for transient model transport failures within one agent run, excluding the initial request.
     transient_request_retries: 10
-    # 单次模型 API 请求的网络超时；不限制完整 Agent run 的轮数。
+    # Network timeout for a single model API request; does not limit the number of turns in an agent run.
     request_timeout_seconds: 600
-    # 单次 Agent 工具调用的超时，超时会作为 ModelRetry 反馈给模型。
+    # Timeout for a single agent tool call; timeouts are reported to the model as ModelRetry.
     tool_timeout_seconds: 180
 
-    # Top Classifier 只分类确定性 BFS 提供的候选。
+    # The Top Classifier only classifies candidates supplied by deterministic BFS.
     top:
-      # Top Classifier 使用的 Pydantic AI 模型名。
+      # Pydantic AI model name used by the Top Classifier.
       model: openai:gpt-5.6-terra
-      # 单个候选批次的一次完整 Agent run 墙钟上限。
+      # Wall-clock limit for one complete agent run on a single candidate batch.
       run_timeout_seconds: 3600
 
-    # repair.strategy=agent 时，在真实环境中迭代提交 Mask 修复方案。
+    # When repair.strategy=agent, iteratively submit mask repair plans in the actual environment.
     repair:
-      # Repair Agent 使用的 Pydantic AI 模型名。
+      # Pydantic AI model name used by the Repair Agent.
       model: openai:gpt-5.6-terra
-      # 整段对话的墙钟上限；对话内可多次 submit 并运行真实验证。
+      # Wall-clock limit for the entire conversation, which may include multiple submissions and actual validations.
       run_timeout_seconds: 3600
 
-    # 为最终 Top 接口编写题面内容。
+    # Write the problem statement for the final Top interface.
     issue_author:
-      # Issue Author Agent 使用的 Pydantic AI 模型名。
+      # Pydantic AI model name used by the Issue Author Agent.
       model: openai:gpt-5.6-terra
-      # 一次完整 Issue Author Agent run 的墙钟上限。
+      # Wall-clock limit for one complete Issue Author Agent run.
       run_timeout_seconds: 3600
 
-    # Adapter Agent 的汇总指标配置。
+    # Summary metrics settings for adapter agents.
     metrics:
-      # 是否为每次完整 Agent run 追加一行汇总指标。
+      # Whether to append one summary metrics record per complete agent run.
       enabled: true
-      # Adapter Agent 指标 JSONL 的宿主机落盘位置。
+      # Host path for adapter agent metrics JSONL.
       path: .featurebench/agent-metrics.jsonl
-    # Adapter Agent 的费用估算单价配置。
+    # Token prices used to estimate adapter agent costs.
     pricing:
-      # 中转站每百万输入/输出 token 的美元单价；两者必须同时配置，null 使用内置目录估算。
+      # Proxy service prices in USD per million input/output tokens; configure both together, or use null for built-in catalog estimates.
       input_per_million_usd: null
-      # 中转站每百万输出 token 的美元单价；null 使用内置目录估算。
+      # Proxy service price in USD per million output tokens; null uses built-in catalog estimates.
       output_per_million_usd: null
-      # 中转站每百万缓存读取 token 的美元单价；null 表示不做自定义计价。
+      # Proxy service price in USD per million cache read tokens; null disables custom pricing.
       cache_read_per_million_usd: null
-      # 中转站每百万缓存写入 token 的美元单价；null 表示不做自定义计价。
+      # Proxy service price in USD per million cache write tokens; null disables custom pricing.
       cache_write_per_million_usd: null
-    # Adapter Agent 的完整轨迹保存策略。
+    # Full trajectory retention policy for adapter agents.
     trajectory:
-      # 是否保存完整 prompt、response、工具调用、重试和可恢复快照。
+      # Whether to save full prompts, responses, tool calls, retries, and resumable snapshots.
       enabled: true
-      # 每个逻辑 Agent run 独立目录的宿主机根路径。
+      # Host root directory for separate logical agent runs.
       directory: .featurebench/agent-trajectories
-      # failures 只保留失败或拒绝 Seed 的完整轨迹；all 保留全部。
+      # failures retains full trajectories only for failed or rejected seeds; all retains every trajectory.
       retention: failures
-    # 只管理当前活动上下文，不限制累计请求数或累计 token。
+    # Manage only the active context, not cumulative requests or tokens.
     compaction:
-      # 触发 Harness 分层压缩的目标上下文 token 数。
+      # Target context token count that triggers the harness's layered compaction.
       target_tokens: 240000
-      # 单个消息 part 压缩前允许保留的最大估算 token 数。
+      # Maximum estimated tokens allowed in a single message part before compaction.
       max_part_tokens: 50000
-      # 截断超大 part 时保留开头的字符数。
+      # Leading characters to retain when truncating an oversized part.
       keep_head_chars: 2000
-      # 截断超大 part 时保留结尾的字符数。
+      # Trailing characters to retain when truncating an oversized part.
       keep_tail_chars: 2000
-      # 清理旧工具结果时保留最近的完整工具调用/返回对数。
+      # Number of recent complete tool call/result pairs to retain when clearing older tool results.
       keep_tool_pairs: 6
-      # 小于该估算 token 数的旧工具结果不值得单独清理。
+      # Older tool results below this estimated token count are not worth clearing individually.
       min_clear_tokens: 4000
-      # 最终摘要压缩后仍原样保留的最近消息数。
+      # Number of recent messages to preserve verbatim after final summary compaction.
       keep_messages: 20
 
-  # ---------- 执行、并发与求解 ----------
-  # pytest 命令；动态追踪复用其中的参数。
+  # ---------- Execution, concurrency, and optimization ----------
+  # pytest command; dynamic tracing reuses its arguments.
   test_command: [pytest, -q]
-  # Environment 级 pytest/Trace 兼容性与分级 Runner 吞吐预检共享的墙钟上限。
+  # Wall-clock limit shared by environment-level pytest/Trace compatibility checks and tiered Runner throughput prechecks.
   compatibility_timeout_seconds: 120
-  # 完整 F2P + P2P 在单次 Runner 调用中的墙钟上限；最终 Task 沿用同一值。
+  # Wall-clock limit for running the full F2P + P2P set in one Runner call; the final task uses the same value.
   full_test_timeout_seconds: 600
-  # 单次候选验证的总墙钟预算；失败整批与诊断 fallback 共享，fallback 不能形成准入。
+  # Total wall-clock budget per candidate validation, shared by failed batches and diagnostic fallback; fallback cannot qualify a candidate for acceptance.
   validation_timeout_seconds: 3600
-  # 单个物理测试文件一次批量动态追踪的总墙钟预算；失败后不再拆分重试。
+  # Total wall-clock budget for one batch dynamic trace of a physical test file; do not split and retry after failure.
   trace_timeout_seconds: 600
-  # 本次 Generate/Resume 全局同时追踪多少个测试文件；每个任务使用独立容器。
+  # Maximum test files traced concurrently across this Generate/Resume run; each tracing task uses a separate container.
   trace_concurrency: 24
-  # 单个 Seed 的 CP-SAT 联合优化墙钟上限。
+  # Wall-clock limit for joint CP-SAT optimization of one seed.
   optimizer_timeout_seconds: 60
-  # CP-SAT 线程数；1 保证限时结果可复现。
+  # CP-SAT thread count; 1 ensures reproducible results under the time limit.
   optimizer_workers: 1
-  # 确定性随机种子。
+  # Deterministic random seed.
   random_seed: 0
 
-  # ---------- 输入规模保护 ----------
-  # 单份动态调用图报告的最大字节数；超限时拒绝，不截断。
+  # ---------- Input size limits ----------
+  # Maximum bytes in one dynamic call graph report; reject oversized reports rather than truncating them.
   maximum_trace_report_bytes: 200000000
-  # 源码快照与 AST 索引的墙钟超时。
+  # Wall-clock timeout for source snapshots and AST indexing.
   index_timeout_seconds: 300
-  # 源码索引最多读取的文件数。
+  # Maximum files read during source indexing.
   maximum_index_files: 10000
-  # 单个索引文件的最大字节数；超限文件会被跳过。
+  # Maximum bytes per indexed file; skip files exceeding the limit.
   maximum_index_file_bytes: 2000000
-  # 单个仓库源码快照的总字节上限。
+  # Maximum total bytes in one repository source snapshot.
   maximum_index_total_bytes: 100000000
 
-  # ---------- 题面 ----------
-  # 题面中显示的库名；null 时从 owner/repository 自动提取。
+  # ---------- Problem statement ----------
+  # Library name shown in the problem statement; null extracts it automatically from owner/repository.
   library_name: null
-  # 题面中禁止访问的 URL。
+  # URLs that the problem statement prohibits accessing.
   black_links: []
 
-  # ---------- 审计与安全 ----------
+  # ---------- Auditing and safety ----------
   audit:
-    # failures 只完整保留失败或拒绝候选现场；all 保留全部候选现场。
+    # failures retains full candidate artifacts only for failed or rejected candidates; all retains every candidate's artifacts.
     retention: failures
-  # 永不删除的关键 Python 魔术方法。
+  # Critical Python magic methods that must never be removed.
   critical_magic_methods:
-    # 保护对象实例创建入口。
+    # Preserve object instance creation.
     - __new__
-    # 保护对象初始化入口。
+    # Preserve object initialization.
     - __init__
-    # 保护缺失属性的动态解析入口。
+    # Preserve dynamic resolution of missing attributes.
     - __getattr__
-    # 保护所有属性读取入口。
+    # Preserve all attribute reads.
     - __getattribute__
-    # 保护属性写入入口。
+    # Preserve attribute writes.
     - __setattr__
-    # 保护同步上下文管理器进入入口。
+    # Preserve synchronous context manager entry.
     - __enter__
-    # 保护同步上下文管理器退出入口。
+    # Preserve synchronous context manager exit.
     - __exit__
-    # 保护异步上下文管理器进入入口。
+    # Preserve asynchronous context manager entry.
     - __aenter__
-    # 保护异步上下文管理器退出入口。
+    # Preserve asynchronous context manager exit.
     - __aexit__

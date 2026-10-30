@@ -110,7 +110,7 @@ def _block_to_html(block: LogBlock) -> str:
         f"<summary class='block-title'>"
         f"<div class='title-row'>"
         f"<span class='block-kind'>{_escape(title)}</span>"
-        f"<span class='hint'>(点击展开)</span>"
+        f"<span class='hint'>(Click to expand)</span>"
         "</div>"
         f"<pre class='preview'>{preview}</pre>"
         "</summary>"

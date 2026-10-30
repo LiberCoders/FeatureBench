@@ -1,68 +1,68 @@
-# GitHub 仓库发现阶段只读取元数据，不会在本阶段克隆仓库。
+# GitHub repository discovery reads metadata only; repositories are not cloned at this stage.
 discovery:
-  # GitHub REST API 的规范基础地址。
+  # Canonical base URL for the GitHub REST API.
   github_api_url: https://api.github.com
-  # 请求 GitHub REST API 时声明的版本。
+  # GitHub REST API version sent with requests.
   github_api_version: "2022-11-28"
-  # 请求头中发送给 GitHub 的应用标识。
+  # Application identifier sent to GitHub in request headers.
   github_user_agent: FeatureBench/0.3.0
-  # 保存 GitHub Token 的宿主机环境变量名。
+  # Host environment variable containing the GitHub token.
   github_token_env: GITHUB_TOKEN
-  # 搜索模式允许的仓库主要编程语言；空列表表示不限制语言。
+  # Allowed primary repository languages in search mode; an empty list allows all languages.
   languages: [Python, JavaScript, TypeScript, Go]
-  # 搜索模式允许的 SPDX License 标识；空列表表示不限制许可证。
+  # Allowed SPDX license identifiers in search mode; an empty list allows all licenses.
   licenses: []
-  # 追加到 GitHub 搜索查询的关键词；空列表表示不使用关键词。
+  # Keywords appended to GitHub search queries; an empty list adds no keywords.
   keywords: []
-  # 可选 TXT 输入文件，每行一个 owner/repo 或 GitHub URL；null 表示不使用文件输入。
+  # Optional TXT input file with one owner/repo or GitHub URL per line; null disables file input.
   repositories_file: null
-  # 需要定向抓取元数据的仓库列表；空列表表示使用搜索模式。
+  # Repositories to fetch metadata for explicitly; an empty list uses search mode.
   target_repositories: []
-  # 只保留在该时间及之后创建的仓库。
+  # Include only repositories created at or after this time.
   created_after: 2008-01-01T00:00:00Z
-  # 只保留在该时间及之前创建的仓库；null 表示不限制上界。
+  # Include only repositories created at or before this time; null sets no upper bound.
   created_before: null
-  # 只保留在该时间及之后有推送的仓库；null 表示不限制下界。
+  # Include only repositories pushed to at or after this time; null sets no lower bound.
   pushed_after: null
-  # 只保留在该时间及之前有推送的仓库；null 表示不限制上界。
+  # Include only repositories pushed to at or before this time; null sets no upper bound.
   pushed_before: null
-  # 仓库 Star 数量下限。
+  # Minimum repository star count.
   minimum_stars: 100
-  # 仓库 Star 数量上限；null 表示不限制。
+  # Maximum repository star count; null sets no limit.
   maximum_stars: null
-  # 整数表示执行全局 Top-K；null 表示执行无损历史分区并抓取全部匹配项。
+  # An integer selects the global top K; null uses lossless historical partitioning to fetch all matches.
   maximum_repositories: 100
-  # 是否排除 Fork 仓库。
+  # Whether to exclude forked repositories.
   exclude_forks: true
-  # 是否排除已归档仓库。
+  # Whether to exclude archived repositories.
   exclude_archived: true
-  # 是否只保留公开仓库。
+  # Whether to include only public repositories.
   public_only: true
-  # GitHub 搜索结果的排序字段，可选 updated 或 stars。
+  # GitHub search sort field: updated or stars.
   sort: updated
-  # GitHub 搜索结果的排列方向，可选 desc 或 asc。
+  # GitHub search sort order: desc or asc.
   order: desc
-  # 单次 GitHub API 分页请求返回的记录数，上限为 100。
+  # Records returned per GitHub API page; at most 100.
   requests_per_page: 100
-  # 无损模式下单个搜索分区允许覆盖的最大结果数。
+  # Maximum results covered by a single search partition in lossless mode.
   partition_result_limit: 900
-  # 无损模式下单个时间分区允许覆盖的最大天数。
+  # Maximum days covered by a single time partition in lossless mode.
   partition_max_span_days: 365
-  # 无损模式下同时执行的分区抓取任务数。
+  # Concurrent partition fetch tasks in lossless mode.
   partition_concurrency: 4
-  # 同时发送给 GitHub API 的最大请求数。
+  # Maximum concurrent requests to the GitHub API.
   max_concurrent_requests: 8
-  # 单次 GitHub API 请求的墙钟超时秒数。
+  # Wall-clock timeout in seconds for a single GitHub API request.
   request_timeout_seconds: 30
-  # 单次 GitHub API 操作失败后的总尝试次数。
+  # Total attempts for a GitHub API operation, including retries after failure.
   request_attempts: 5
-  # GitHub API 网络重试的指数退避起始秒数。
+  # Initial exponential backoff in seconds for GitHub API network retries.
   retry_base_seconds: 1
-  # GitHub API 网络重试的最大退避秒数。
+  # Maximum backoff in seconds for GitHub API network retries.
   retry_max_seconds: 60
-  # GitHub 返回 incomplete_results 时的额外重试次数。
+  # Additional retries when GitHub returns incomplete_results.
   incomplete_results_retries: 3
-  # 无损分区分页期间结果发生变化时的重新抓取次数。
+  # Refetch attempts when results change during pagination of a lossless partition.
   partition_consistency_retries: 2
-  # GitHub 未返回限流重置时间时使用的默认等待秒数。
+  # Default wait in seconds when GitHub provides no rate-limit reset time.
   rate_limit_fallback_seconds: 60

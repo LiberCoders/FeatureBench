@@ -1,171 +1,171 @@
-# 同时构建的仓库数量；不是单个容器的 CPU 数量。
+# Number of repositories to build concurrently; not the CPU count per container.
 concurrency: 4
 
 repository:
-  # 宿主机使用的 Git 可执行文件。
+  # Git executable on the host.
   git_binary: git
-  # clone、fetch、submodule、LFS 等单条 Git 命令的墙钟超时。
+  # Wall-clock timeout for each Git command, including clone, fetch, submodule, and LFS operations.
   command_timeout_seconds: 1200
-  # 未配置 github_git Source 时，同一官方地址上的 Git 网络命令总尝试次数。
-  # 配置 Source 后由 sources.services.github_git.maximum_attempts 统一限制 endpoint 数量。
+  # Total attempts for Git network commands against the same official URL when no github_git source is configured.
+  # With a source configured, sources.services.github_git.maximum_attempts limits the number of endpoints instead.
   network_attempts: 3
-  # Git 网络重试的指数退避起始秒数。
+  # Initial exponential backoff in seconds for Git network retries.
   retry_base_seconds: 2
-  # Git HTTP 传输低于该字节/秒时开始判定网络停滞。
+  # Git HTTP transfer rate in bytes per second below which a connection is considered stalled.
   low_speed_bytes_per_second: 1024
-  # Git HTTP 持续低速达到该秒数后切换下一个源。
+  # Seconds of sustained low-speed Git HTTP transfer before switching to the next source.
   low_speed_timeout_seconds: 30
-  # clone 时启用 blob 按需获取，减少临时磁盘和网络开销。
+  # Fetch blobs on demand during clone to reduce temporary disk and network usage.
   partial_clone: true
-  # 仓库声明 submodule 时是否递归物化。
+  # Whether to recursively materialize submodules declared by the repository.
   update_submodules: true
-  # submodule 并行下载任务数。
+  # Number of parallel submodule download jobs.
   submodule_jobs: 4
-  # 仓库使用 Git LFS 时是否下载真实对象；启用后 Build 会在提交任务前检查宿主机 git-lfs。
+  # Whether to download actual Git LFS objects; when enabled, Build checks for git-lfs on the host before submitting tasks.
   fetch_lfs: true
-  # 无存活租约的暂存目录超过该秒数后可作为垃圾清理。
+  # Age in seconds after which a staging directory without an active lease is eligible for cleanup.
   stale_checkout_seconds: 86400
 
 docker:
-  # 宿主机使用的 Docker CLI 可执行文件。
+  # Docker CLI executable on the host.
   binary: docker
-  # 已构建容器在分析、验证和 adapter 执行阶段使用的网络模式。
+  # Network mode for built containers during analysis, validation, and adapter execution.
   network: none
-  # Docker build 阶段使用的网络模式，依赖安装需要联网。
+  # Network mode during Docker builds; dependency installation requires network access.
   build_network: default
-  # 构建前是否刷新上游基础镜像。
+  # Whether to refresh upstream base images before building.
   pull: true
-  # create、start、exec、inspect 等普通 Docker 命令的默认超时。
+  # Default timeout for ordinary Docker commands such as create, start, exec, and inspect.
   command_timeout_seconds: 300
-  # 单个镜像源执行 docker pull 的墙钟超时，超时后切换下一个源。
+  # Wall-clock timeout for docker pull against one image source; switch to the next source on timeout.
   pull_timeout_seconds: 900
-  # docker build 的墙钟超时。
+  # Wall-clock timeout for docker build.
   build_timeout_seconds: 3600
-  # 每个 Docker 命令的 stdout、stderr 各自只保留末尾这些字符。
+  # Maximum trailing characters retained separately from stdout and stderr for each Docker command.
   max_output_chars: 100000
-  # 容器 CPU 上限；null 表示交给 Docker/宿主机决定。
+  # Container CPU limit; null leaves the decision to Docker and the host.
   cpus: 8
-  # 容器内存上限，例如 8g；null 表示不额外限制。
+  # Container memory limit, such as 8g; null adds no limit.
   memory: 16g
-  # 仅必需 GPU 的仓库会传给 docker create --gpus；null 表示未配置 GPU。
+  # Passed to docker create --gpus only for repositories that require a GPU; null means no GPU is configured.
   gpus: null
 
-# Pydantic AI 与 pydantic-ai-harness 只在宿主机运行，不会装进任务镜像。
+# Pydantic AI and pydantic-ai-harness run only on the host and are not installed in task images.
 agent:
-  # 所有环境构建 Agent 使用的 Pydantic AI 模型名。
+  # Pydantic AI model name used by all environment build agents.
   model: openai:gpt-5.6-luna
   provider:
-    # 是否校验模型服务的 TLS 证书；仅中转站明确要求时才设为 false。
+    # Whether to verify the model service's TLS certificate; set to false only when explicitly required by a proxy service.
     tls_verify: true
-  # 同一个工具连续触发 ModelRetry 的上限；该工具成功后单独清零。
+  # Maximum consecutive ModelRetry retries for the same tool; reset independently when that tool succeeds.
   tool_retries: 10
-  # 一次 Agent run 内结构化输出校验失败的累计重试上限。
+  # Total retry limit for structured output validation failures within one agent run.
   output_retries: 10
-  # 同一次 Agent run 内模型传输临时故障的最多重试次数；不包含首次请求。
+  # Maximum retries for transient model transport failures within one agent run, excluding the initial request.
   transient_request_retries: 10
-  # 一次完整 Analysis Agent run 的墙钟超时。
+  # Wall-clock timeout for one complete Analysis Agent run.
   analysis_run_timeout_seconds: 600
-  # 一次完整 Artifact Agent run 的墙钟超时。
+  # Wall-clock timeout for one complete Artifact Agent run.
   artifact_run_timeout_seconds: 600
-  # 独立 Runner Review Agent 审查一次完整 Runner 源码的墙钟超时。
+  # Wall-clock timeout for the independent Runner Review Agent to review the complete Runner source.
   runner_review_run_timeout_seconds: 300
-  # 单次模型 API 请求的网络超时；不限制完整 Agent run 的轮数。
+  # Network timeout for a single model API request; does not limit the number of turns in an agent run.
   request_timeout_seconds: 180
-  # 单次 Agent 工具调用的超时，超时会作为 ModelRetry 反馈给模型。
+  # Timeout for a single agent tool call; timeouts are reported to the model as ModelRetry.
   tool_timeout_seconds: 180
   metrics:
-    # 是否为每次完整 Agent run 追加一行汇总指标。
+    # Whether to append one summary metrics record per complete agent run.
     enabled: true
-    # Agent 指标 JSONL 的宿主机落盘位置。
+    # Host path for agent metrics JSONL.
     path: .featurebench/agent-metrics.jsonl
   pricing:
-    # 中转站每百万输入/输出 token 的美元单价；两者必须同时配置，null 使用内置目录估算。
+    # Proxy service prices in USD per million input/output tokens; configure both together, or use null for built-in catalog estimates.
     input_per_million_usd: null
     output_per_million_usd: null
-    # 中转站每百万缓存读取/写入 token 的美元单价；null 表示不做自定义计价。
+    # Proxy service prices in USD per million cache read/write tokens; null disables custom pricing.
     cache_read_per_million_usd: null
     cache_write_per_million_usd: null
   trajectory:
-    # 是否保存完整 prompt、response、工具调用、重试和可恢复快照。
+    # Whether to save full prompts, responses, tool calls, retries, and resumable snapshots.
     enabled: true
-    # 每个逻辑 Agent run 独立目录的根路径；网络重试分别写入 attempt-* 子目录。
+    # Root directory for separate logical agent runs; network retries are written to individual attempt-* subdirectories.
     directory: .featurebench/agent-trajectories
-    # failures 只长期保留失败或拒绝仓库的轨迹；all 保留所有仓库轨迹。
+    # failures retains trajectories only for failed or rejected repositories long-term; all retains every repository's trajectories.
     retention: failures
-  # 以下参数只管理当前活动上下文，不限制累计请求数或累计 token。
+  # The following settings manage only the active context, not cumulative requests or tokens.
   compaction:
-    # 触发 Harness 分层压缩的目标上下文 token 数。
+    # Target context token count that triggers the harness's layered compaction.
     target_tokens: 240000
-    # 单个消息 part 压缩前允许保留的最大估算 token 数。
+    # Maximum estimated tokens allowed in a single message part before compaction.
     max_part_tokens: 50000
-    # 截断超大 part 时保留开头的字符数。
+    # Leading characters to retain when truncating an oversized part.
     keep_head_chars: 2000
-    # 截断超大 part 时保留结尾的字符数。
+    # Trailing characters to retain when truncating an oversized part.
     keep_tail_chars: 2000
-    # 清理旧工具结果时保留最近的完整工具调用/返回对数。
+    # Number of recent complete tool call/result pairs to retain when clearing older tool results.
     keep_tool_pairs: 6
-    # 小于该估算 token 数的旧工具结果不值得单独清理。
+    # Older tool results below this estimated token count are not worth clearing individually.
     min_clear_tokens: 4000
-    # 最终摘要压缩后仍原样保留的最近消息数。
+    # Number of recent messages to preserve verbatim after final summary compaction.
     keep_messages: 20
 
 environment:
-  # 所有任务镜像内仓库的唯一标准路径。
+  # Canonical repository path inside every task image.
   workdir: /testbed
-  # Analysis/Artifact Agent 首轮检查仓库时使用的语言无关镜像。
+  # Language-neutral image used by Analysis/Artifact Agents for initial repository inspection.
   planner_image: ubuntu:24.04
-  # false 只拒绝测试必须依赖 GPU 的仓库；GPU 可选仓库仍可走 CPU 路径。
+  # false rejects only repositories whose tests require a GPU; repositories with optional GPU support may still use CPU execution.
   allow_gpu_repositories: false
-  # 自包含 Dockerfile 内单条 clone/fetch/checkout/submodule/LFS Git 命令的墙钟上限。
+  # Wall-clock limit for each clone/fetch/checkout/submodule/LFS Git command in the self-contained Dockerfile.
   clone_command_timeout_seconds: 300
-  # 自包含 Dockerfile 内 Git 传输低于该字节/秒时开始判定源停滞。
+  # Git transfer rate in bytes per second below which a source is considered stalled in the self-contained Dockerfile.
   clone_low_speed_bytes_per_second: 1024
-  # 自包含 Dockerfile 内 Git 持续低速达到该秒数后让构建失败并切换下一个源。
+  # Seconds of sustained low-speed Git transfer in the self-contained Dockerfile before failing the build and switching sources.
   clone_low_speed_timeout_seconds: 30
-  # Runner 收集测试和 Quickcheck 抽样运行的单次墙钟上限。
+  # Wall-clock limit for each Runner test collection or Quickcheck sample run.
   collect_timeout_seconds: 600
-  # 环境至少需要该数量的测试点：collect 少于此值时立即修复；完整基线后真实 passed 少于此值时放弃该环境。
+  # Minimum test points: repair immediately if collection falls short; reject the environment if actual passes after the full baseline fall short.
   min_verified_test_points: 10
-  # 完整基线先按测试文件分组，再按该上限确定性切分；避免单个超大测试文件形成无界 Runner 请求。
+  # Group the full baseline by test file, then split deterministically at this limit to prevent oversized files from creating unbounded Runner requests.
   baseline_group_max_test_points: 100
-  # 完整基线所有分组共享的总墙钟时限；每组使用当时剩余时间，耗尽后不再启动新分组。
+  # Total wall-clock budget shared by all full-baseline groups; each group uses the remaining time, and no new groups start once it is exhausted.
   baseline_total_timeout_seconds: 1800
-  # 单个仓库从在线克隆、Agent 分析、产物编写到全部构建/验证/修复的总墙钟上限；超时后本仓库记为 failed，并清理候选容器与中间镜像。
+  # Total wall-clock limit per repository, from online cloning through agent analysis, artifact authoring, and all build/validation/repair steps; on timeout, mark it failed and clean up candidate containers and intermediate images.
   total_timeout_seconds: 7200
-  # Quickcheck 从 collect 结果中按 commit 和测试 ID 确定性抽取的测试点数量；collect 不足时取全部，即 min(配置值, collect 数量)。
+  # Quickcheck test points sampled deterministically from collection using the commit and test IDs; use all if fewer are available, i.e. min(configured value, collected count).
   quickcheck_test_points: 10
-  # Quickcheck 样本的最低真实通过率；低于该比例说明环境或 Runner 尚未达到可接受健康度并交回 Agent 修复。
+  # Minimum actual pass rate for the Quickcheck sample; a lower rate returns the environment or Runner to the agent for repair.
   quickcheck_min_pass_rate: 0.5
-  # 测试收集结果必须连续一致的运行次数。
+  # Number of consecutive runs that must produce identical test collection results.
   collect_stability_runs: 2
-  # Docker 构建或验证失败后，带真实错误交回 Agent 修复的总轮数；达到 10 轮才放弃该仓库。
+  # Maximum build/validation attempts, returning actual failures to the agent for repair; abandon the repository only after 10 attempts.
   max_build_attempts: 10
-  # 修复成功或失败后是否删除不再使用的“中间”镜像标签。
+  # Whether to delete unused intermediate image tags after repair succeeds or fails.
   cleanup_intermediate_images: true
   audit:
-    # 是否额外生成供人类审计的目录包；JSONL 始终是正式产物。
+    # Whether to also generate a directory bundle for human auditing; JSONL remains the authoritative output.
     enabled: false
-    # 审计目录包的宿主机根路径。
+    # Host root directory for audit bundles.
     directory: .featurebench/audit/environments
-  # Agent 只能从该目录选择基础镜像；每项字段的语义只在第一项说明一次。
+  # Agents may select base images only from this catalog; each field is documented on the first entry only.
   base_images:
-    # 配置内稳定且唯一的候选名称。
+    # Stable, unique candidate name within the configuration.
     - name: generic-ubuntu
-      # Agent 产物必须使用的官方基础镜像引用。
+      # Official base image reference required in agent artifacts.
       image: ubuntu:24.04
-      # 该候选适用的标准化语言标签。
+      # Normalized language labels supported by this candidate.
       languages: [generic]
-      # 激活环境和运行时选择使用的语言家族。
+      # Language family used for environment activation and runtime selection.
       runtime_family: generic
-      # 运行时版本；null 表示没有固定的语言版本。
+      # Runtime version; null means no fixed language version.
       runtime_version: null
-      # 托管 recipe 实际预装、可供 Agent 依赖的能力。
+      # Capabilities preinstalled by the managed recipe that agents may rely on.
       capabilities: [bash, git, build-toolchain]
-      # 该候选是否能够承载必须使用 GPU 的测试。
+      # Whether this candidate can run tests that require a GPU.
       gpu_support: false
-      # 内联到最终 Dockerfile 的托管 recipe 资产名。
+      # Managed recipe asset name to inline into the final Dockerfile.
       recipe: generic-ubuntu
-      # 提供给 Analysis Agent 的选型说明。
+      # Selection guidance provided to the Analysis Agent.
       description: Generic Debian-family base for repositories with custom toolchains.
     - name: python-3.14
       image: ubuntu:24.04

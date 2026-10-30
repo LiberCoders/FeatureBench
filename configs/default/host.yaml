@@ -1,8 +1,8 @@
-# FeatureBench data factory 宿主机工作目录；相对路径基于项目启动目录。
+# Host workspace for the FeatureBench data factory; relative paths resolve from the project launch directory.
 workspace: .featurebench
-# Rich 面板每秒最多刷新次数。
+# Maximum Rich panel refreshes per second.
 refresh_per_second: 8
-# JSONL 每追加多少条记录执行一次 fsync。
+# Number of JSONL records to append between fsync calls.
 jsonl_fsync_interval: 1
-# 宿主机加载凭证的 dotenv 文件；不会覆盖进程中已有变量。
+# Host dotenv file for credentials; does not override existing process environment variables.
 env_file: .env
